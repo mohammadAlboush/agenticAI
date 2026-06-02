@@ -1,0 +1,15 @@
+{
+  "domain": "it-sicherheit.de",
+  "seed": 42,
+  "prompt_set_version": "v1",
+  "top_urls": [
+    "https://www.it-sicherheit.de/nis2-richtlinie",
+    "https://www.it-sicherheit.de/ransomware-schutz",
+    "https://www.it-sicherheit.de/zero-trust-architektur",
+    "https://www.it-sicherheit.de/phishing-erkennen",
+    "https://www.it-sicherheit.de/dsgvo-checkliste",
+    "https://www.it-sicherheit.de/firewall-grundlagen",
+    "https://www.it-sicherheit.de/passwort-manager-vergleich",
+    "https://www.it-sicherheit.de/security-awareness-training"
+  ]
+}

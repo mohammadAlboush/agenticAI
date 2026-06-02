@@ -1,0 +1,40 @@
+"""Zentrale Konstanten (keine Magic Numbers/Strings im Code, Projektregeln §4)."""
+
+from __future__ import annotations
+
+from typing import Final
+
+# --- Probe-Matrix (Pitch: 5 IPs x 4 Engines x 12 Prompts = 240 Probes/Run) ---
+N_PROXY_IPS: Final = 5
+N_ENGINES: Final = 4
+N_PROMPTS: Final = 12
+EXPECTED_PROBES_PER_RUN: Final = N_PROXY_IPS * N_ENGINES * N_PROMPTS  # 240
+
+# --- Engine-Abfrage-Defaults ---
+DEFAULT_MAX_TOKENS: Final = 1024
+DEFAULT_TEMPERATURE: Final = 0.2
+
+# --- Perplexity (einzige Live-Engine in Sprint 1) ---
+PERPLEXITY_ENDPOINT: Final = "https://api.perplexity.ai/chat/completions"
+
+# --- Crawler ---
+DEFAULT_USER_AGENT: Final = "geo-audit-loop/0.1 (+research; kontakt@alboush-elektro.de)"
+DEFAULT_MAX_PAGES: Final = 200
+DEFAULT_DOWNLOAD_DELAY_S: Final = 1.0
+DEFAULT_CONCURRENT_PER_DOMAIN: Final = 2
+
+# --- Retry / Backoff (externe Aufrufe, Projektregeln §6) ---
+RETRY_MAX_ATTEMPTS: Final = 3
+RETRY_BASE_DELAY_S: Final = 1.0
+RETRY_MAX_DELAY_S: Final = 30.0
+
+# --- Report ---
+TOP_N: Final = 10
+
+# --- Versioniertes Prompt-Set ---
+DEFAULT_PROMPT_SET_VERSION: Final = "v1"
+
+# --- Budget-Cap-Defaults (hart, Projektregeln §6) ---
+DEFAULT_MAX_PROBES: Final = EXPECTED_PROBES_PER_RUN
+DEFAULT_MAX_USD: Final = 2.0
+DEFAULT_MAX_TOKENS_BUDGET: Final = 2_000_000

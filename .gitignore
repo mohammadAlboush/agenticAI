@@ -1,0 +1,49 @@
+# --- Secrets (CLAUDE.md §6: niemals committen) ---
+.env
+.env.*
+!.env.example
+*.key
+Webshare*proxies*.txt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# --- Virtualenv / uv ---
+.venv/
+venv/
+.python-version
+
+# --- Test / Typ-Caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Laufzeit-Artefakte ---
+*.db
+*.sqlite
+*.sqlite3
+runs/
+data/
+*.jl                  # advertools-Crawl-Output (JSON Lines)
+chroma/               # S2: Vektorspeicher
+logs/
+*.log
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Plan-/Tooling-Artefakte ---
+_pitch_text.txt

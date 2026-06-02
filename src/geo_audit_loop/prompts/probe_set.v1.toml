@@ -1,0 +1,52 @@
+# Versioniertes Probe-Set (Projektregeln §3.3). 12 IT-Security-GEO-Zielfragen fuer
+# it-sicherheit.de, formuliert als eigenstaendige Nutzerfragen gemaess geo-strategy
+# (Hebel 10: Frage-Deckung). Jede Aenderung erhoeht die Version -> neue Datei.
+version = "v1"
+
+[[prompts]]
+id = "p01"
+text = "Was schreibt die NIS2-Richtlinie fuer Unternehmen vor und wer ist betroffen?"
+
+[[prompts]]
+id = "p02"
+text = "Welche technischen Massnahmen schuetzen wirksam vor Ransomware?"
+
+[[prompts]]
+id = "p03"
+text = "Wie baut man eine Zero-Trust-Architektur Schritt fuer Schritt auf?"
+
+[[prompts]]
+id = "p04"
+text = "Woran erkennt man Phishing-Mails zuverlaessig?"
+
+[[prompts]]
+id = "p05"
+text = "Welche Schritte umfasst eine DSGVO-Checkliste fuer KMU?"
+
+[[prompts]]
+id = "p06"
+text = "Welcher Passwort-Manager ist fuer Unternehmen sicher und empfehlenswert?"
+
+[[prompts]]
+id = "p07"
+text = "Wie funktioniert eine Firewall und worauf kommt es bei der Konfiguration an?"
+
+[[prompts]]
+id = "p08"
+text = "Wie baut man ein wirksames Security-Awareness-Training auf?"
+
+[[prompts]]
+id = "p09"
+text = "Was ist ISO 27001 und wie laeuft eine Zertifizierung ab?"
+
+[[prompts]]
+id = "p10"
+text = "Wie sieht eine sichere Backup-Strategie nach dem 3-2-1-Prinzip aus?"
+
+[[prompts]]
+id = "p11"
+text = "Warum ist Multi-Faktor-Authentifizierung wichtig und wie wird sie eingefuehrt?"
+
+[[prompts]]
+id = "p12"
+text = "Was gehoert in einen Incident-Response-Plan bei einem Cyberangriff?"
