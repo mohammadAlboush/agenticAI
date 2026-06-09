@@ -85,6 +85,31 @@ class CostTracker:
         self._usd += cost
         return cost
 
+    def ensure_within_budget(self) -> None:
+        """Wirft ``BudgetExceeded`` bei erreichtem Token-/USD-Limit (Reasoning-Schritte, §6).
+
+        Wie ``ensure_can_probe``, aber ohne Probe-Limit: Reasoning-Aufrufe (Pattern-Miner,
+        GEO-Auditor) sind keine Probes, unterliegen aber demselben Token-/Kosten-Cap.
+        """
+        if self._tokens >= self._max_tokens:
+            raise BudgetExceeded(
+                "Token-Limit erreicht",
+                limit_name="max_tokens",
+                limit=self._max_tokens,
+                used=self._tokens,
+            )
+        if self._usd >= self._max_usd:
+            raise BudgetExceeded(
+                "USD-Limit erreicht", limit_name="max_usd", limit=self._max_usd, used=self._usd
+            )
+
+    def record_reasoning(self, model: str, usage: ProbeUsage) -> float:
+        """Verbucht einen Reasoning-Aufruf (Tokens + USD, KEIN Probe-Zaehler) und liefert Kosten."""
+        self._tokens += usage.total_tokens
+        cost = self.estimate_cost(model, usage)
+        self._usd += cost
+        return cost
+
     @property
     def probes(self) -> int:
         """Anzahl bisher verbuchter Probes."""

@@ -23,3 +23,20 @@ def load_probe_set(version: str = "v1") -> tuple[str, list[ProbePrompt]]:
     if not prompts:
         raise ConfigError(f"Probe-Set probe_set.{version}.toml enthaelt keine Prompts")
     return str(data.get("version", version)), prompts
+
+
+def load_prompt(name: str, version: str = "v1") -> tuple[str, str]:
+    """Laedt ein versioniertes Markdown-Prompt ``<name>.<version>.md`` und liefert (Version, Text).
+
+    Fuer die LLM-Agenten (Pattern-Miner, GEO-Auditor): der Text ist der System-Prompt;
+    der Agent haengt die konkreten Eingabedaten als User-Nachricht an. Die genutzte
+    Version wird pro Run protokolliert (Reproduzierbarkeit, Projektregeln §3.3).
+    Wirft ``ConfigError``, wenn die Datei fehlt oder leer ist.
+    """
+    resource = files("geo_audit_loop.prompts").joinpath(f"{name}.{version}.md")
+    if not resource.is_file():
+        raise ConfigError(f"Prompt nicht gefunden: {name}.{version}.md")
+    text = resource.read_text(encoding="utf-8").strip()
+    if not text:
+        raise ConfigError(f"Prompt {name}.{version}.md ist leer")
+    return version, text

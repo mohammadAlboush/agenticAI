@@ -15,6 +15,10 @@ class EngineError(GeoAuditError):
     """Fehler bei der Abfrage einer Such-/AI-Engine."""
 
 
+class ReasoningError(GeoAuditError):
+    """Nicht behebbarer Fehler eines LLM-Reasoning-Adapters (z.B. fehlender API-Key)."""
+
+
 class ProxyError(GeoAuditError):
     """Fehler bei Beschaffung oder Nutzung eines Proxys."""
 

@@ -17,9 +17,12 @@ from geo_audit_loop.adapters.crawl.mock import MockCrawlAdapter
 from geo_audit_loop.adapters.engines.mock import MockEngineAdapter
 from geo_audit_loop.adapters.engines.perplexity import PerplexityEngineAdapter
 from geo_audit_loop.adapters.proxy.webshare import WebshareProxyPool
+from geo_audit_loop.adapters.reasoning.mock import MockReasoningAdapter
 from geo_audit_loop.adapters.sample_data import build_sample_inventory, sample_target_urls
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
+from geo_audit_loop.agents.pattern_miner import PatternMinerService
 from geo_audit_loop.agents.sampler import SamplerService
 from geo_audit_loop.config import constants as c
 from geo_audit_loop.config.engines import ENGINE_REGISTRY
@@ -30,17 +33,24 @@ from geo_audit_loop.domain.probe import EngineId, EngineProbeSpec, ProbePrompt
 from geo_audit_loop.domain.run import RunContext
 from geo_audit_loop.observability.cost import CostTracker
 from geo_audit_loop.orchestration.sprint1_flow import Sprint1Flow, Sprint1Pipeline
+from geo_audit_loop.orchestration.sprint2_flow import Sprint2Flow, Sprint2Pipeline
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
 from geo_audit_loop.ports.proxy import ProxyPort
+from geo_audit_loop.ports.reasoning import ReasoningPort
+from geo_audit_loop.prompts.loader import load_prompt
 
 
 @dataclass(frozen=True)
 class RunAssembly:
-    """Alles, was ein Run braucht (vom Composition Root erstellt)."""
+    """Alles, was ein Run braucht (vom Composition Root erstellt).
 
-    flow: Sprint1Flow
-    pipeline: Sprint1Pipeline
+    ``flow``/``pipeline`` sind je nach Modus die Sprint-1- (Messung) oder die
+    Sprint-2-Variante (Messung + Lern-Loop); beide teilen die ``report``-Property.
+    """
+
+    flow: Sprint1Flow | Sprint2Flow
+    pipeline: Sprint1Pipeline | Sprint2Pipeline
     storage: SqliteStorage
     cost_tracker: CostTracker
     run_context: RunContext
@@ -92,6 +102,19 @@ def build_crawl(*, offline: bool, domain: str) -> CrawlPort:
     return AdvertoolsCrawlAdapter()
 
 
+def build_reasoning(settings: Settings, *, offline: bool) -> ReasoningPort:
+    """Waehlt den Reasoning-Adapter: offline/Default deterministischer Mock, sonst Claude live.
+
+    Der ``anthropic``-Import bleibt im Live-Zweig (Offline-Runs laden das SDK nicht).
+    """
+    if offline or not settings.is_live(EngineId.CLAUDE):
+        return MockReasoningAdapter()
+    from geo_audit_loop.adapters.reasoning.claude import ClaudeReasoningAdapter
+
+    cfg = ENGINE_REGISTRY[EngineId.CLAUDE]
+    return ClaudeReasoningAdapter(api_key=settings.api_key_for(EngineId.CLAUDE), model=cfg.model)
+
+
 def assemble_run(
     settings: Settings,
     *,
@@ -101,9 +124,14 @@ def assemble_run(
     now: datetime,
     prompts: Sequence[ProbePrompt],
     prompt_version: str,
+    explain: bool = False,
     logger: logging.Logger | None = None,
 ) -> RunAssembly:
-    """Verdrahtet Storage, CostTracker, Engines, Services und den Flow fuer einen Run."""
+    """Verdrahtet Storage, CostTracker, Engines, Services und den Flow fuer einen Run.
+
+    ``explain=True`` haengt den Sprint-2-Lern-Loop (Pattern-Miner + GEO-Auditor) an die
+    Sprint-1-Messung; sonst laeuft der reine Sprint-1-Flow.
+    """
     storage = SqliteStorage(settings.db_path)
     storage.initialize()
     cost_tracker = CostTracker(
@@ -152,9 +180,43 @@ def assemble_run(
         top_n=settings.top_n,
         logger=logger,
     )
+    if not explain:
+        return RunAssembly(
+            flow=Sprint1Flow(pipeline),
+            pipeline=pipeline,
+            storage=storage,
+            cost_tracker=cost_tracker,
+            run_context=run_context,
+        )
+
+    reasoning = build_reasoning(settings, offline=offline)
+    pm_version, pm_prompt = load_prompt("pattern_miner")
+    ga_version, ga_prompt = load_prompt("geo_auditor")
+    pattern_miner = PatternMinerService(
+        reasoning=reasoning,
+        system_prompt=pm_prompt,
+        prompt_version=pm_version,
+        cost_tracker=cost_tracker,
+        logger=logger,
+    )
+    geo_auditor = GeoAuditorService(
+        reasoning=reasoning,
+        system_prompt=ga_prompt,
+        prompt_version=ga_version,
+        cost_tracker=cost_tracker,
+        logger=logger,
+    )
+    sprint2 = Sprint2Pipeline(
+        base=pipeline,
+        pattern_miner=pattern_miner,
+        geo_auditor=geo_auditor,
+        storage=storage,
+        run_context=run_context,
+        logger=logger,
+    )
     return RunAssembly(
-        flow=Sprint1Flow(pipeline),
-        pipeline=pipeline,
+        flow=Sprint2Flow(sprint2),
+        pipeline=sprint2,
         storage=storage,
         cost_tracker=cost_tracker,
         run_context=run_context,

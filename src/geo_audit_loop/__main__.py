@@ -14,8 +14,11 @@ import uuid
 from datetime import UTC, datetime
 
 from geo_audit_loop.config.settings import Settings
+from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.errors import BudgetExceeded, GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
+from geo_audit_loop.domain.geo import LEVER_LABELS, PYRAMID_LABELS
+from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.observability.logging import configure_logging
 from geo_audit_loop.prompts.loader import load_probe_set
 
@@ -29,6 +32,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     mode.add_argument("--live", action="store_true", help="Perplexity live (braucht Key + Proxies)")
     parser.add_argument("--top-n", type=int, default=None, help="Groesse der Top/Flop-Liste")
     parser.add_argument("--seed", type=int, default=None, help="Run-Seed (Reproduzierbarkeit)")
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="Sprint-2-Lern-Loop: Muster (warum) + priorisierte Findings (was tun) ausgeben",
+    )
     parser.add_argument("--log-level", default="INFO", help="Logging-Level")
     return parser.parse_args(argv)
 
@@ -53,6 +61,29 @@ def _print_report(report: TopFlopReport) -> None:
         print(_entry_line(entry))
 
 
+def _print_patterns(report: PatternReport) -> None:
+    """Gibt die geminten Best-Practice-Templates aus (Sprint-2: 'warum ranken die Top-Seiten')."""
+    print(f"\n=== WARUM ranken die Top-Seiten? {len(report.templates)} Muster (Pattern-Miner) ===")
+    for tmpl in report.templates:
+        levers = ", ".join(LEVER_LABELS[lever] for lever in tmpl.levers)
+        print(f"\n  [{tmpl.template_id}] {tmpl.title}  (Konfidenz {tmpl.confidence:.2f})")
+        print(f"      Ebene: {PYRAMID_LABELS[tmpl.pyramid_level]} | Hebel: {levers}")
+        print(f"      {tmpl.summary}")
+
+
+def _print_findings(report: AuditReport) -> None:
+    """Gibt die priorisierten Audit-Findings aus (Sprint-2: 'was an den Flop-Seiten tun')."""
+    print(f"\n=== WAS tun? {len(report.findings)} Findings (GEO-Auditor, priorisiert) ===")
+    for position, finding in enumerate(report.findings, start=1):
+        print(f"\n  {position}. [{finding.severity.value.upper()}] {finding.target_url}")
+        print(
+            f"      Ebene: {PYRAMID_LABELS[finding.pyramid_level]} | "
+            f"Hebel: {LEVER_LABELS[finding.lever]}"
+        )
+        print(f"      Beleg: {finding.evidence}")
+        print(f"      Fix:   {finding.recommendation}")
+
+
 def main(argv: list[str] | None = None) -> int:
     """Fuehrt einen Sprint-1-Run aus und gibt den Report aus. Liefert den Exit-Code."""
     os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
@@ -75,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     version, prompts = load_probe_set(settings.prompt_set_version)
     # Deferred Import: erst nach dem Setzen der Telemetrie-Env (crewai wird dort geladen).
     from geo_audit_loop.orchestration.factory import assemble_run
+    from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
 
     assembly = assemble_run(
         settings,
@@ -84,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         now=datetime.now(UTC),
         prompts=prompts,
         prompt_version=version,
+        explain=args.explain,
     )
     try:
         assembly.flow.kickoff()
@@ -98,6 +131,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if assembly.pipeline.report is not None:
         _print_report(assembly.pipeline.report)
+    if isinstance(assembly.pipeline, Sprint2Pipeline):
+        if assembly.pipeline.pattern_report is not None:
+            _print_patterns(assembly.pipeline.pattern_report)
+        if assembly.pipeline.audit_report is not None:
+            _print_findings(assembly.pipeline.audit_report)
     return 0
 
 

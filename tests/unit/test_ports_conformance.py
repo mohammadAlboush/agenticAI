@@ -11,10 +11,12 @@ from datetime import datetime
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeRequest, ProbeResult
+from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
 from geo_audit_loop.domain.run import RunRecord
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
 from geo_audit_loop.ports.proxy import ProxyPort
+from geo_audit_loop.ports.reasoning import ReasoningPort
 from geo_audit_loop.ports.storage import StoragePort
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -98,7 +100,22 @@ def test_crawl_port_conformance() -> None:
     assert isinstance(crawler, CrawlPort)
 
 
+class _StubReasoning:
+    model = "stub-model"
+
+    def reason(self, request: ReasoningRequest) -> ReasoningResult:
+        return ReasoningResult(
+            run_id=request.run_id, task=request.task, model=request.model, generated_at=FIXED
+        )
+
+
 def test_storage_port_conformance() -> None:
     storage: StoragePort = _StubStorage()
     assert isinstance(storage, StoragePort)
     assert storage.load_run("x") is None
+
+
+def test_reasoning_port_conformance() -> None:
+    reasoning: ReasoningPort = _StubReasoning()
+    assert isinstance(reasoning, ReasoningPort)
+    assert reasoning.model == "stub-model"
