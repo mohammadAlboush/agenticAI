@@ -6,8 +6,8 @@ Templates auditiert, Fixes vorschlägt (Human-in-the-Loop), deployt und den Effe
 
 Master-Modulprojekt · Agentic AI · Westfälische Hochschule · Master Informatik.
 
-> **Status:** Sprint 1 (FOUNDATION) abgeschlossen — SERP & Citation Sampler, Inventory-Crawler,
-> SQLite-Persistenz. 84 Tests grün · `mypy --strict` · `ruff`.
+> **Status:** Sprint 2 (LEARNING) abgeschlossen — Pattern-Miner & GEO-Auditor über einem neuen
+> `ReasoningPort` (Claude/Mock), toleranzbasierte Evals. `mypy --strict` · `ruff` · alle Tests grün.
 
 ---
 
@@ -37,9 +37,36 @@ in AI-Engines zitiert werden, und daraus eine **Top/Flop-Liste** erzeugen — of
 **Neu seit Sprint 0 (Pitch):** **alles.** Sprint 0 war reine Pitch-/Architektur-Konzeption;
 Sprint 1 ist die erste lauffähige Implementierung — die gesamte Codebasis, Test- und Eval-Gerüst.
 
-**Offene Punkte / nächster Schritt (Sprint 2 — Learning):** Live-Adapter für ChatGPT & Gemini
-(aktuell gemockt); Pattern-Miner & GEO-Auditor; `MemoryPort` + Chroma/`bge-m3`; toleranzbasierte
-Evals für nicht-deterministische Agenten. Der Fix-/Re-Probe-Loop folgt in Sprint 3–4.
+**Offene Punkte / nächster Schritt:** Sprint 2 (Learning) ist unten beschrieben. Danach: Fix-Agent
++ Human-in-the-Loop + Deploy (Sprint 3) und Re-Probe + Memory (Sprint 4).
+
+---
+
+## Sprint 2 — Summary
+
+**Ziel:** Die Mess-Schicht lernfähig machen — aus der Top/Flop-Liste ableiten, **warum** Top-Seiten
+zitiert werden und **was** den Flop-Seiten fehlt.
+
+**Gebaut:**
+- **ReasoningPort:** LLM-Schließen sauber getrennt vom SERP-`EnginePort`. Adapter:
+  `MockReasoningAdapter` (offline, deterministisch) & `ClaudeReasoningAdapter` (live, opt-in) —
+  dasselbe Mock-/Live-Muster wie bei den Engines.
+- **Pattern-Miner:** mint aus den Top-Seiten wiederverwendbare `Template`s, verankert in den
+  10 GEO-Hebeln und der Citation-Pyramide (Skill `geo-strategy`).
+- **GEO-Auditor:** prüft Flop-Seiten gegen die Templates → nach Pyramide **priorisierte**
+  `AuditFinding`s (Beleg, Hebel, Ebene, Schweregrad, Empfehlung).
+- **Contracts & Disziplin:** `Template` / `AuditFinding` + GEO-Vokabular (`Lever`, `PyramidLevel`);
+  versionierte Prompts (`pattern_miner.v1.md`, `geo_auditor.v1.md`); **toleranzbasierte Eval-Slots**
+  je Agent; `Sprint2Flow` orchestriert sample → report → mine → audit.
+
+**Das System kann jetzt:** in **einem** Lauf messen, *warum* Top-Seiten ranken und *was* an den
+Flop-Seiten zu tun ist — offline deterministisch (Seed 42) oder mit Live-Claude. Ohne neue
+Abhängigkeit (`anthropic` war bereits gepinnt).
+
+**Bewusst offen (Fast-Follow / Sprint 3–4):** Live-Adapter ChatGPT & Gemini; `MemoryPort` +
+Chroma/`bge-m3`; Fix-Agent + HITL + Deploy; Re-Probe + `EffectHypothesis`.
+
+> Demo: `docs/demo-sprint2.md` · Folien: `docs/sprint2-praesentation.html`.
 
 ---
 
@@ -81,6 +108,9 @@ uv run pytest                 # Tests (alle Ports gemockt, kein Netz)
 ```bash
 # Offline-Demo (Mock-Engines) — reproduzierbare Top/Flop-Liste für it-sicherheit.de:
 uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --top-n 3
+
+# Sprint-2-Lern-Loop: zusätzlich WARUM (Templates) + WAS TUN (priorisierte Findings):
+uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3
 
 # Opt-in Live-Probing (nur Perplexity, budget-gedeckelt; braucht .env + Proxies):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --live
