@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>geo-audit-loop — Projektdokumentation (von Grund auf)</title>
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7; --ink:#1c1d1a; --mut:#5f635c;
+  --faint:#9a9c94; --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9;
+  --amber:#9a6a16; --amber-soft:#f3e8d0; --red:#a8392c; --red-soft:#f1e0db; --blue:#2f6d8f;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas",ui-monospace,monospace;
+  --sans:"Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;line-height:1.7;letter-spacing:-.006em}
+.layout{display:grid;grid-template-columns:288px 1fr;align-items:start}
+/* ---- TOC ---- */
+.toc{position:sticky;top:0;height:100vh;overflow:auto;padding:34px 26px;background:var(--surface-2)}
+.toc .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.toc .brand img{height:26px}
+.toc .doctype{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:22px}
+.toc a{display:block;color:var(--mut);text-decoration:none;font-size:13.5px;padding:5px 10px;border-radius:8px;transition:.25s var(--ease)}
+.toc a:hover{color:var(--ink);background:var(--surface)}
+.toc a.on{color:var(--acc-deep);background:var(--acc-soft);font-weight:600}
+.toc .num{font-family:var(--mono);font-size:11px;color:var(--faint);margin-right:8px}
+/* ---- content ---- */
+.content{max-width:880px;margin:0 auto;padding:64px clamp(24px,5vw,72px) 120px}
+.cover{padding-bottom:30px;margin-bottom:30px}
+.cover .kick{font-family:var(--mono);font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--acc-deep);margin-bottom:18px}
+.cover h1{font-size:clamp(34px,5vw,56px);font-weight:680;letter-spacing:-.028em;line-height:1.04;margin:0 0 16px}
+.cover p.sub{font-size:clamp(16px,1.8vw,21px);color:var(--mut);max-width:36em;margin:0 0 24px}
+.cover .meta{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;font-size:14px;max-width:620px}
+.cover .meta dt{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);align-self:center}
+.cover .meta dd{margin:0}
+h2{font-size:clamp(24px,3vw,34px);font-weight:660;letter-spacing:-.02em;line-height:1.12;margin:64px 0 6px;scroll-margin-top:20px}
+h2 .chnum{font-family:var(--mono);font-size:.5em;color:var(--acc-deep);font-weight:600;display:block;letter-spacing:.04em;margin-bottom:6px}
+h3{font-size:19px;font-weight:640;letter-spacing:-.01em;margin:34px 0 8px}
+h4{font-size:15px;font-weight:640;margin:22px 0 6px;color:var(--ink)}
+p{margin:12px 0;max-width:72ch}
+.lead{font-size:18px;color:var(--mut);max-width:66ch}
+strong{font-weight:640}
+a.ref{color:var(--acc-deep);text-decoration:none}
+em.q{color:var(--acc-deep);font-style:normal;font-weight:600}
+ul,ol{max-width:72ch;padding-left:22px}li{margin:6px 0}
+code{font-family:var(--mono);font-size:.88em;background:#e9e7df;color:#33352e;padding:2px 6px;border-radius:5px}
+.rule{height:3px;width:60px;background:var(--acc);border-radius:3px;margin:14px 0 0}
+/* callouts & cards (randlos, getoent) */
+.callout{background:var(--acc-soft);border-radius:16px;padding:18px 22px;margin:22px 0;font-size:15px;color:#3f4a2c}
+.callout.warn{background:var(--amber-soft);color:#5e451a}
+.callout b{color:var(--acc-deep)}
+.callout.warn b{color:var(--amber)}
+.panel{background:var(--surface);border-radius:18px;padding:22px 24px;margin:18px 0}
+.tcard{background:var(--surface);border-radius:18px;padding:0;margin:14px 0;overflow:hidden}
+.tcard .hd{padding:16px 22px 4px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tcard .hd h4{margin:0;font-size:17px}
+.tcard .hd .tagx{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.tcard dl{display:grid;grid-template-columns:130px 1fr;gap:1px 0;margin:8px 0 0;background:transparent}
+.tcard dt{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--acc-deep);padding:9px 22px;align-self:start}
+.tcard dd{margin:0;padding:9px 22px 9px 0;font-size:14px;color:var(--mut)}
+.tcard dd b{color:var(--ink)}
+.tcard .row{display:contents}
+.tcard dt.alt{color:var(--amber)}
+/* tables */
+table{border-collapse:collapse;width:100%;max-width:100%;margin:18px 0;font-size:14px}
+th,td{text-align:left;padding:10px 12px;vertical-align:top}
+thead th{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);border-bottom:2px solid var(--acc-soft)}
+tbody tr:nth-child(odd){background:var(--surface)}
+tbody td:first-child{font-weight:600;color:var(--ink)}
+/* figures + svg */
+figure{margin:26px 0;background:var(--surface-2);border-radius:18px;padding:24px 22px 14px}
+figure svg{display:block;width:100%;height:auto;overflow:visible}
+figcaption{font-size:12.5px;color:var(--mut);text-align:center;margin-top:12px;font-family:var(--mono);letter-spacing:.02em}
+.nd{fill:#fff;stroke:none}
+.nd.t{fill:var(--surface)}
+.nd.core{fill:var(--acc-soft)}
+.nd.new{fill:#deecc7}
+.nd.fut{fill:#efeee7}
+.lbl{font-family:var(--mono);font-size:12.5px;fill:var(--ink)}
+.lbls{font-family:var(--mono);font-size:10.5px;fill:var(--mut)}
+.lblw{font-family:var(--sans);font-size:13px;fill:var(--ink);font-weight:600}
+.ed{stroke:#c2c0b4;stroke-width:1.6;fill:none}
+.ed.a{stroke:var(--acc);stroke-width:2}
+.ed.dash{stroke-dasharray:5 4}
+/* pyramid */
+.pyr{display:flex;flex-direction:column-reverse;gap:6px;max-width:560px;margin:6px auto 0}
+.band{height:46px;border-radius:11px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;color:#fff;font-weight:600;font-size:14px}
+.band .lv{font-family:var(--mono);font-size:11px;opacity:.85;font-weight:500}
+.b1{background:#46641a;width:100%}.b2{background:#5d871f;width:88%}.b3{background:#73a528;width:74%}.b4{background:#8cbb37;width:60%}.b5{background:#a7cf63;width:46%}
+/* mini stat row */
+.stats{display:flex;gap:16px;flex-wrap:wrap;margin:18px 0}
+.stat{flex:1;min-width:120px;background:var(--surface);border-radius:16px;padding:16px 18px}
+.stat .v{font-size:26px;font-weight:680;color:var(--acc-deep);letter-spacing:-.02em}
+.stat .l{font-size:12px;color:var(--mut);margin-top:3px}
+pre{background:#26251f;color:#eceae2;border-radius:14px;padding:18px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.55;overflow:auto;margin:18px 0}
+pre .c{color:#9a9684}.k{color:#b6dd7e}
+.gloss{display:grid;grid-template-columns:200px 1fr;gap:2px 0;margin:14px 0}
+.gloss dt{font-weight:640;padding:9px 0}
+.gloss dd{margin:0;padding:9px 0;color:var(--mut);font-size:14.5px}
+.toplink{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--faint);text-decoration:none}
+@media(max-width:920px){.layout{grid-template-columns:1fr}.toc{position:static;height:auto}}
+@media print{
+  .layout{display:block}.toc{display:none}.content{max-width:none;padding:0}
+  h2{page-break-before:always}figure,table,.tcard,pre,.callout{break-inside:avoid}
+  body{background:#fff}figure{background:#f3f2ec}
+  @page{size:A4;margin:18mm 16mm}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="brand"><img src="assets/whs-logo.svg" alt="WHS"/></div>
+  <div class="doctype">Projektdokumentation</div>
+  <a href="#ch1"><span class="num">00</span>Management-Summary</a>
+  <a href="#ch2"><span class="num">01</span>Problem &amp; Motivation</a>
+  <a href="#ch3"><span class="num">02</span>Vision: der Lern-Loop</a>
+  <a href="#ch4"><span class="num">03</span>GEO-Grundlagen</a>
+  <a href="#ch5"><span class="num">04</span>Architektur &amp; Warum</a>
+  <a href="#ch6"><span class="num">05</span>Technologie-Entscheidungen</a>
+  <a href="#ch7"><span class="num">06</span>Forschungs-Methodik</a>
+  <a href="#ch8"><span class="num">07</span>Sprint 0 — Pitch</a>
+  <a href="#ch9"><span class="num">08</span>Sprint 1 — Foundation</a>
+  <a href="#ch10"><span class="num">09</span>Sprint 2 — Learning</a>
+  <a href="#ch11"><span class="num">10</span>Aktueller Stand &amp; Demo</a>
+  <a href="#ch12"><span class="num">11</span>Ausblick (Sprint 3–4)</a>
+  <a href="#ch13"><span class="num">12</span>Glossar</a>
+  <a href="#ch14"><span class="num">13</span>Quellen</a>
+</nav>
+
+<main class="content">
+
+<header class="cover">
+  <div class="kick">geo-audit-loop · Projektdokumentation</div>
+  <h1>Ein selbstlernendes GEO-Audit-System — von Grund auf erklärt</h1>
+  <p class="sub">Wie das System misst, warum Webseiten von AI-Engines zitiert werden, daraus lernt
+    und Fixes vorschlägt — inklusive Begründung jeder Technologie-Entscheidung und ihrer Wirkung.</p>
+  <dl class="meta">
+    <dt>Projekt</dt><dd>geo-audit-loop · Master-Modulprojekt „Agentic AI"</dd>
+    <dt>Autor</dt><dd>Mohammad Alboush · Master Informatik · Westfälische Hochschule</dd>
+    <dt>Pilot-Domain</dt><dd>it-sicherheit.de</dd>
+    <dt>Stand</dt><dd>Sprint 2 (Learning) abgeschlossen · Juni 2026</dd>
+    <dt>Lesehinweis</dt><dd>Fachlich tief, aber von Grund auf erklärt — Fachbegriffe siehe Glossar (Kap. 12).</dd>
+  </dl>
+</header>
+
+<!-- 0 -->
+<h2 id="ch1"><span class="chnum">Kapitel 00</span>Management-Summary</h2>
+<p class="lead">Suchmaschinen zeigten früher Links. KI-Antwortmaschinen (ChatGPT, Perplexity, Google
+AI Overviews, Gemini) <strong>formulieren Antworten und nennen Quellen</strong>. Wer als Quelle
+zitiert wird, gewinnt Sichtbarkeit — wer nicht, verschwindet.</p>
+<p><strong>geo-audit-loop</strong> ist ein agentisches System, das diesen neuen Wettbewerb in einen
+geschlossenen Regelkreis fasst: Es (1) <strong>misst</strong> neutral, welche Seiten einer Domain in
+AI-Engines zitiert werden, (2) <strong>lernt</strong> aus den Gewinnern wiederverwendbare Muster und
+deckt die Schwächen der Verlierer auf, (3) <strong>handelt</strong> über menschlich freigegebene Fixes
+und (4) <strong>misst die Wirkung erneut</strong> und schreibt das Gelernte in ein Gedächtnis.</p>
+<div class="stats">
+  <div class="stat"><div class="v">4</div><div class="l">Sprints (Measure · Learn · Act · Loop)</div></div>
+  <div class="stat"><div class="v">2 / 4</div><div class="l">umgesetzt (Sprint 1 + 2)</div></div>
+  <div class="stat"><div class="v">240</div><div class="l">Messpunkte je Lauf</div></div>
+  <div class="stat"><div class="v">0</div><div class="l">Typ-/Lint-Fehler (mypy --strict, ruff)</div></div>
+</div>
+<p>Dieses Dokument erklärt das Projekt vollständig — vom Problem über jede Technologie-Entscheidung
+(samt verworfener Alternativen) bis zum aktuellen Stand. Der rote Faden: <em class="q">Reproduzierbarkeit
+und Nachvollziehbarkeit sind hier nicht optional, sondern Bewertungskriterium</em> — jede Design-Wahl
+zahlt darauf ein.</p>
+
+<!-- 1 -->
+<h2 id="ch2"><span class="chnum">Kapitel 01</span>Das Problem &amp; die Motivation</h2>
+<p class="lead">Die Art, wie Menschen Informationen finden, hat sich verschoben — und damit die Regeln
+für Sichtbarkeit.</p>
+<p>Bei der klassischen Suche liefert Google eine <strong>Liste von Links</strong>; die Nutzerin klickt.
+Bei einer KI-Antwortmaschine wird die Frage intern in Teilfragen zerlegt (<em>Query Fan-out</em>), zu
+jeder werden Quellen gezogen, und das Modell <strong>synthetisiert eine Antwort mit Quellenangaben</strong>.
+Das Ziel verschiebt sich von „Platz 1 im Ranking" zu <strong>„als Quelle zitiert werden"</strong>.</p>
+
+<figure>
+<svg viewBox="0 0 720 250" role="img" aria-label="Klassische Suche vs. AI-Antwort">
+  <text class="lblw" x="20" y="24">Klassische Suche</text>
+  <rect class="nd t" x="20" y="40" width="300" height="26" rx="6"/><text class="lbls" x="34" y="57">1. ergebnis-eins.de/…</text>
+  <rect class="nd t" x="20" y="74" width="300" height="26" rx="6"/><text class="lbls" x="34" y="91">2. ergebnis-zwei.de/…</text>
+  <rect class="nd t" x="20" y="108" width="300" height="26" rx="6"/><text class="lbls" x="34" y="125">3. ergebnis-drei.de/…</text>
+  <text class="lbls" x="20" y="160">Nutzer klickt &rarr; Traffic auf Platz 1–3</text>
+  <line class="ed" x1="360" y1="20" x2="360" y2="200"/>
+  <text class="lblw" x="392" y="24">KI-Antwortmaschine</text>
+  <rect class="nd core" x="392" y="40" width="300" height="92" rx="10"/>
+  <text class="lbls" x="406" y="62">„NIS2 verpflichtet Unternehmen,</text>
+  <text class="lbls" x="406" y="80">Risiken zu melden …"</text>
+  <text class="lbls" x="406" y="108" fill="#4f7d1a">Quellen: [1] it-sicherheit.de/nis2</text>
+  <text class="lbls" x="406" y="124" fill="#4f7d1a">[2] bsi.bund.de · [3] …</text>
+  <text class="lbls" x="392" y="160">Zitiert werden = Sichtbarkeit (oft ohne Klick)</text>
+</svg>
+<figcaption>Abb. 1 — Vom Link-Ranking zum Zitiert-Werden: AI-Engines synthetisieren Antworten und nennen Quellen.</figcaption>
+</figure>
+
+<p>Zwei Befunde aus dem Projekt-Pitch motivieren das Vorhaben: Studien berichten von deutlichen
+Sichtbarkeitsgewinnen durch gezielte Optimierung für generative Engines (Aggarwal et&nbsp;al., KDD&nbsp;2024:
+ca.&nbsp;+40&nbsp;% AI-Visibility), und im B2B-Umfeld endet ein erheblicher Teil der Suchen
+<strong>ohne Klick</strong> (Zero-Click), weil die Antwort schon auf der Ergebnisseite steht.</p>
+<p><strong>Die Lücke:</strong> Bestehende Werkzeuge (Screaming Frog, Search Console, oder
+Citation-Tracker wie Profound/Otterly) zeigen <em>dass</em> eine Seite schlecht zitiert wird — aber nicht
+belastbar <em>warum</em> vergleichbarer Content besser läuft, und sie schließen nicht den Kreis aus
+<strong>Diagnose → Muster-Lernen → Fix → Re-Validierung</strong>.</p>
+<div class="callout"><b>Kernthese des Projekts:</b> Ein Audit ohne Fix ist halbiert; ein Fix ohne
+Re-Validierung ist blind. Erst der geschlossene, lernende Loop macht GEO-Optimierung überprüfbar.</div>
+
+<!-- 2 -->
+<h2 id="ch3"><span class="chnum">Kapitel 02</span>Die Vision: der geschlossene Lern-Loop</h2>
+<p class="lead">Das System ist als Regelkreis aus spezialisierten Agenten konzipiert — jede Stufe hat
+eine klar definierte Eingabe und Ausgabe (einen Datenvertrag).</p>
+<figure>
+<svg viewBox="0 0 720 210" role="img" aria-label="Der geschlossene Loop">
+  <rect class="nd core" x="20" y="70" width="150" height="64" rx="12"/><text class="lblw" x="95" y="100" text-anchor="middle">Measure</text><text class="lbls" x="95" y="118" text-anchor="middle">Sprint 1</text>
+  <rect class="nd core" x="200" y="70" width="150" height="64" rx="12"/><text class="lblw" x="275" y="100" text-anchor="middle">Learn</text><text class="lbls" x="275" y="118" text-anchor="middle">Sprint 2</text>
+  <rect class="nd fut" x="380" y="70" width="150" height="64" rx="12"/><text class="lblw" x="455" y="100" text-anchor="middle">Act</text><text class="lbls" x="455" y="118" text-anchor="middle">Sprint 3</text>
+  <rect class="nd fut" x="560" y="70" width="140" height="64" rx="12"/><text class="lblw" x="630" y="100" text-anchor="middle">Loop</text><text class="lbls" x="630" y="118" text-anchor="middle">Sprint 4</text>
+  <path class="ed a" d="M170 102 H198" marker-end="url(#a1)"/><path class="ed a" d="M350 102 H378" marker-end="url(#a1)"/><path class="ed a" d="M530 102 H558" marker-end="url(#a1)"/>
+  <path class="ed a dash" d="M630 70 C630 24, 95 24, 95 68" marker-end="url(#a1)"/>
+  <text class="lbls" x="360" y="18" text-anchor="middle">Wirkung speist das Gedächtnis &rarr; verfeinert den nächsten Lauf</text>
+  <defs><marker id="a1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#71b127"/></marker></defs>
+</svg>
+<figcaption>Abb. 2 — Vier Stufen, ein Kreis. Grün = umgesetzt (Sprint 1/2), grau = geplant (Sprint 3/4).</figcaption>
+</figure>
+<ul>
+  <li><strong>Measure</strong> — neutral messen, welche Seiten zitiert werden (Top/Flop-Liste).</li>
+  <li><strong>Learn</strong> — aus den Top-Seiten Best-Practice-Muster minen; Flop-Seiten dagegen prüfen.</li>
+  <li><strong>Act</strong> — begründete Fixes vorschlagen, nach menschlicher Freigabe deployen.</li>
+  <li><strong>Loop</strong> — nach 7/14/28 Tagen erneut messen, die Wirkung als Hypothese ins Gedächtnis schreiben.</li>
+</ul>
+
+<!-- 3 -->
+<h2 id="ch4"><span class="chnum">Kapitel 03</span>GEO-Grundlagen: 10 Hebel &amp; die Citation-Pyramide</h2>
+<p class="lead">GEO (Generative Engine Optimization) fragt nicht „ranke ich?", sondern „werde ich zitiert?".
+Das Projekt arbeitet mit einem festen Kriterienkatalog — damit jede Bewertung nachvollziehbar bleibt.</p>
+<p>Zehn Hebel treiben die Zitierwürdigkeit. Sie sind nicht gleichwertig, sondern in einer
+<strong>Pyramide</strong> geschichtet: Ein Defizit auf einer unteren Ebene entwertet alles darüber —
+eine perfekt geschriebene Seite nützt nichts, wenn der AI-Bot sie gar nicht lesen darf.</p>
+<div class="pyr">
+  <div class="band b1"><span>Ebene 1 · Zugang &amp; Indexierbarkeit</span><span class="lv">Hebel 1</span></div>
+  <div class="band b2"><span>Ebene 2 · Extrahierbarkeit &amp; Struktur</span><span class="lv">Hebel 2·3·4·6</span></div>
+  <div class="band b3"><span>Ebene 3 · Substanz &amp; Vertrauen</span><span class="lv">Hebel 5·7·8</span></div>
+  <div class="band b4"><span>Ebene 4 · Korroboration</span><span class="lv">Hebel 9</span></div>
+  <div class="band b5"><span>Spitze · tatsächliche Zitation</span><span class="lv">Hebel 10</span></div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>Hebel</th><th>Prüffrage (erfüllt, wenn …)</th><th>Ebene</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Crawler-Zugang</td><td>AI-Bots erlaubt, Kerninhalt serverseitig im HTML</td><td>Zugang</td></tr>
+    <tr><td>2</td><td>Antwortblöcke</td><td>40–60-Wörter-Antwort direkt nach der Überschrift</td><td>Extrahierbarkeit</td></tr>
+    <tr><td>3</td><td>Überschriften-Hierarchie</td><td>H1→H2→H3 sauber geschachtelt</td><td>Extrahierbarkeit</td></tr>
+    <tr><td>4</td><td>Definitionsblöcke</td><td>Kernbegriffe eigenständig definiert</td><td>Extrahierbarkeit</td></tr>
+    <tr><td>6</td><td>Maschinenlesbare Struktur</td><td>Schema.org/Tabellen/Listen vorhanden</td><td>Extrahierbarkeit</td></tr>
+    <tr><td>5</td><td>Faktendichte &amp; neutraler Ton</td><td>konkrete Zahlen statt Marketing-Prosa</td><td>Substanz</td></tr>
+    <tr><td>7</td><td>Entitäten-Klarheit</td><td>konsistente, eindeutige Benennung</td><td>Substanz</td></tr>
+    <tr><td>8</td><td>Aktualitäts-Signale</td><td>sichtbares Datum + dateModified</td><td>Substanz</td></tr>
+    <tr><td>9</td><td>Externe Korroboration</td><td>Bestätigung durch Dritt-/Earned-Media</td><td>Korroboration</td></tr>
+    <tr><td>10</td><td>Frage-Deckung</td><td>Teilfragen des Query-Fan-out beantwortet</td><td>Zitation</td></tr>
+  </tbody>
+</table>
+<p>Im Code ist dieses Vokabular hart verankert (Enums <code>Lever</code> und <code>PyramidLevel</code> in
+<code>domain/geo.py</code>) — so kann <strong>jedes</strong> Muster und jeder Befund auf einen Hebel und
+eine Ebene zurückgebunden werden; keine vagen „schreib besser"-Ratschläge.</p>
+
+<!-- 4 -->
+<h2 id="ch5"><span class="chnum">Kapitel 04</span>Architektur — und warum gerade so</h2>
+<p class="lead">Das System folgt der <strong>hexagonalen Architektur</strong> (Ports &amp; Adapters). Der
+fachliche Kern weiß nichts über die konkrete Außenwelt.</p>
+<figure>
+<svg viewBox="0 0 640 300" role="img" aria-label="Hexagonale Architektur">
+  <rect class="nd t" x="40" y="30" width="560" height="240" rx="20"/>
+  <text class="lbls" x="60" y="54">agents · orchestration  (hängen nur an domain + ports)</text>
+  <rect class="nd" x="90" y="70" width="460" height="170" rx="16" fill="#f3f2ec"/>
+  <text class="lbls" x="110" y="92">adapters  (engines · reasoning · crawl · proxy · storage)</text>
+  <rect class="nd t" x="150" y="108" width="340" height="118" rx="14"/>
+  <text class="lbls" x="170" y="130">ports  (EnginePort · ReasoningPort · CrawlPort · …)</text>
+  <rect class="nd core" x="220" y="148" width="200" height="64" rx="12"/>
+  <text class="lblw" x="320" y="180" text-anchor="middle">domain</text>
+  <text class="lbls" x="320" y="198" text-anchor="middle">reine Contracts, kein I/O</text>
+</svg>
+<figcaption>Abb. 3 — Zwiebelschalen: Abhängigkeiten zeigen immer nach innen. Außen austauschbar, innen rein.</figcaption>
+</figure>
+<table>
+  <thead><tr><th>Schicht</th><th>Inhalt</th><th>kennt</th></tr></thead>
+  <tbody>
+    <tr><td>domain</td><td>Pydantic-Contracts + Domänenlogik</td><td>nichts (kein I/O)</td></tr>
+    <tr><td>ports</td><td>abstrakte Interfaces (Protocols)</td><td>domain</td></tr>
+    <tr><td>adapters</td><td>konkrete I/O-Implementierungen</td><td>ports + domain</td></tr>
+    <tr><td>agents / orchestration</td><td>Services + Flow</td><td>nur domain + ports</td></tr>
+  </tbody>
+</table>
+<h3>Warum hexagonal — und nicht ein Monolith oder klassische Schichten?</h3>
+<p>In einer üblichen Schichtenarchitektur ruft die Geschäftslogik direkt <code>requests.get(...)</code>
+oder ein SDK auf. Das hat zwei teure Folgen: man kann die Logik <strong>nicht ohne Netz testen</strong>,
+und ein Anbieterwechsel (fünfte Engine, anderes LLM) zieht sich durch den ganzen Code.</p>
+<div class="callout"><b>Wirkung im Projekt:</b> Jeder externe Aufruf ist im Test durch einen Mock
+ersetzbar (alle 240 Probes laufen offline, deterministisch). Eine neue Engine oder ein neues LLM
+wird als <em>Adapter</em> ergänzt, <strong>ohne den Kern anzufassen</strong> — exakt das ist in Sprint 2
+beim Hinzufügen des <code>ReasoningPort</code> passiert. Das ist nicht Ästhetik, sondern die Grundlage
+der wissenschaftlichen Reproduzierbarkeit.</p></div>
+
+<!-- 5 -->
+<h2 id="ch6"><span class="chnum">Kapitel 05</span>Technologie-Entscheidungen (das Herzstück)</h2>
+<p class="lead">Für ein Forschungsprojekt zählt nicht nur <em>was</em> benutzt wird, sondern <em>warum</em> —
+und welche Alternative aus welchem Grund verworfen wurde. Jede Karte: Was · Warum · Alternative ·
+Wirkung.</p>
+<figure>
+<svg viewBox="0 0 700 210" role="img" aria-label="Stack auf Schichten gemappt">
+  <rect class="nd core" x="20" y="20" width="660" height="34" rx="9"/><text class="lbls" x="34" y="42">Orchestrierung · CrewAI-Flow</text>
+  <rect class="nd t" x="20" y="62" width="660" height="34" rx="9"/><text class="lbls" x="34" y="84">Agenten/Services · reines Python (+ Skills als Wissensbasis)</text>
+  <rect class="nd t" x="20" y="104" width="320" height="34" rx="9"/><text class="lbls" x="34" y="126">Reasoning · Claude (anthropic)</text>
+  <rect class="nd t" x="360" y="104" width="320" height="34" rx="9"/><text class="lbls" x="374" y="126">Engines · Perplexity / OpenAI / Gemini</text>
+  <rect class="nd t" x="20" y="146" width="200" height="34" rx="9"/><text class="lbls" x="34" y="168">Crawl · advertools</text>
+  <rect class="nd t" x="232" y="146" width="200" height="34" rx="9"/><text class="lbls" x="246" y="168">Persistenz · SQLite</text>
+  <rect class="nd t" x="444" y="146" width="236" height="34" rx="9"/><text class="lbls" x="458" y="168">Memory · Chroma + bge-m3 (geplant)</text>
+  <text class="lbls" x="20" y="200">Querschnitt: Pydantic v2 (Contracts) · pydantic-settings · httpx · uv · ruff · mypy · pytest</text>
+</svg>
+<figcaption>Abb. 4 — Welche Technologie in welcher Schicht sitzt. Querschnitts-Werkzeuge tragen alle.</figcaption>
+</figure>
+
+<div class="tcard"><div class="hd"><h4>Hexagonal + Pydantic v2 (Datenverträge)</h4><span class="tagx">Kern</span></div>
+<dl><dt>Was</dt><dd>Jede Übergabe zwischen Agenten ist ein typisiertes, unveränderliches Modell (<code>frozen</code>, <code>extra="forbid"</code>).</dd>
+<dt>Warum</dt><dd>Validierung am Rust-Core (schnell), erzwingt Korrektheit, dokumentiert den Vertrag.</dd>
+<dt class="alt">Alternative</dt><dd><b>dicts/Freitext</b> zwischen Agenten — verworfen: kein Schutz vor Tippfehlern/Drift (explizites Anti-Pattern). <b>dataclasses</b> — keine Validierung.</dd>
+<dt>Wirkung</dt><dd>Ändert sich ein Vertrag, brechen Producer/Consumer/Tests sichtbar — im selben Commit zu fixen.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>CrewAI (Orchestrierung)</h4><span class="tagx">Agentic-Framework</span></div>
+<dl><dt>Was</dt><dd>Bildet den Agenten-Flow ab (<code>@start</code>/<code>@listen</code>), <strong>am Rand</strong> der Architektur.</dd>
+<dt>Warum</dt><dd>Das Modulthema verlangt ein agentisches Framework; CrewAI ist schlank und integriert sich als dünne Hülle über einer framework-freien Pipeline.</dd>
+<dt class="alt">Alternative</dt><dd><b>LangGraph</b> (mächtiger, aber komplexer/abhängiger), <b>AutoGen</b> (chat-zentriert), <b>reines Python</b> (kein Framework — widerspräche dem Modulthema).</dd>
+<dt>Wirkung</dt><dd>Die Kern-Logik liegt framework-frei in der Pipeline → CrewAI ist später austauschbar, ohne den Kern zu berühren.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>Claude Sonnet (Reasoning) hinter <code>ReasoningPort</code></h4><span class="tagx">LLM</span></div>
+<dl><dt>Was</dt><dd>Liefert das inhaltliche Schließen für Pattern-Miner &amp; GEO-Auditor (strukturierte JSON-Ausgabe).</dd>
+<dt>Warum</dt><dd>Starkes, verlässliches strukturiertes Reasoning; gutes Preis/Leistungs-Verhältnis; Tool-Use (Web-Suche).</dd>
+<dt class="alt">Alternative</dt><dd><b>GPT-4o</b> (ebenbürtig — als Engine-Adapter geplant), <b>kleine Open-Modelle</b> (schwächer bei striktem JSON-Schema).</dd>
+<dt>Wirkung</dt><dd>Hinter dem Port; offline ersetzt ihn ein deterministischer Mock → Evals/Demo reproduzierbar.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>Perplexity sonar-pro (SERP/Citation)</h4><span class="tagx">Such-Engine</span></div>
+<dl><dt>Was</dt><dd>Liefert Antwort + Quellenliste (<code>search_results</code>) — die Messgrundlage der Zitation.</dd>
+<dt>Warum</dt><dd>API statt Scraping; gibt Antwort <em>und</em> Quellen zurück; rechtlich/technisch robust.</dd>
+<dt class="alt">Alternative</dt><dd><b>Google scrapen</b> (ToS-Risiko, Captchas, fragil), <b>SerpAPI</b> (teurer, keine AI-Antwort).</dd>
+<dt>Wirkung</dt><dd>Saubere, wiederholbare Zitations-Messung; weitere Engines (OpenAI/Gemini) als Fast-Follow.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>SQLite (relationale Persistenz)</h4><span class="tagx">Storage</span></div>
+<dl><dt>Was</dt><dd>Speichert Runs, Probes, Seiten-Inventar, Reports; idempotente UPSERTs, Checkpointing.</dd>
+<dt>Warum</dt><dd>Eingebettet, null-Setup, ACID, perfekt für ein reproduzierbares Einzel-Forschungs-Tool.</dd>
+<dt class="alt">Alternative</dt><dd><b>Postgres</b> (Server-/Infra-Overhead ohne Mehrwert hier), <b>JSON-Dateien</b> (keine Idempotenz/Queries/Checkpoints).</dd>
+<dt>Wirkung</dt><dd>Abgebrochene Läufe werden fortgesetzt statt doppelt zu proben — Budget &amp; Determinismus geschützt.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>Residential-Proxies (Webshare) + Median</h4><span class="tagx">Mess-Methodik</span></div>
+<dl><dt>Was</dt><dd>Dieselbe Frage über mehrere IPs proben; der Median über die IPs geht in die Kennzahl ein.</dd>
+<dt>Warum</dt><dd>Engines personalisieren/geolokalisieren Antworten — eine einzelne IP verzerrt die Messung.</dd>
+<dt class="alt">Alternative</dt><dd><b>Eine IP</b> (personalisierungs-verzerrt), <b>Datacenter-IPs</b> (oft geblockt/erkannt).</dd>
+<dt>Wirkung</dt><dd>Der Median eliminiert Personalisierungs-Bias → methodisch neutrale Zitations-Rate. (Ethik: Forschungs-Setting, Rate-Limits/ToS respektieren.)</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>advertools (Crawler)</h4><span class="tagx">Inventar</span></div>
+<dl><dt>Was</dt><dd>SEO-Crawler (auf Scrapy aufbauend), zieht robots, Schema/JSON-LD, On-Page-Signale; läuft im Subprozess (isolierter Reactor).</dd>
+<dt>Warum</dt><dd>SEO-spezifisch und kuratiert — weniger Boilerplate als rohes Scrapy.</dd>
+<dt class="alt">Alternative</dt><dd><b>Scrapy direkt</b> (mehr Aufwand), <b>requests + BeautifulSoup</b> (kein robustes Crawling/robots-Handling).</dd>
+<dt>Wirkung</dt><dd>Liefert das Seiten-Inventar, das mit den Zitations-Daten zum Top/Flop-Report verknüpft wird.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>uv · ruff · mypy --strict · pytest</h4><span class="tagx">Qualität &amp; Reproduzierbarkeit</span></div>
+<dl><dt>Was</dt><dd><code>uv</code> verwaltet Python-Version + Dependencies mit Lockfile; <code>ruff</code> lintet/formatiert; <code>mypy --strict</code> erzwingt Typen; <code>pytest</code> testet.</dd>
+<dt>Warum</dt><dd>In einem Forschungsprojekt ist Code-Qualität = wissenschaftliche Aussagekraft; reproduzierbare Umgebung ist Pflicht.</dd>
+<dt class="alt">Alternative</dt><dd><b>pip+venv</b> (kein Lock), <b>poetry/conda</b> (langsamer/schwerer), <b>black+flake8</b> (getrennt/langsamer), <b>ohne strict</b> (schwächere Garantien).</dd>
+<dt>Wirkung</dt><dd>Gleiche Umgebung auf jedem Rechner; jede Datenübergabe ist typgeprüft; Regressionen werden sofort sichtbar.</dd></dl></div>
+
+<div class="tcard"><div class="hd"><h4>bge-m3 + Chroma (Memory, geplant)</h4><span class="tagx">Sprint 3–4</span></div>
+<dl><dt>Was</dt><dd>Embeddings (<code>bge-m3</code>) + lokaler Vektorspeicher (Chroma) für Template-RAG und das Effekt-Gedächtnis.</dd>
+<dt>Warum</dt><dd>Lokal, kostenfrei, mehrsprachig stark; passt zum Datenschutz-/Reproduzierbarkeits-Anspruch.</dd>
+<dt class="alt">Alternative</dt><dd><b>OpenAI-Embeddings</b> (extern, Kosten/Datenschutz), <b>FAISS</b> (kein bequemes Persistenz-API), <b>pgvector</b> (Postgres-Abhängigkeit).</dd>
+<dt>Wirkung</dt><dd>Ein lokales semantisches Gedächtnis, das künftige Fix-Läufe verfeinert (noch nicht aktiv).</dd></dl></div>
+
+<!-- 6 -->
+<h2 id="ch7"><span class="chnum">Kapitel 06</span>Forschungs-Methodik: warum jeder Lauf reproduzierbar ist</h2>
+<p class="lead">Bewertet wird nicht nur, dass es läuft, sondern dass jeder Lauf <strong>rekonstruierbar</strong>
+und jede Aussage <strong>belegt</strong> ist. Mehrere Mechanismen sichern das.</p>
+<figure>
+<svg viewBox="0 0 700 120" role="img" aria-label="Reproduzierbarkeits-Anker">
+  <rect class="nd core" x="20" y="40" width="150" height="44" rx="10"/><text class="lblw" x="95" y="67" text-anchor="middle">run_id</text>
+  <rect class="nd core" x="190" y="40" width="170" height="44" rx="10"/><text class="lblw" x="275" y="67" text-anchor="middle">config_hash</text>
+  <rect class="nd core" x="380" y="40" width="120" height="44" rx="10"/><text class="lblw" x="440" y="67" text-anchor="middle">seed</text>
+  <rect class="nd t" x="520" y="40" width="160" height="44" rx="10"/><text class="lbls" x="600" y="67" text-anchor="middle">Logs · DB · Report</text>
+  <path class="ed a" d="M170 62 H188"/><path class="ed a" d="M360 62 H378"/><path class="ed a" d="M500 62 H518"/>
+  <text class="lbls" x="20" y="26">propagiert durch jeden Schritt &rarr;</text>
+</svg>
+<figcaption>Abb. 5 — Jeder Lauf trägt run_id, config_hash (Fingerprint der Konfiguration) und Seed durch alle Logs, DB-Zeilen und den Report.</figcaption>
+</figure>
+<ul>
+  <li><strong>Determinismus:</strong> Offline laufen Mock-Engines <em>und</em> Mock-Reasoning seed-gesteuert — gleicher Seed ⇒ identischer Report (Basis von Demo &amp; Eval).</li>
+  <li><strong>Budget-Cap:</strong> hartes Token-/USD-/Probe-Limit; bei Überschreitung sauberer Abbruch (<code>BudgetExceeded</code>), kein Weiterlaufen.</li>
+  <li><strong>Idempotenz/Checkpointing:</strong> jede Probe ist eindeutig (run_id/prompt/engine/proxy); ein Neustart proben nicht doppelt.</li>
+  <li><strong>Retry mit Backoff</strong> für alle externen Aufrufe; <strong>strukturiertes JSON-Logging</strong> mit run_id pro Schritt.</li>
+  <li><strong>HITL-Gate:</strong> kein Auto-Deploy — ein Fix wird nie ohne menschliche Freigabe wirksam (Sicherheitsregel).</li>
+</ul>
+<h3>Eval-Disziplin: kein Agent ohne Prüfslot</h3>
+<figure>
+<svg viewBox="0 0 480 170" role="img" aria-label="Test- und Eval-Pyramide">
+  <polygon points="240,16 60,150 420,150" fill="#e7efd9"/>
+  <line class="ed" x1="120" y1="106" x2="360" y2="106"/><line class="ed" x1="90" y1="128" x2="390" y2="128"/><line class="ed" x1="170" y1="62" x2="310" y2="62"/>
+  <text class="lbls" x="240" y="46" text-anchor="middle">Live (opt-in)</text>
+  <text class="lbls" x="240" y="92" text-anchor="middle">Eval — Golden &amp; toleranzbasiert</text>
+  <text class="lbls" x="240" y="120" text-anchor="middle">Integration (Ports gemockt)</text>
+  <text class="lbls" x="240" y="144" text-anchor="middle">Unit (deterministisch)</text>
+</svg>
+<figcaption>Abb. 6 — Deterministische Agenten: Golden-Regression (exakt). Nicht-deterministische LLM-Agenten: toleranzbasierte Evals (Struktur statt Wortlaut).</figcaption>
+</figure>
+<p>Deterministische Bausteine (Sampler, Crawler) werden gegen ein <strong>Golden-Dataset</strong> gepinnt
+(exakte Top/Flop-Rangfolge bei Seed 42). LLM-Agenten variieren im Wortlaut, nicht in der Struktur —
+deshalb prüfen ihre Evals <strong>toleranzbasiert</strong>: Anzahl in einem Korridor, Hebel-/Pyramide-Bezug,
+Severity, monotone Priorisierung. Robust gegen Prompt-Iteration, sensibel für echte Regression.</p>
+
+<!-- 7 -->
+<h2 id="ch8"><span class="chnum">Kapitel 07</span>Sprint 0 — der Pitch (Konzept)</h2>
+<p class="lead">Sprint 0 war reine Konzeption: Problem, Lösungsidee, Marktlücke, Technik-Skizze und ein
+4-Sprint-Plan über 8 Wochen.</p>
+<table>
+  <thead><tr><th>Sprint</th><th>Fokus</th><th>Demo-Versprechen</th></tr></thead>
+  <tbody>
+    <tr><td>S1 · Foundation</td><td>Sampler + Inventory + SQLite</td><td>Top/Flop-Liste</td></tr>
+    <tr><td>S2 · Learning</td><td>Pattern-Miner + GEO-Auditor</td><td>„Warum ranken diese?"</td></tr>
+    <tr><td>S3 · Action</td><td>Fix-Agent + HITL + Deploy</td><td>Live-Freigabe eines Schema-Fixes</td></tr>
+    <tr><td>S4 · Loop</td><td>Re-Prober + Memory</td><td>Vorher/Nachher der Zitations-Rate</td></tr>
+  </tbody>
+</table>
+<p>Pilot: <strong>it-sicherheit.de</strong> (1.600+ Artikel, 400+ Anbieter, Institut für Internet-Sicherheit) —
+eine reale, themenstarke Domain für belastbare Messungen.</p>
+
+<!-- 8 -->
+<h2 id="ch9"><span class="chnum">Kapitel 08</span>Sprint 1 — Foundation (die Mess-Schicht)</h2>
+<p class="lead">Ziel: das Fundament — neutral, getestet und reproduzierbar messen, welche Seiten zitiert werden.</p>
+<h3>Die Probe-Matrix: 4 × 12 × 5 = 240</h3>
+<figure>
+<svg viewBox="0 0 700 180" role="img" aria-label="Probe-Matrix 240">
+  <text class="lbls" x="20" y="30">4 Engines</text><text class="lbls" x="20" y="50">× 12 Prompts</text><text class="lbls" x="20" y="70">× 5 Proxy-IPs</text>
+  <text class="lblw" x="20" y="104">= 240 Probes / Lauf</text>
+  <g>
+   <rect class="nd core" x="240" y="20" width="120" height="30" rx="7"/><text class="lbls" x="300" y="40" text-anchor="middle">Perplexity (live)</text>
+   <rect class="nd t" x="240" y="56" width="120" height="30" rx="7"/><text class="lbls" x="300" y="76" text-anchor="middle">ChatGPT (mock)</text>
+   <rect class="nd t" x="240" y="92" width="120" height="30" rx="7"/><text class="lbls" x="300" y="112" text-anchor="middle">Claude (mock)</text>
+   <rect class="nd t" x="240" y="128" width="120" height="30" rx="7"/><text class="lbls" x="300" y="148" text-anchor="middle">Gemini (mock)</text>
+  </g>
+  <path class="ed a" d="M372 100 H410"/>
+  <rect class="nd t" x="420" y="40" width="120" height="100" rx="10"/><text class="lbls" x="480" y="84" text-anchor="middle">12 Zielfragen</text><text class="lbls" x="480" y="102" text-anchor="middle">(Query-Fan-out)</text>
+  <path class="ed a" d="M552 92 H588"/>
+  <rect class="nd core" x="596" y="56" width="92" height="68" rx="10"/><text class="lbls" x="642" y="86" text-anchor="middle">5 IPs</text><text class="lbls" x="642" y="104" text-anchor="middle">→ Median</text>
+</svg>
+<figcaption>Abb. 7 — Die Multi-Proxy-Probing-Matrix. In Sprint 1 ist Perplexity live, die übrigen Engines sind gemockt.</figcaption>
+</figure>
+<h3>Citation-Normalisierung: vier Formate, ein Modell</h3>
+<figure>
+<svg viewBox="0 0 700 150" role="img" aria-label="Citation-Normalisierung">
+  <rect class="nd t" x="20" y="20" width="150" height="26" rx="6"/><text class="lbls" x="34" y="38">Perplexity-Format</text>
+  <rect class="nd t" x="20" y="52" width="150" height="26" rx="6"/><text class="lbls" x="34" y="70">ChatGPT-Format</text>
+  <rect class="nd t" x="20" y="84" width="150" height="26" rx="6"/><text class="lbls" x="34" y="102">Claude-Format</text>
+  <rect class="nd t" x="20" y="116" width="150" height="26" rx="6"/><text class="lbls" x="34" y="134">Gemini-Format</text>
+  <path class="ed a" d="M172 33 C300 33, 320 70, 430 70"/><path class="ed a" d="M172 65 C300 65, 330 72, 430 72"/>
+  <path class="ed a" d="M172 97 C300 97, 330 74, 430 74"/><path class="ed a" d="M172 129 C300 129, 320 78, 430 76"/>
+  <rect class="nd core" x="436" y="50" width="240" height="48" rx="12"/><text class="lblw" x="556" y="79" text-anchor="middle">ein Citation-Modell</text>
+</svg>
+<figcaption>Abb. 8 — Jede Engine liefert ein anderes Rohformat; alle werden auf ein normalisiertes <code>Citation</code> abgebildet. So sieht der Sampler immer dasselbe.</figcaption>
+</figure>
+<h3>Vom CLI-Aufruf zum Report (vereinfachte Sequenz)</h3>
+<figure>
+<svg viewBox="0 0 700 200" role="img" aria-label="Run-Sequenz">
+  <text class="lbls" x="60" y="20" text-anchor="middle">CLI/Factory</text>
+  <text class="lbls" x="200" y="20" text-anchor="middle">Flow/Pipeline</text>
+  <text class="lbls" x="350" y="20" text-anchor="middle">Sampler</text>
+  <text class="lbls" x="500" y="20" text-anchor="middle">EnginePort</text>
+  <text class="lbls" x="640" y="20" text-anchor="middle">Storage</text>
+  <line class="ed dash" x1="60" y1="30" x2="60" y2="180"/><line class="ed dash" x1="200" y1="30" x2="200" y2="180"/><line class="ed dash" x1="350" y1="30" x2="350" y2="180"/><line class="ed dash" x1="500" y1="30" x2="500" y2="180"/><line class="ed dash" x1="640" y1="30" x2="640" y2="180"/>
+  <path class="ed a" d="M60 50 H200"/><text class="lbls" x="130" y="46" text-anchor="middle">assemble + kickoff</text>
+  <path class="ed a" d="M200 78 H350"/><text class="lbls" x="275" y="74" text-anchor="middle">run(matrix)</text>
+  <path class="ed a" d="M350 106 H500"/><text class="lbls" x="425" y="102" text-anchor="middle">probe()  ×240</text>
+  <path class="ed a" d="M500 134 H350"/><text class="lbls" x="425" y="150" text-anchor="middle">ProbeResult</text>
+  <path class="ed a" d="M350 162 H640"/><text class="lbls" x="500" y="178" text-anchor="middle">save (idempotent) + Budget-Check</text>
+</svg>
+<figcaption>Abb. 9 — Schleife über die Matrix: vor jeder Probe Budget prüfen, jedes Ergebnis idempotent speichern; danach Aggregation + Top/Flop.</figcaption>
+</figure>
+<h3>Datenmodell &amp; Top/Flop-Ergebnis</h3>
+<p>In SQLite liegen <code>runs</code>, <code>probes</code>, <code>pages</code> und <code>reports</code>.
+Der Inventory-Crawler verknüpft pro URL die Zitate aus den Probes mit dem gecrawlten Seiten-Inventar und
+sortiert zur <strong>Top/Flop-Sichtbarkeitsliste</strong>. Beispiel (offline, Seed 42):</p>
+<pre><span class="c">=== GEO-Sichtbarkeit: it-sicherheit.de ===</span>
+TOP   1.  71x  /nis2-richtlinie     2.  42x  /ransomware-schutz   3.  39x  /zero-trust-architektur
+FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager    3.  19x  /firewall-grundlagen</pre>
+
+<!-- 9 -->
+<h2 id="ch10"><span class="chnum">Kapitel 09</span>Sprint 2 — Learning (die Lern-Schicht)</h2>
+<p class="lead">Ziel: erklären, <strong>warum</strong> die Top-Seiten zitiert werden, und <strong>was</strong> den
+Flop-Seiten fehlt — über zwei LLM-gestützte Agenten.</p>
+<h3>Der neue <code>ReasoningPort</code> — und warum getrennt vom <code>EnginePort</code></h3>
+<figure>
+<svg viewBox="0 0 640 150" role="img" aria-label="ReasoningPort mit zwei Adaptern">
+  <rect class="nd core" x="230" y="20" width="180" height="40" rx="11"/><text class="lblw" x="320" y="45" text-anchor="middle">ReasoningPort</text>
+  <rect class="nd t" x="80" y="100" width="200" height="38" rx="10"/><text class="lbls" x="180" y="124" text-anchor="middle">MockReasoning (offline, det.)</text>
+  <rect class="nd new" x="360" y="100" width="200" height="38" rx="10"/><text class="lbls" x="460" y="124" text-anchor="middle">ClaudeReasoning (live, opt-in)</text>
+  <path class="ed a" d="M300 60 L180 98"/><path class="ed a" d="M340 60 L460 98"/>
+</svg>
+<figcaption>Abb. 10 — Reasoning ist sauber vom SERP-Probing getrennt. Offline = deterministischer Mock, live = Claude — gleiche Schnittstelle.</figcaption>
+</figure>
+<p>SERP-Probing (eine Suchanfrage → Quellen) und inhaltliches Schließen (eine Analyse → strukturierte
+Befunde) sind verschiedene Aufgaben. Ein eigener Port hält beides sauber getrennt und — entscheidend —
+macht das Reasoning offline durch einen deterministischen Mock ersetzbar.</p>
+<div class="cols"></div>
+<h3>Pattern-Miner &amp; GEO-Auditor</h3>
+<figure>
+<svg viewBox="0 0 700 230" role="img" aria-label="Pattern-Miner und GEO-Auditor">
+  <rect class="nd core" x="20" y="20" width="150" height="40" rx="10"/><text class="lbls" x="95" y="44" text-anchor="middle">Top-Seiten + Inventar</text>
+  <path class="ed a" d="M172 40 H210"/>
+  <rect class="nd t" x="214" y="20" width="150" height="40" rx="10"/><text class="lbls" x="289" y="44" text-anchor="middle">Pattern-Miner</text>
+  <path class="ed a" d="M366 40 H404"/>
+  <rect class="nd core" x="408" y="20" width="150" height="40" rx="10"/><text class="lbls" x="483" y="44" text-anchor="middle">Template[]</text>
+  <rect class="nd t" x="20" y="120" width="150" height="40" rx="10"/><text class="lbls" x="95" y="144" text-anchor="middle">Flop-Seiten + Inventar</text>
+  <path class="ed a" d="M172 140 H210"/>
+  <rect class="nd t" x="214" y="120" width="150" height="40" rx="10"/><text class="lbls" x="289" y="144" text-anchor="middle">GEO-Auditor</text>
+  <path class="ed a dash" d="M483 60 C483 96, 320 96, 300 118"/>
+  <path class="ed a" d="M366 140 H404"/>
+  <rect class="nd core" x="408" y="120" width="240" height="40" rx="10"/><text class="lbls" x="528" y="144" text-anchor="middle">AuditFinding[] (priorisiert)</text>
+  <text class="lbls" x="214" y="186">beide nutzen den ReasoningPort + die 10 Hebel/Pyramide</text>
+</svg>
+<figcaption>Abb. 11 — Pattern-Miner lernt aus den Gewinnern; der GEO-Auditor hält die Verlierer gegen diese Templates und priorisiert die Befunde nach der Pyramide.</figcaption>
+</figure>
+<p>Beide Agenten produzieren <strong>Contracts statt Freitext</strong>: <code>Template</code> (Hebel,
+Pyramide-Ebene, Kriterien, Konfidenz) und <code>AuditFinding</code> (Beleg, Hebel, Ebene, Schweregrad,
+Empfehlung). Ihre Prompts liegen <strong>versioniert</strong> in <code>prompts/</code> und werden je Lauf
+protokolliert; jeder Agent hat einen toleranzbasierten Eval-Slot.</p>
+
+<!-- 10 -->
+<h2 id="ch11"><span class="chnum">Kapitel 10</span>Aktueller Stand &amp; die Demo erklärt</h2>
+<p class="lead">In <strong>einem</strong> Befehl führt das System von der Messung zur Maßnahme — offline,
+deterministisch, ohne Kosten.</p>
+<pre><span class="c">$ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3</span>
+
+<span class="k">WAS</span>   Top/Flop-Liste (s. Kap. 8)
+<span class="k">WARUM</span> [t1] Extrahierbarer Antwortblock + FAQ-Schema   (Konfidenz 0.82)
+            Ebene: Extrahierbarkeit | Hebel: Antwortblöcke, Maschinenlesbare Struktur
+<span class="k">WAS TUN</span> 1.[HIGH] /passwort-manager-vergleich · Maschinenlesbare Struktur
+            Fix: Vergleichstabelle + Product/Review-Schema ergänzen</pre>
+<p>Die drei Blöcke entsprechen genau den drei Fragen: <em>Was</em> wird zitiert (Sampler), <em>warum</em>
+(Pattern-Miner: 3 Templates), <em>was tun</em> (GEO-Auditor: 6 nach Pyramide priorisierte Findings).
+Gleicher Seed ⇒ exakt dieselbe Ausgabe — im Terminal wie in der Präsentation.</p>
+<div class="callout"><b>Stand:</b> Sprint 1 + 2 abgeschlossen; <code>ruff</code> und <code>mypy --strict</code>
+ohne Befund, alle Tests grün (Unit, Integration, toleranzbasierte Evals; Live-Tests opt-in). Keine neue
+Abhängigkeit nötig (<code>anthropic</code> war bereits gepinnt).</div>
+
+<!-- 11 -->
+<h2 id="ch12"><span class="chnum">Kapitel 11</span>Ausblick — Sprint 3 &amp; 4</h2>
+<figure>
+<svg viewBox="0 0 700 130" role="img" aria-label="Voller Loop mit Zukunft">
+  <rect class="nd core" x="20" y="44" width="150" height="46" rx="11"/><text class="lblw" x="95" y="72" text-anchor="middle">Measure ✓</text>
+  <rect class="nd core" x="195" y="44" width="150" height="46" rx="11"/><text class="lblw" x="270" y="72" text-anchor="middle">Learn ✓</text>
+  <rect class="nd fut" x="370" y="44" width="150" height="46" rx="11"/><text class="lblw" x="445" y="72" text-anchor="middle">Act</text>
+  <rect class="nd fut" x="545" y="44" width="135" height="46" rx="11"/><text class="lblw" x="612" y="72" text-anchor="middle">Loop</text>
+  <path class="ed a" d="M170 67 H193"/><path class="ed a" d="M345 67 H368"/><path class="ed a dash" d="M520 67 H543"/>
+  <path class="ed a dash" d="M612 44 C612 14, 95 14, 95 42"/>
+</svg>
+<figcaption>Abb. 12 — Was bleibt: Act (Fix-Agent + HITL + Deploy) und Loop (Re-Probe + Memory) schließen den Kreis.</figcaption>
+</figure>
+<ul>
+  <li><strong>Sprint 3 — Act:</strong> aus einem <code>AuditFinding</code> wird ein begründeter <code>Patch</code>
+    (Kette Finding → Hebel → Template → Änderung), Freigabe durch den Menschen, dann Deploy (WordPress-API/GitHub-PR).</li>
+  <li><strong>Sprint 4 — Loop:</strong> nach 7/14/28 Tagen erneut proben, die Wirkung als
+    <code>EffectHypothesis</code> (Vorher/Nachher, Confidence) in Chroma/bge-m3 schreiben — das Gedächtnis
+    verfeinert die nächsten Fixes.</li>
+  <li><strong>Fast-Follow aus Sprint 2:</strong> Live-Adapter für ChatGPT &amp; Gemini (echte Multi-Engine-Messung).</li>
+</ul>
+
+<!-- 12 -->
+<h2 id="ch13"><span class="chnum">Kapitel 12</span>Glossar</h2>
+<dl class="gloss">
+  <dt>GEO</dt><dd>Generative Engine Optimization — Optimierung darauf, von KI-Antwortmaschinen <em>zitiert</em> zu werden (nicht nur zu ranken).</dd>
+  <dt>Citation / Zitation</dt><dd>Eine von der Engine als Beleg genannte Quelle (URL). Die gemessene Zielgröße.</dd>
+  <dt>Probe</dt><dd>Eine einzelne Abfrage (eine Zelle der Matrix Engine × Prompt × Proxy-IP).</dd>
+  <dt>Query Fan-out</dt><dd>Das interne Zerlegen einer Frage in Teilfragen durch die Engine.</dd>
+  <dt>Port / Adapter</dt><dd>Port = abstrakte Schnittstelle; Adapter = konkrete Implementierung. Kern hängt nur an Ports.</dd>
+  <dt>Contract</dt><dd>Ein typisiertes Pydantic-Modell, das Agenten austauschen — statt Freitext.</dd>
+  <dt>Template</dt><dd>Ein geminte­s Best-Practice-Muster der Top-Seiten (Pattern-Miner-Ausgabe).</dd>
+  <dt>AuditFinding</dt><dd>Eine belegte Schwachstelle einer Flop-Seite (GEO-Auditor-Ausgabe).</dd>
+  <dt>Golden-Dataset</dt><dd>Fixierte Soll-Ausgabe, gegen die deterministischer Code geprüft wird.</dd>
+  <dt>HITL</dt><dd>Human-in-the-Loop — menschliche Freigabe vor jedem Deploy.</dd>
+  <dt>Determinismus</dt><dd>Gleicher Seed/Input ⇒ identische Ausgabe; Voraussetzung für Reproduzierbarkeit.</dd>
+</dl>
+
+<!-- 13 -->
+<h2 id="ch14"><span class="chnum">Kapitel 13</span>Quellen &amp; Verweise</h2>
+<ul>
+  <li>Projekt-Repository: <code>README.md</code>, <code>CLAUDE.md</code> (verbindliche Regeln), <code>src/geo_audit_loop/</code>.</li>
+  <li>Skills als Wissensbasis: <code>.claude/skills/geo-strategy</code> (10 Hebel, Pyramide), <code>.claude/skills/agent-contracts</code>.</li>
+  <li>Pitch (Sprint 0): Marktlücke &amp; Belege — Aggarwal et&nbsp;al., <em>GEO: Generative Engine Optimization</em>, KDD 2024; Zero-Click-Anteil im B2B.</li>
+  <li>Begleitende Dokumente: <code>docs/sprint2-praesentation.html</code> (Folien), <code>docs/demo-sprint2.md</code> (Demo-Ablauf).</li>
+</ul>
+<p style="color:var(--faint);font-size:13px;margin-top:30px">geo-audit-loop · Projektdokumentation · Westfälische Hochschule · Mohammad Alboush · Stand Juni 2026</p>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var heads = Array.prototype.slice.call(document.querySelectorAll('h2[id]'));
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id]; if (a) a.classList.add('on');
+      }
+    });
+  }, { rootMargin: '0px 0px -75% 0px', threshold: 0 });
+  heads.forEach(function(h){ obs.observe(h); });
+})();
+</script>
+</body>
+</html>
