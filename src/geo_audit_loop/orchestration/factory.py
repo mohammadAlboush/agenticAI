@@ -197,6 +197,7 @@ def assemble_run(
         system_prompt=pm_prompt,
         prompt_version=pm_version,
         cost_tracker=cost_tracker,
+        storage=storage,
         logger=logger,
     )
     geo_auditor = GeoAuditorService(
@@ -204,6 +205,7 @@ def assemble_run(
         system_prompt=ga_prompt,
         prompt_version=ga_version,
         cost_tracker=cost_tracker,
+        storage=storage,
         logger=logger,
     )
     sprint2 = Sprint2Pipeline(

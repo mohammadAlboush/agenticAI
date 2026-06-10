@@ -75,8 +75,8 @@ class Sprint2Pipeline:
         self._base.sample()
 
     def crawl_and_report(self) -> TopFlopReport:
-        """Schritt 2: Inventar crawlen und Top/Flop-Report bauen (S1-Pipeline)."""
-        return self._base.crawl_and_report()
+        """Schritt 2: Inventar crawlen und Top/Flop-Report bauen (Finalize aufgeschoben)."""
+        return self._base.crawl_and_report(finalize=False)
 
     def _require_report(self) -> TopFlopReport:
         report = self._base.report
@@ -90,20 +90,23 @@ class Sprint2Pipeline:
         return self._pages
 
     def mine_patterns(self) -> PatternReport:
-        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen."""
+        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren)."""
         self._pattern_report = self._pattern_miner.run(
             self._run_context, self._require_report(), self._load_pages()
         )
+        self._storage.save_pattern_report(self._pattern_report)
         return self._pattern_report
 
     def audit_flops(self) -> AuditReport:
-        """Schritt 4: Flop-Seiten gegen die Templates auditieren (priorisierte Findings)."""
+        """Schritt 4: Flop-Seiten auditieren, Lern-Artefakte speichern, Run finalisieren."""
         if self._pattern_report is None:
             self.mine_patterns()
         assert self._pattern_report is not None
         self._audit_report = self._geo_auditor.run(
             self._run_context, self._require_report(), self._load_pages(), self._pattern_report
         )
+        self._storage.save_audit_report(self._audit_report)
+        self._base.finalize_completed()  # jetzt enthalten die persistierten Kosten das Reasoning
         return self._audit_report
 
     def run(self) -> TopFlopReport:

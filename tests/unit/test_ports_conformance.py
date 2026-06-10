@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeRequest, ProbeResult
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
 from geo_audit_loop.domain.run import RunRecord
+from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
 from geo_audit_loop.ports.proxy import ProxyPort
@@ -82,6 +84,20 @@ class _StubStorage:
 
     def load_report(self, run_id: str) -> TopFlopReport | None:
         return None
+
+    def save_pattern_report(self, report: PatternReport) -> None: ...
+
+    def load_pattern_report(self, run_id: str) -> PatternReport | None:
+        return None
+
+    def save_audit_report(self, report: AuditReport) -> None: ...
+
+    def load_audit_report(self, run_id: str) -> AuditReport | None:
+        return None
+
+    def append_reasoning_log(
+        self, run_id: str, task: str, model: str, prompt_version: str, raw_text: str
+    ) -> None: ...
 
 
 def test_engine_port_conformance() -> None:

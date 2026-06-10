@@ -14,6 +14,11 @@ EXPECTED_PROBES_PER_RUN: Final = N_PROXY_IPS * N_ENGINES * N_PROMPTS  # 240
 DEFAULT_MAX_TOKENS: Final = 1024
 DEFAULT_TEMPERATURE: Final = 0.2
 
+# --- Reasoning (Pattern-Miner/GEO-Auditor): temperature 0 => deterministischer (Forschung) ---
+REASONING_TEMPERATURE: Final = 0.0
+# Inhalts-Auszug pro Seite (Groessenkappung fuer Persistenz + LLM-Kontext)
+CONTENT_EXCERPT_WORDS: Final = 300
+
 # --- Perplexity (einzige Live-Engine in Sprint 1) ---
 PERPLEXITY_ENDPOINT: Final = "https://api.perplexity.ai/chat/completions"
 

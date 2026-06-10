@@ -14,11 +14,13 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import cast
 
+from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
+from geo_audit_loop.domain.templates import PatternReport
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -42,6 +44,21 @@ CREATE TABLE IF NOT EXISTS pages (
 CREATE TABLE IF NOT EXISTS reports (
     run_id  TEXT PRIMARY KEY,
     payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS patterns (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS audits (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reasoning_log (
+    run_id         TEXT NOT NULL,
+    task           TEXT NOT NULL,
+    model          TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    raw_text       TEXT NOT NULL
 );
 """
 
@@ -192,3 +209,38 @@ class SqliteStorage:
         """Laedt den Top/Flop-Report eines Runs oder ``None``."""
         row = self._fetchone("SELECT payload FROM reports WHERE run_id = ?", (run_id,))
         return TopFlopReport.model_validate_json(row["payload"]) if row is not None else None
+
+    # --- Sprint-2-Lern-Artefakte -------------------------------------------
+    def save_pattern_report(self, report: PatternReport) -> None:
+        """Persistiert die geminten Templates eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO patterns (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_pattern_report(self, run_id: str) -> PatternReport | None:
+        """Laedt den PatternReport eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM patterns WHERE run_id = ?", (run_id,))
+        return PatternReport.model_validate_json(row["payload"]) if row is not None else None
+
+    def save_audit_report(self, report: AuditReport) -> None:
+        """Persistiert die Audit-Findings eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO audits (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_audit_report(self, run_id: str) -> AuditReport | None:
+        """Laedt den AuditReport eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM audits WHERE run_id = ?", (run_id,))
+        return AuditReport.model_validate_json(row["payload"]) if row is not None else None
+
+    def append_reasoning_log(
+        self, run_id: str, task: str, model: str, prompt_version: str, raw_text: str
+    ) -> None:
+        """Haengt die rohe LLM-Antwort eines Reasoning-Schritts an (Auditierbarkeit/Replay)."""
+        self._execute(
+            "INSERT INTO reasoning_log (run_id, task, model, prompt_version, raw_text) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (run_id, task, model, prompt_version, raw_text),
+        )

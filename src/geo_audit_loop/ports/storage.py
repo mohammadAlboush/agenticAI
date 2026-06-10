@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
+from geo_audit_loop.domain.templates import PatternReport
 
 
 @runtime_checkable
@@ -62,4 +64,27 @@ class StoragePort(Protocol):
 
     def load_report(self, run_id: str) -> TopFlopReport | None:
         """Laedt den Top/Flop-Report eines Runs oder ``None``."""
+        ...
+
+    # --- Sprint-2-Lern-Artefakte ---
+    def save_pattern_report(self, report: PatternReport) -> None:
+        """Persistiert die geminten Templates eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_pattern_report(self, run_id: str) -> PatternReport | None:
+        """Laedt den PatternReport eines Runs oder ``None``."""
+        ...
+
+    def save_audit_report(self, report: AuditReport) -> None:
+        """Persistiert die Audit-Findings eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_audit_report(self, run_id: str) -> AuditReport | None:
+        """Laedt den AuditReport eines Runs oder ``None``."""
+        ...
+
+    def append_reasoning_log(
+        self, run_id: str, task: str, model: str, prompt_version: str, raw_text: str
+    ) -> None:
+        """Haengt die rohe LLM-Antwort eines Reasoning-Schritts an (Auditierbarkeit/Replay)."""
         ...

@@ -136,6 +136,10 @@ def main(argv: list[str] | None = None) -> int:
             _print_patterns(assembly.pipeline.pattern_report)
         if assembly.pipeline.audit_report is not None:
             _print_findings(assembly.pipeline.audit_report)
+    snap = assembly.cost_tracker.snapshot()
+    print(
+        f"\nKosten/Lauf: {snap.probes} Probes · {snap.total_tokens} Tokens · ${snap.total_usd:.4f}"
+    )
     return 0
 
 
