@@ -14,8 +14,11 @@ EXPECTED_PROBES_PER_RUN: Final = N_PROXY_IPS * N_ENGINES * N_PROMPTS  # 240
 DEFAULT_MAX_TOKENS: Final = 1024
 DEFAULT_TEMPERATURE: Final = 0.2
 
-# --- Reasoning (Pattern-Miner/GEO-Auditor): temperature 0 => deterministischer (Forschung) ---
+# --- Reasoning (Pattern-Miner/GEO-Auditor/Fix-Agent): temperature 0 => deterministischer ---
 REASONING_TEMPERATURE: Final = 0.0
+# Reasoning braucht mehr Output-Budget als Engine-Probes: der Fix-Agent erzeugt je Patch
+# laengeren Inhalt (Textblock/JSON-LD). 1024 reicht echten LLMs nicht -> JSON wird abgeschnitten.
+REASONING_MAX_TOKENS: Final = 4096
 # Inhalts-Auszug pro Seite (Groessenkappung fuer Persistenz + LLM-Kontext)
 CONTENT_EXCERPT_WORDS: Final = 300
 

@@ -259,6 +259,7 @@ def assemble_run(
         system_prompt=pm_prompt,
         prompt_version=pm_version,
         cost_tracker=cost_tracker,
+        max_tokens=c.REASONING_MAX_TOKENS,
         storage=storage,
         logger=logger,
     )
@@ -267,6 +268,7 @@ def assemble_run(
         system_prompt=ga_prompt,
         prompt_version=ga_version,
         cost_tracker=cost_tracker,
+        max_tokens=c.REASONING_MAX_TOKENS,
         storage=storage,
         logger=logger,
     )
@@ -293,6 +295,7 @@ def assemble_run(
         system_prompt=fx_prompt,
         prompt_version=fx_version,
         cost_tracker=cost_tracker,
+        max_tokens=c.REASONING_MAX_TOKENS,
         storage=storage,
         logger=logger,
     )
