@@ -6,8 +6,9 @@ Templates auditiert, Fixes vorschlägt (Human-in-the-Loop), deployt und den Effe
 
 Master-Modulprojekt · Agentic AI · Westfälische Hochschule · Master Informatik.
 
-> **Status:** Sprint 2 (LEARNING) abgeschlossen — Pattern-Miner & GEO-Auditor über einem neuen
-> `ReasoningPort` (Claude/Mock), toleranzbasierte Evals. `mypy --strict` · `ruff` · alle Tests grün.
+> **Status:** Sprint 3 (FIX & DEPLOY) abgeschlossen — Fix-Agent leitet aus den Findings konkrete
+> Patches ab, ein Human-in-the-Loop-Gate gibt sie frei, ein sicherer Dry-Run-Deploy schließt den
+> Loop (kein externer Write). `mypy --strict` · `ruff` · alle Tests grün, bit-genau reproduzierbar.
 
 ---
 
@@ -63,10 +64,40 @@ zitiert werden und **was** den Flop-Seiten fehlt.
 Flop-Seiten zu tun ist — offline deterministisch (Seed 42) oder mit Live-Claude. Ohne neue
 Abhängigkeit (`anthropic` war bereits gepinnt).
 
-**Bewusst offen (Fast-Follow / Sprint 3–4):** Live-Adapter ChatGPT & Gemini; `MemoryPort` +
-Chroma/`bge-m3`; Fix-Agent + HITL + Deploy; Re-Probe + `EffectHypothesis`.
-
 > Demo: `docs/demo-sprint2.md` · Folien: `docs/sprint2-praesentation.html`.
+
+---
+
+## Sprint 3 — Summary
+
+**Ziel:** Den Loop schließen — aus den priorisierten Findings nicht nur sagen, *was* zu tun ist,
+sondern es **umsetzen**: konkrete Patches vorschlagen, nach **menschlicher Freigabe** anwenden.
+
+**Gebaut:**
+- **Fix-Agent:** macht aus jedem `AuditFinding` einen konkreten `FixProposal` (= Patch) — fertiger
+  Antwortblock, FAQ-/Autor-/Product-Schema (JSON-LD), Vergleichstabelle … — mit Beleg, Hebel,
+  Konfidenz und Herkunft (`finding_id` → Template). Über denselben `ReasoningPort` wie Sprint 2
+  (Mock offline-deterministisch · SAIA/Claude live).
+- **Human-in-the-Loop-Gate:** ein `ApprovalGate` entscheidet je Patch (`AutoApproveGate` für die
+  Demo, interaktiver Gate in der CLI, `RejectAllGate` für Tests). **Hart erzwungen:** `apply_patches`
+  ohne Freigabe wirft `DeployBlocked` — aus einem `FixPlan` wird **nie** direkt ein `DeployResult`.
+- **Publisher-Port + Adapter:** `MockPublisher` (Default, reiner Dry-Run), `FilesystemPublisher`
+  (schreibt Patch-Artefakte nach `runs/<run_id>/patches/` — **lokal**, nie die Live-Domain),
+  `WordPress`/`GitHub`-Stubs hinter demselben Port (opt-in, in Sprint 3 blockiert). Nicht
+  freigegebene Patches landen **immer** in `skipped_patch_ids`.
+- **Contracts & Disziplin:** `FixProposal`/`FixPlan`/`ApprovalDecision`/`DeployResult` (+ Enums);
+  deterministische `patch_id`; versionierter Prompt `fix_agent.v1.md`; toleranzbasierter Eval-Slot;
+  `Sprint3Flow` orchestriert sample → … → propose → approve → deploy; Fingerprint rechnet den
+  Fix-Plan mit ein (bit-genau reproduzierbar, Seed 42).
+
+**Das System kann jetzt:** in **einem** Lauf messen, verstehen, priorisieren **und** den Fix
+formulieren, freigeben und (Dry-Run) anwenden — offline deterministisch, ohne je eine Live-Seite zu
+berühren (Projektregeln §6: kein Auto-Deploy ohne HITL).
+
+**Bewusst offen (Sprint 4):** echter WordPress/GitHub-Deploy hinter dem bestehenden Port; Re-Probe
+des Effekts; `MemoryPort` + Chroma/`bge-m3`; `EffectHypothesis` (Vorher/Nachher + Confidence).
+
+> Demo: `docs/demo-sprint3.md` · Folien: `docs/sprint3-praesentation.html`.
 
 ---
 
@@ -111,6 +142,9 @@ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --top-n 3
 
 # Sprint-2-Lern-Loop: zusätzlich WARUM (Templates) + WAS TUN (priorisierte Findings):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3
+
+# Sprint-3-Fix-/Deploy-Loop: zusätzlich FIX (Patches) + FREIGABE (HITL) + DEPLOY (Dry-Run):
+uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all --top-n 3
 
 # Opt-in Live-Probing (nur Perplexity, budget-gedeckelt; braucht .env + Proxies):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --live
