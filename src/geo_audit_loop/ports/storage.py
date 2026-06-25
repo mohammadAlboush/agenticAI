@@ -36,6 +36,14 @@ class StoragePort(Protocol):
         """Laedt einen Run oder ``None``, falls unbekannt."""
         ...
 
+    def list_runs(self) -> list[RunRecord]:
+        """Listet alle Runs, neuester zuerst (fuer den Run-Monitor)."""
+        ...
+
+    def delete_run(self, run_id: str) -> None:
+        """Loescht einen Run samt aller Artefakte (Dashboard-Verwaltung)."""
+        ...
+
     def save_probe(self, result: ProbeResult) -> None:
         """Persistiert eine Probe idempotent (UNIQUE run_id/prompt/engine/proxy)."""
         ...

@@ -65,6 +65,11 @@ class _StubStorage:
     def load_run(self, run_id: str) -> RunRecord | None:
         return None
 
+    def list_runs(self) -> list[RunRecord]:
+        return []
+
+    def delete_run(self, run_id: str) -> None: ...
+
     def save_probe(self, result: ProbeResult) -> None: ...
 
     def has_probe(

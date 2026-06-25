@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from geo_audit_loop.adapters.sample_data import build_sample_inventory
@@ -57,6 +57,43 @@ def test_run_roundtrip(tmp_path: Path) -> None:
     storage.save_run(run)
     assert storage.load_run("run-1") == run
     assert storage.load_run("unknown") is None
+
+
+def test_list_runs_newest_first(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    assert storage.list_runs() == []
+    storage.save_run(_run())
+    newer = _run().model_copy(
+        update={"run_id": "run-2", "started_at": datetime(2026, 1, 2, 12, 0, 0)}
+    )
+    storage.save_run(newer)
+    runs = storage.list_runs()
+    assert [r.run_id for r in runs] == ["run-2", "run-1"]
+
+
+def test_list_runs_handles_mixed_timezone_awareness(tmp_path: Path) -> None:
+    # Reale DBs koennen naive UND tz-bewusste started_at mischen -> Sort darf nicht crashen.
+    storage = _storage(tmp_path)
+    naive = _run().model_copy(update={"run_id": "naive", "started_at": datetime(2026, 1, 1, 9, 0)})
+    aware = _run().model_copy(
+        update={"run_id": "aware", "started_at": datetime(2026, 1, 1, 10, 0, tzinfo=UTC)}
+    )
+    storage.save_run(naive)
+    storage.save_run(aware)
+    runs = storage.list_runs()  # darf nicht werfen
+    assert [r.run_id for r in runs] == ["aware", "naive"]  # 10:00 UTC vor 09:00 UTC
+
+
+def test_delete_run_removes_all_artifacts(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    storage.save_run(_run())
+    storage.save_probe(_probe())
+    storage.save_pages("run-1", build_sample_inventory())
+    storage.delete_run("run-1")
+    assert storage.load_run("run-1") is None
+    assert storage.load_probes("run-1") == []
+    assert storage.load_pages("run-1") == []
+    storage.delete_run("unbekannt")  # idempotent, kein Fehler
 
 
 def test_update_run(tmp_path: Path) -> None:

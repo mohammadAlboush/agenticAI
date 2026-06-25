@@ -19,8 +19,15 @@ REASONING_TEMPERATURE: Final = 0.0
 # Inhalts-Auszug pro Seite (Groessenkappung fuer Persistenz + LLM-Kontext)
 CONTENT_EXCERPT_WORDS: Final = 300
 
-# --- Perplexity (einzige Live-Engine in Sprint 1) ---
+# --- Perplexity (Live-Engine seit Sprint 1) ---
 PERPLEXITY_ENDPOINT: Final = "https://api.perplexity.ai/chat/completions"
+
+# --- Gemini (Live-Engine mit Google-Search-Grounding; Free Tier 500 Anfragen/Tag) ---
+GEMINI_ENDPOINT_TEMPLATE: Final = (
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+)
+# Eigen-Drosselung fuer das Free-Tier-Rate-Limit (~10 Anfragen/Minute, Stand 2026-06).
+GEMINI_MIN_INTERVAL_S: Final = 6.5
 
 # --- Crawler ---
 DEFAULT_USER_AGENT: Final = "geo-audit-loop/0.1 (+research; kontakt@alboush-elektro.de)"

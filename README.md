@@ -137,6 +137,36 @@ FLOP (selten/nie zitiert):
 > denselben Report. Im Live-Modus wird ausschließlich **Perplexity** real abgefragt;
 > die übrigen Engines bleiben in Sprint 1 gemockt.
 
+## Steuerzentrale (Web-Dashboard)
+
+Läufe **starten, stoppen, verwalten und live beobachten** — „Neuer Lauf"-Formular (Domain,
+Offline/Live, Engine-/Reasoning-Auswahl je nach hinterlegten Keys, Top-N, Seed, Proxy-IPs),
+Lauf-Verlauf mit Ansehen/Löschen, Probe-Matrix mit klickbaren Zellen (Antwort & Quellen),
+Inventar, Top/Flop, Templates, Findings, Fingerprint:
+
+```bash
+uv run python -m geo_audit_loop --serve            # http://127.0.0.1:8042
+```
+
+Ein gestarteter Lauf läuft als eigener Prozess (exakt der CLI-Code-Pfad, vorab vergebene
+`--run-id`); das Dashboard beobachtet ihn über die SQLite. Bindung nur an `127.0.0.1`.
+
+## Echte Engines (kostenlos)
+
+- **Reasoning (Pattern-Miner/GEO-Auditor): SAIA/KISSKI** — Hochschul-LLM-Dienst, OpenAI-kompatibel,
+  kostenlos. `SAIA_API_KEY` in `.env`, dann `GEO_REASONING_PROVIDER=saia` (oder im Dashboard wählen).
+- **Zitations-Messung: Gemini mit Google-Search-Grounding** — einziger echter Gratis-Weg zu
+  Quellen-URLs (500 Anfragen/Tag frei, Stand 06/2026). Kostenlosen Key von
+  [aistudio.google.com/apikey](https://aistudio.google.com/apikey) als `GOOGLE_API_KEY` in `.env`,
+  dann `GEO_LIVE_ENGINES=gemini` (Free-Tier-Tipp: `GEO_N_PROXY_IPS=1` ⇒ 12 Anfragen/Lauf).
+  Hinweis: SAIA-Modelle haben keine Websuche und liefern daher keine echten Quellen —
+  deshalb die Aufteilung SAIA=Reasoning, Gemini=Zitate. Perplexity bleibt als bezahlte
+  Live-Engine opt-in; Live-Läufe sind naturgemäß nicht bit-reproduzierbar (Fingerprint-Beweis
+  gilt offline).
+- **Crawl im Live-Modus:** Standardmäßig nutzen auch Live-Läufe das schnelle, deterministische
+  Sample-Inventar der Domain (der echte advertools-Crawl ist langsam und kann in den
+  5-Minuten-Timeout laufen). Für einen echten Crawl der Zieldomain: `--live-crawl` ergänzen.
+
 ## Eval
 
 `tests/eval/` enthält den Eval-Harness. Sprint 1 pinnt die Top/Flop-Rangfolge der deterministischen

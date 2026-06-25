@@ -8,12 +8,13 @@ abgefragt (Entscheidung Sprint 1), alle anderen Engines bleiben gemockt.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
 from geo_audit_loop.adapters.crawl.advertools_crawler import AdvertoolsCrawlAdapter
 from geo_audit_loop.adapters.crawl.mock import MockCrawlAdapter
+from geo_audit_loop.adapters.engines.gemini import GeminiEngineAdapter
 from geo_audit_loop.adapters.engines.mock import MockEngineAdapter
 from geo_audit_loop.adapters.engines.perplexity import PerplexityEngineAdapter
 from geo_audit_loop.adapters.proxy.webshare import WebshareProxyPool
@@ -77,17 +78,30 @@ def build_proxy(settings: Settings, *, offline: bool) -> ProxyPort:
     return WebshareProxyPool.from_file(settings.proxy_file, seed=settings.run_seed)
 
 
+def _build_perplexity(settings: Settings, proxy: ProxyPort) -> EnginePort:
+    return PerplexityEngineAdapter(api_key=settings.api_key_for(EngineId.PERPLEXITY), proxy=proxy)
+
+
+def _build_gemini(settings: Settings, proxy: ProxyPort) -> EnginePort:
+    return GeminiEngineAdapter(api_keys=settings.api_keys_for(EngineId.GEMINI), proxy=proxy)
+
+
+#: Engines mit Live-Adapter; alle anderen bleiben (auch im Live-Modus) gemockt.
+_LIVE_ENGINE_BUILDERS: dict[EngineId, Callable[[Settings, ProxyPort], EnginePort]] = {
+    EngineId.PERPLEXITY: _build_perplexity,
+    EngineId.GEMINI: _build_gemini,
+}
+
+
 def build_engines(
     settings: Settings, *, offline: bool, target_urls: Sequence[str], proxy: ProxyPort
 ) -> dict[EngineId, EnginePort]:
-    """Waehlt je Engine den Live- oder Mock-Adapter (nur Perplexity geht live)."""
+    """Waehlt je Engine den Live- oder Mock-Adapter (live: Perplexity, Gemini)."""
     engines: dict[EngineId, EnginePort] = {}
     for engine_id in ENGINE_REGISTRY:
-        live = (not offline) and settings.is_live(engine_id) and engine_id is EngineId.PERPLEXITY
-        if live:
-            engines[engine_id] = PerplexityEngineAdapter(
-                api_key=settings.api_key_for(engine_id), proxy=proxy
-            )
+        builder = _LIVE_ENGINE_BUILDERS.get(engine_id)
+        if (not offline) and settings.is_live(engine_id) and builder is not None:
+            engines[engine_id] = builder(settings, proxy)
         else:
             engines[engine_id] = MockEngineAdapter(
                 engine_id, target_urls=target_urls, seed=settings.run_seed
@@ -95,24 +109,46 @@ def build_engines(
     return engines
 
 
-def build_crawl(*, offline: bool, domain: str) -> CrawlPort:
-    """Waehlt den Crawl-Adapter (offline: Mock-Inventar der Domain; live: advertools)."""
-    if offline:
+def build_crawl(*, offline: bool, domain: str, live_crawl: bool = False) -> CrawlPort:
+    """Waehlt den Crawl-Adapter.
+
+    Der echte advertools-Crawl der Zieldomain ist langsam/fragil (Timeout-Risiko) und fuer
+    die Zitations-Messung nicht noetig. Er laeuft daher NUR bei ``live_crawl=True``; sonst
+    (auch bei Live-Engines) liefert das deterministische Sample-Inventar der Domain die
+    Wissensbasis fuer die Lern-Agenten — schnell und reproduzierbar.
+    """
+    if offline or not live_crawl:
         return MockCrawlAdapter(build_sample_inventory(domain))
     return AdvertoolsCrawlAdapter()
 
 
 def build_reasoning(settings: Settings, *, offline: bool) -> ReasoningPort:
-    """Waehlt den Reasoning-Adapter: offline/Default deterministischer Mock, sonst Claude live.
+    """Waehlt den Reasoning-Adapter: ``mock`` (Default) | ``saia`` (Hochschule) | ``claude``.
 
-    Der ``anthropic``-Import bleibt im Live-Zweig (Offline-Runs laden das SDK nicht).
+    Der Provider ist bewusst UNABHAENGIG vom Engine-Offline-Modus waehlbar (Misch-Lauf:
+    Mock-Engines + echtes Reasoning). Rueckwaertskompatibilitaet: ``GEO_LIVE_ENGINES=claude``
+    wirkt im Live-Modus weiter wie ``GEO_REASONING_PROVIDER=claude``. Die SDK-Imports
+    bleiben in den Live-Zweigen (Offline-Runs laden sie nicht).
     """
-    if offline or not settings.is_live(EngineId.CLAUDE):
-        return MockReasoningAdapter()
-    from geo_audit_loop.adapters.reasoning.claude import ClaudeReasoningAdapter
+    provider = settings.reasoning_provider
+    if provider == "mock" and not offline and settings.is_live(EngineId.CLAUDE):
+        provider = "claude"
+    if provider == "saia":
+        from geo_audit_loop.adapters.reasoning.saia import SaiaReasoningAdapter
 
-    cfg = ENGINE_REGISTRY[EngineId.CLAUDE]
-    return ClaudeReasoningAdapter(api_key=settings.api_key_for(EngineId.CLAUDE), model=cfg.model)
+        return SaiaReasoningAdapter(
+            api_key=settings.saia_api_key,
+            base_url=settings.saia_base_url,
+            model=settings.saia_model,
+        )
+    if provider == "claude":
+        from geo_audit_loop.adapters.reasoning.claude import ClaudeReasoningAdapter
+
+        cfg = ENGINE_REGISTRY[EngineId.CLAUDE]
+        return ClaudeReasoningAdapter(
+            api_key=settings.api_key_for(EngineId.CLAUDE), model=cfg.model
+        )
+    return MockReasoningAdapter()
 
 
 def assemble_run(
@@ -125,12 +161,14 @@ def assemble_run(
     prompts: Sequence[ProbePrompt],
     prompt_version: str,
     explain: bool = False,
+    live_crawl: bool = False,
     logger: logging.Logger | None = None,
 ) -> RunAssembly:
     """Verdrahtet Storage, CostTracker, Engines, Services und den Flow fuer einen Run.
 
     ``explain=True`` haengt den Sprint-2-Lern-Loop (Pattern-Miner + GEO-Auditor) an die
-    Sprint-1-Messung; sonst laeuft der reine Sprint-1-Flow.
+    Sprint-1-Messung; sonst laeuft der reine Sprint-1-Flow. ``live_crawl=True`` crawlt die
+    Zieldomain real (advertools) statt das schnelle Sample-Inventar zu nutzen.
     """
     storage = SqliteStorage(settings.db_path)
     storage.initialize()
@@ -153,7 +191,9 @@ def assemble_run(
         logger=logger,
     )
     crawler = InventoryCrawlerService(
-        crawl=build_crawl(offline=offline, domain=domain), storage=storage, logger=logger
+        crawl=build_crawl(offline=offline, domain=domain, live_crawl=live_crawl),
+        storage=storage,
+        logger=logger,
     )
     run_context = RunContext(
         run_id=run_id,

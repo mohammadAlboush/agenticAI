@@ -11,6 +11,7 @@ from __future__ import annotations
 import sqlite3
 import threading
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
@@ -63,6 +64,11 @@ CREATE TABLE IF NOT EXISTS reasoning_log (
 """
 
 
+def _as_aware(value: datetime) -> datetime:
+    """Macht ein Datetime vergleichbar: naive Werte gelten als UTC."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
 class SqliteStorage:
     """SQLite-Implementierung des ``StoragePort``."""
 
@@ -86,11 +92,13 @@ class SqliteStorage:
         return self._conn
 
     def initialize(self) -> None:
-        """Legt das Schema an, falls noch nicht vorhanden (idempotent)."""
+        """Legt das Schema an, falls noch nicht vorhanden (idempotent, lock-geschuetzt)."""
         conn = self._connection()
         try:
-            conn.executescript(_SCHEMA)
-            conn.commit()
+            # Lock: CLI- und Dashboard-Prozess koennen dieselbe DB gleichzeitig oeffnen.
+            with self._lock:
+                conn.executescript(_SCHEMA)
+                conn.commit()
         except sqlite3.Error as exc:
             raise StorageError(f"Schema-Initialisierung fehlgeschlagen: {exc}") from exc
 
@@ -142,6 +150,30 @@ class SqliteStorage:
         """Laedt einen Run oder ``None``, falls unbekannt."""
         row = self._fetchone("SELECT payload FROM runs WHERE run_id = ?", (run_id,))
         return RunRecord.model_validate_json(row["payload"]) if row is not None else None
+
+    def list_runs(self) -> list[RunRecord]:
+        """Listet alle Runs, neuester zuerst (fuer den Run-Monitor).
+
+        Sortiert tz-robust: aeltere DB-Eintraege koennen ``started_at`` ohne Zeitzone
+        enthalten; naive Werte werden als UTC interpretiert (sonst scheitert der
+        Vergleich naiver mit tz-bewussten Datetimes).
+        """
+        rows = self._fetchall("SELECT payload FROM runs", ())
+        records = [RunRecord.model_validate_json(row["payload"]) for row in rows]
+        records.sort(key=lambda record: _as_aware(record.started_at), reverse=True)
+        return records
+
+    def delete_run(self, run_id: str) -> None:
+        """Loescht einen Run samt aller Artefakte (eine Transaktion ueber alle Tabellen)."""
+        tables = ("runs", "probes", "pages", "reports", "patterns", "audits", "reasoning_log")
+        conn = self._connection()
+        try:
+            with self._lock:
+                for table in tables:
+                    conn.execute(f"DELETE FROM {table} WHERE run_id = ?", (run_id,))
+                conn.commit()
+        except sqlite3.Error as exc:
+            raise StorageError(f"Run loeschen fehlgeschlagen: {exc}") from exc
 
     # --- Probes -------------------------------------------------------------
     def save_probe(self, result: ProbeResult) -> None:
