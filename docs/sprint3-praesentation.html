@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>geo-audit-loop · Sprint 3 — Fix &amp; Deploy · Technischer Projektbericht</title>
+<style>
+:root{
+  /* warmes Papier + leicht warmes Weiß für Figuren (Hybrid: Sprint-2-Wärme, Sprint-1-Struktur) */
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --node:#c8c5b8;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --amber:#9a6a16; --amber-soft:#f3e8d0;
+  --red:#a8392c; --red-soft:#f1e0db; --crit:#8a241a;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em}
+code,.m,.mono{font-family:var(--mono)}
+
+/* ---------- Deck / Folien ---------- */
+.deck{position:fixed;inset:0;background:var(--bg);overflow:hidden}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transform:translateY(16px) scale(.995);
+  transition:opacity .55s var(--ease),transform .55s var(--ease),visibility .55s;
+  display:flex;flex-direction:column;padding:clamp(30px,3.8vw,56px) clamp(40px,6vw,92px) clamp(20px,2.4vw,30px);z-index:1}
+.slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
+
+/* ---------- Kopf-/Fußzeile (Sprint-1-Struktur, warm getönt) ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:clamp(14px,2vw,26px)}
+.sec{font-family:var(--mono);font-size:13px;letter-spacing:.06em;color:var(--mut);text-transform:uppercase}
+.sec b{color:var(--acc-deep);font-weight:700}
+.runlogo{height:21px;width:auto;opacity:.9}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;
+  border-top:1px solid var(--line);padding-top:9px;font-size:12px;color:var(--faint)}
+.foot .m{font-family:var(--mono);font-size:11.5px}
+
+/* ---------- Körper ---------- */
+.body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+h1{font-size:clamp(30px,4.4vw,52px);line-height:1.05;font-weight:680;letter-spacing:-.025em}
+h2{font-size:clamp(23px,3vw,38px);line-height:1.1;margin:0 0 .35em;font-weight:660;letter-spacing:-.02em}
+h2 .g,.g{color:var(--acc-deep)}
+.lead,.sub{font-size:clamp(15px,1.6vw,20px);color:var(--mut);line-height:1.55;max-width:64ch}
+.accent-rule{width:72px;height:3px;background:var(--acc);border-radius:3px;margin:14px 0 22px}
+.note{font-size:13px;color:var(--mut);background:var(--acc-soft);border-radius:13px;padding:13px 17px;margin-top:18px;line-height:1.5}
+.note b{color:var(--acc-deep2)}
+.note.amber{background:var(--amber-soft)}.note.amber b{color:var(--amber)}
+.note.red{background:var(--red-soft)}.note.red b{color:var(--red)}
+
+/* ---------- Titelfolie ---------- */
+.slide.title{padding-top:0}
+.title-top{display:flex;justify-content:space-between;align-items:flex-end;
+  padding:clamp(26px,3.6vw,46px) 0 15px;margin-bottom:clamp(18px,2.6vw,32px);border-bottom:2px solid var(--acc)}
+.title-logo{height:clamp(38px,4.4vw,54px);width:auto}
+.title-meta{font-family:var(--mono);font-size:13px;color:var(--mut);text-align:right;line-height:1.5}
+.content{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:16px}
+dl.meta{margin-top:clamp(22px,2.8vw,34px);max-width:74ch}
+dl.meta>div{display:grid;grid-template-columns:185px 1fr;gap:18px;align-items:baseline;padding:8px 2px;border-top:1px solid var(--line)}
+dl.meta>div:last-child{border-bottom:1px solid var(--line)}
+dl.meta dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+dl.meta dd{font-size:15.5px;color:var(--ink)}
+dl.meta dd.mono{font-family:var(--mono);font-size:13px;color:var(--mut)}
+
+/* ---------- Figuren / Abb.-Captions ---------- */
+.fig{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.fig.box{background:var(--surface-2);border:1px solid var(--line-2);border-radius:18px;padding:18px 22px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.fig svg{max-height:58vh}
+.cap{font-family:var(--mono);font-size:12.5px;color:var(--mut);margin-top:11px;text-align:center;line-height:1.5}
+.cap b{color:var(--acc-deep)}
+
+/* ---------- SVG-Primitive (warm, füllbasiert) ---------- */
+.nd{fill:var(--surface);stroke:none}
+.nd.line{fill:var(--surface-2);stroke:var(--node);stroke-width:1.4}
+.nd.core{fill:var(--acc-soft);stroke:none}
+.nd.coreln{fill:var(--acc-soft);stroke:var(--acc);stroke-width:1.6}
+.nd.new{fill:#deecc7;stroke:none}
+.nd.warn{fill:var(--red-soft);stroke:none}
+.lbl{font-family:var(--mono);font-size:15px;fill:var(--ink)}
+.lbl.b{font-weight:700}
+.lbls{font-family:var(--mono);font-size:12.5px;fill:var(--mut)}
+.lblxs{font-family:var(--mono);font-size:11.5px;fill:#83857b}
+.lbl.acc{fill:var(--acc-deep)}
+.ed{stroke:var(--node);stroke-width:1.6;fill:none;marker-end:url(#arr)}
+.ed.a{stroke:var(--acc);stroke-width:2;marker-end:url(#arrA)}
+.ed.dash{stroke-dasharray:5 4}
+.ed.real{stroke:var(--node);stroke-width:1.4;stroke-dasharray:4 4;fill:none;marker-end:url(#tri)}
+.ed.warn{stroke:var(--red);stroke-width:1.6;fill:none;marker-end:url(#arrR)}
+.ed.plain{marker-end:none}
+
+/* ---------- Karten / Listen ---------- */
+.cols{display:grid;gap:clamp(16px,2vw,30px)}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--surface);border-radius:16px;padding:20px 22px}
+.card.line{background:var(--surface-2);border:1px solid var(--line-2)}
+.card h3{margin:0 0 7px;font-size:15.5px;letter-spacing:-.01em}
+.card p{margin:0;color:var(--mut);font-size:13.5px;line-height:1.55}
+.rh{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:9px}
+ul.clean{list-style:none}
+ul.clean li{position:relative;padding:7px 0 7px 22px;color:var(--mut);font-size:14.5px;line-height:1.5}
+ul.clean li::before{content:"";position:absolute;left:0;top:14px;width:7px;height:7px;border-radius:2px;background:var(--acc)}
+ul.clean li b{color:var(--ink);font-weight:640}
+ul.clean.lg li{font-size:19px;line-height:1.6;padding:12px 0 12px 30px;color:#4a4d45}
+ul.clean.lg li::before{top:21px;width:9px;height:9px;border-radius:3px}
+code{background:#e9e7df;color:#33352e;padding:2px 7px;border-radius:6px;font-size:.9em}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:999px;background:var(--acc-soft);color:var(--acc-deep);font-weight:600}
+.big{font-size:clamp(28px,4.4vw,56px);font-weight:680;letter-spacing:-.03em;line-height:1.08}
+.big .q1{color:var(--mut)}.big .q2{color:var(--acc-deep)}
+
+/* ---------- Pyramide / Bänder ---------- */
+.pyr{display:flex;flex-direction:column-reverse;gap:7px;max-width:560px;margin:0 auto;width:100%}
+.band{min-height:52px;border-radius:11px;display:flex;align-items:center;justify-content:space-between;
+  padding:7px 18px;color:#fff;font-weight:600;transform-origin:center;opacity:0;transform:scaleX(.6)}
+.slide.active .band{animation:band .7s var(--ease) forwards}
+.slide.active .band:nth-child(1){animation-delay:.05s}
+.slide.active .band:nth-child(2){animation-delay:.17s}
+.slide.active .band:nth-child(3){animation-delay:.29s}
+.slide.active .band:nth-child(4){animation-delay:.41s}
+.slide.active .band:nth-child(5){animation-delay:.53s}
+.slide.active .band:nth-child(6){animation-delay:.65s}
+@keyframes band{to{opacity:1;transform:scaleX(1)}}
+.band .nm{font-size:14.5px}.band .lv{font-family:var(--mono);font-size:10.5px;opacity:.9;font-weight:500;white-space:nowrap;margin-left:14px}
+.band small{display:block;font-family:var(--mono);font-size:10px;font-weight:500;opacity:.9;letter-spacing:.01em;margin-top:1px}
+.b1{background:#3f6614;width:100%}.b2{background:#557f1c;width:88%}.b3{background:#6fa028;width:74%}
+.b4{background:#8bbb3d;width:60%}.b5{background:#a9cf6a;width:46%}
+
+/* ---------- Balken (Demo) ---------- */
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:210px 1fr 42px;align-items:center;gap:13px;font-size:12.5px}
+.bar .u{font-family:var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .track{height:18px;background:#e7e5dc;border-radius:9px;overflow:hidden}
+.bar .fill{display:block;height:100%;border-radius:9px;background:#6fa028}
+.bar.flop .fill{background:#bcb9ad}
+.bar .v{font-family:var(--mono);color:var(--acc-deep);font-weight:600;text-align:right}
+.bar.flop .v{color:var(--faint);font-weight:400}
+
+/* ---------- Findings / Patches ---------- */
+.find{background:var(--surface);border-radius:13px;padding:12px 16px;margin-bottom:10px}
+.find .h{display:flex;gap:9px;align-items:center;font-size:12.5px;margin-bottom:5px;flex-wrap:wrap}
+.find .sev{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+.sev.critical{background:var(--red-soft);color:var(--crit)}
+.sev.high{background:var(--red-soft);color:var(--red)}
+.sev.medium{background:var(--amber-soft);color:var(--amber)}
+.sev.low{background:#e6e4db;color:var(--mut)}
+.sev.chg{background:var(--amber-soft);color:var(--amber)}
+.sev.ok{background:var(--acc-soft);color:var(--acc-deep)}
+.find .url{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+.find .lever{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--acc-deep)}
+.find .fix{font-size:12.5px;color:var(--ink);line-height:1.5}
+.find .ev{font-size:11.5px;color:var(--mut);margin-top:3px}
+
+/* ---------- Code / Terminal ---------- */
+.codecard{background:var(--surface-2);border:1px solid var(--line-2);border-radius:14px;padding:15px 18px;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+.codecard .ky{color:var(--acc-deep)}.codecard .ty{color:#2f7d3f}.codecard .cm{color:var(--faint)}.codecard b{color:var(--ink)}
+pre{background:#26251f;color:#eceae2;border-radius:15px;padding:20px 24px;font-family:var(--mono);
+  font-size:13px;line-height:1.6;overflow:auto;margin:0}
+pre .c{color:#9a9684}.k{color:#b6dd7e}.s{color:#e3c08a}.d{color:#8ec7e0}.r{color:#e0a08a}.b2c{color:#fff;font-weight:600}
+
+/* ---------- KPIs ---------- */
+.kpis{display:flex;gap:16px;flex-wrap:wrap}
+.kpi{flex:1;min-width:120px;background:var(--surface);border-radius:16px;padding:18px 16px;text-align:center}
+.kpi .v{font-size:30px;font-weight:680;color:var(--acc-deep);letter-spacing:-.02em}
+.kpi .l{font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.4}
+
+/* ---------- Step-Reveal ---------- */
+.step{opacity:0;transform:translateY(12px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.step.shown{opacity:1;transform:none}
+
+/* ---------- Nav-Chrome ---------- */
+.progress{position:fixed;top:0;left:0;height:2px;background:var(--acc);width:0;z-index:50;transition:width .5s var(--ease)}
+.dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:50}
+.dot{width:7px;height:7px;border-radius:50%;border:0;background:#cbc9be;cursor:pointer;padding:0;transition:.35s var(--ease)}
+.dot.on{width:22px;border-radius:5px;background:var(--acc)}
+.nz{position:fixed;top:0;bottom:0;width:26%;z-index:40;cursor:pointer}
+.nz.l{left:0}.nz.r{right:0}
+.hint{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--faint);z-index:50;transition:opacity .6s ease}
+
+/* ---------- Sprecher-Skript / Teleprompter (Taste S öffnet zweites Fenster, URL-Anhang #script) ---------- */
+body.tp-mode{background:#1a1b17}
+body.tp-mode .deck,body.tp-mode .progress,body.tp-mode .dots,body.tp-mode .nz,body.tp-mode .hint{display:none!important}
+.tp{display:none}
+body.tp-mode .tp{position:fixed;inset:0;display:flex;flex-direction:column;background:#1a1b17;color:#ecebe2;z-index:100}
+.tp-top{display:flex;align-items:baseline;gap:16px;padding:14px 24px 12px;border-bottom:1px solid #33342c;flex:none}
+.tp-no{font-family:var(--mono);font-size:14px;font-weight:700;color:#a9cf6a;white-space:nowrap}
+.tp-title{flex:1;font-size:16px;font-weight:650;color:#ecebe2;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-timer{font-family:var(--mono);font-size:20px;color:#cfcdc0;cursor:pointer;user-select:none}
+.tp-kern{flex:none;margin:12px 24px 0;padding:9px 16px;border-radius:11px;background:#242921;color:#bcd98c;font-size:14.5px;font-weight:600}
+.tp-kern::before{content:"Kernbotschaft · ";font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#88a35c}
+.tp-body{flex:1;overflow-y:auto;padding:26px clamp(24px,6vw,80px) 40vh;scroll-behavior:smooth}
+.tp-seg{font-size:clamp(20px,2.5vw,31px);line-height:1.68;letter-spacing:-.008em;color:#62645a;max-width:34em;margin:0 0 24px;padding-left:18px;border-left:4px solid transparent;transition:color .35s,border-color .35s}
+.tp-seg.on{color:#f6f5ee;border-left-color:#71b127}
+.tp-seg.done{color:#45463e}
+.tp-seg b{color:#bcd98c;font-weight:650}
+.tp-wait{color:#8a8c80;font-size:18px;font-family:var(--mono);line-height:1.7}
+.tp-foot{flex:none;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:11px 24px;border-top:1px solid #33342c;font-family:var(--mono);font-size:12.5px;color:#8a8c80}
+.tp-foot .nx{color:#bcd98c;font-weight:700}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:opacity .2s ease!important}
+  .slide,.step,.band,.bar .fill{transform:none!important}
+}
+
+/* ---------- Print / PDF: 16:9-Seiten, farbtreu ---------- */
+@media print{
+  @page{size:13.333in 7.5in;margin:0}
+  html,body{overflow:visible!important;height:auto!important;background:#fff!important}
+  *,*::before,*::after{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .progress,.dots,.hint,.nz{display:none!important}
+  .deck{position:static!important;overflow:visible!important}
+  .slide{position:relative!important;inset:auto!important;opacity:1!important;visibility:visible!important;
+    transform:none!important;display:flex!important;width:100vw!important;height:100vh!important;
+    overflow:hidden;break-after:page;break-inside:avoid}
+  .slide:last-child{break-after:auto}
+  .step{opacity:1!important;transform:none!important}
+  .band{opacity:1!important;transform:none!important}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<!-- globale Marker -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c8c5b8"/></marker>
+  <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71b127"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a8392c"/></marker>
+  <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#fbfaf7" stroke="#c8c5b8" stroke-width="1.2"/></marker>
+</defs></svg>
+
+<div class="deck" id="deck">
+
+  <!-- ===== 1 · TITEL ===== -->
+  <section class="slide title active">
+    <div class="title-top">
+      <img class="title-logo" src="assets/whs-logo.svg" alt="Westfälische Hochschule" />
+      <div class="title-meta">Master Informatik<br>Modulprojekt Agentic&nbsp;AI · 2026</div>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Technischer Projektbericht · Sprint 3</div>
+      <h1>Agentic AI für SEO/GEO-Auditing<br><span class="g">Sprint 3 — Fix &amp; Deploy</span></h1>
+      <div class="accent-rule"></div>
+      <p class="sub" style="max-width:72ch">Sprint 3 schließt den Loop: Der neue <b style="color:var(--ink)">Fix-Agent</b>
+        macht aus den priorisierten Findings konkrete Patches, ein <b style="color:var(--ink)">Human-in-the-Loop-Gate</b>
+        gibt sie frei, ein <b style="color:var(--ink)">sicherer Dry-Run-Deploy</b> wendet nur Freigegebenes an —
+        ohne je eine Live-Seite zu berühren, jeder Lauf exakt reproduzierbar (Seed&nbsp;42).</p>
+      <dl class="meta">
+        <div><dt>Verfasser</dt><dd>Mohammad Alboush</dd></div>
+        <div><dt>Matrikelnummer</dt><dd>201922227</dd></div>
+        <div><dt>Studiengang</dt><dd>Master Informatik · Modulprojekt Agentic&nbsp;AI</dd></div>
+        <div><dt>Technologien</dt><dd class="mono">Python 3.12 · CrewAI · Reasoning-Port (Mock/SAIA/Claude) · Pydantic v2 · SQLite · mypy --strict</dd></div>
+        <div><dt>Stand</dt><dd>Sprint 3 · Juni 2026 — abgeschlossen</dd></div>
+      </dl>
+    </div>
+    <div class="foot"><span>Westfälische Hochschule · geo-audit-loop</span><span class="m">01 / 14</span></div>
+  </section>
+
+  <!-- ===== 2 · EINORDNUNG ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>02</b> · Kontext &amp; Einordnung</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Einordnung: Sprint 3 ergänzt die <span class="g">Handlungs-Schicht</span> des Audit-Loops.</h2>
+      <p class="lead" style="max-width:82ch">Sprint 1 misst, Sprint 2 lernt — Sprint 3 baut Baustein
+        <b style="color:var(--ink)">05 Fix · HITL · Deploy</b>: aus dem Befund wird eine konkrete, freigegebene Maßnahme.</p>
+      <div class="fig">
+        <svg viewBox="0 0 1000 250" role="img" aria-label="Sechs-Baustein-Loop, Sprint 3 markiert">
+          <!-- Klammer über Baustein 05 -->
+          <path class="ed a plain" d="M660,52 L660,44 L800,44 L800,52"/>
+          <text class="lbls acc" x="730" y="35" text-anchor="middle" style="font-weight:700">Sprint 3 (Act) — jetzt</text>
+          <!-- 6 Boxen -->
+          <rect class="nd" x="20"  y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="180" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="340" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="500" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd core" x="660" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="820" y="64" width="140" height="76" rx="9"/>
+          <g text-anchor="middle" class="lbls" fill="var(--ink)">
+            <text x="90"  y="96"><tspan x="90" dy="0">01 SERP &amp;</tspan><tspan x="90" dy="14">Citation-Sampler</tspan></text>
+            <text x="250" y="96"><tspan x="250" dy="0">02 Inventory-</tspan><tspan x="250" dy="14">Crawler</tspan></text>
+            <text x="410" y="96"><tspan x="410" dy="0">03 Pattern-</tspan><tspan x="410" dy="14">Miner</tspan></text>
+            <text x="570" y="96"><tspan x="570" dy="0">04 GEO-</tspan><tspan x="570" dy="14">Auditor</tspan></text>
+            <text x="730" y="96" fill="var(--acc-deep2)" style="font-weight:700"><tspan x="730" dy="0">05 Fix · HITL ·</tspan><tspan x="730" dy="14">Deploy</tspan></text>
+            <text x="890" y="96"><tspan x="890" dy="0">06 Re-Prober ·</tspan><tspan x="890" dy="14">Memory</tspan></text>
+          </g>
+          <text class="lblxs" x="90"  y="132" text-anchor="middle">Sprint 1 ✓</text>
+          <text class="lblxs" x="250" y="132" text-anchor="middle">Sprint 1 ✓</text>
+          <text class="lblxs" x="410" y="132" text-anchor="middle">Sprint 2 ✓</text>
+          <text class="lblxs" x="570" y="132" text-anchor="middle">Sprint 2 ✓</text>
+          <text class="lblxs" x="890" y="132" text-anchor="middle">Sprint 4</text>
+          <!-- Vorwärtspfeile -->
+          <g class="ed">
+            <line x1="160" y1="102" x2="180" y2="102"/><line x1="320" y1="102" x2="340" y2="102"/>
+            <line x1="480" y1="102" x2="500" y2="102"/><line x1="640" y1="102" x2="660" y2="102"/>
+            <line x1="800" y1="102" x2="820" y2="102"/>
+          </g>
+          <!-- Rückkopplung -->
+          <path class="ed" d="M890,140 L890,205 L90,205 L90,140"/>
+          <text class="lblxs" x="490" y="200" text-anchor="middle">Closed Loop · Re-Trigger nach 7 / 14 / 28 Tagen (Sprint 4)</text>
+        </svg>
+        <div class="cap">Abb. 1 — System-Kontext: sechs Bausteine. <b>Sprint 3 = Baustein 05</b> auf dem Fundament aus Sprint 1 + 2.</div>
+      </div>
+      <div class="note"><b>Ausgangslage:</b> Der GEO-Auditor liefert priorisierte <code>AuditFinding</code>s — getestet und reproduzierbar.
+        Sprint 3 setzt sie um: mit gleicher Architektur und Disziplin, aber neuer Sicherheits-Anforderung (kein Deploy ohne Freigabe).</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">02 / 14</span></div>
+  </section>
+
+  <!-- ===== 3 · PROBLEMSTELLUNG ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>03</b> · Problemstellung</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Problemstellung: Der Auditor sagt, <span class="g">was</span> zu tun ist — aber er <span class="g">tut</span> es nicht.</h2>
+      <div class="note step" style="margin:16px 0 8px;font-size:16px;line-height:1.6;padding:18px 22px"><b>Fragestellung Sprint 3:</b> Lässt sich aus einem Befund eine <i>konkrete, anwendbare</i> Maßnahme ableiten
+        und ausführen — <i>reproduzierbar</i> trotz Sprachmodell und <i>sicher</i>, also nie ohne menschliche Freigabe und nie auf einer Live-Seite?</div>
+      <div class="fig" style="flex:none;margin:10px 0 4px">
+        <svg viewBox="0 0 1000 168" role="img" aria-label="Sechs Akte: WAS, WARUM, WAS TUN, FIX, FREIGABE, DEPLOY">
+          <g>
+            <rect class="nd" x="14"  y="40" width="150" height="74" rx="10"/>
+            <rect class="nd" x="178" y="40" width="150" height="74" rx="10"/>
+            <rect class="nd" x="342" y="40" width="150" height="74" rx="10"/>
+            <rect class="nd core" x="506" y="40" width="150" height="74" rx="10"/>
+            <rect class="nd core" x="670" y="40" width="150" height="74" rx="10"/>
+            <rect class="nd core" x="834" y="40" width="150" height="74" rx="10"/>
+          </g>
+          <g text-anchor="middle">
+            <text class="lbl b" x="89"  y="72">WAS</text><text class="lbls" x="89"  y="92">Top/Flop</text>
+            <text class="lbl b" x="253" y="72">WARUM</text><text class="lbls" x="253" y="92">Templates</text>
+            <text class="lbl b" x="417" y="72">WAS TUN</text><text class="lbls" x="417" y="92">Findings</text>
+            <text class="lbl b acc" x="581" y="72">FIX</text><text class="lbls" x="581" y="92">Patches</text>
+            <text class="lbl b acc" x="745" y="72">FREIGABE</text><text class="lbls" x="745" y="92">HITL</text>
+            <text class="lbl b acc" x="909" y="72">DEPLOY</text><text class="lbls" x="909" y="92">Dry-Run</text>
+          </g>
+          <g class="ed"><line x1="164" y1="77" x2="178" y2="77"/><line x1="328" y1="77" x2="342" y2="77"/></g>
+          <g class="ed a"><line x1="492" y1="77" x2="506" y2="77"/><line x1="656" y1="77" x2="670" y2="77"/><line x1="820" y1="77" x2="834" y2="77"/></g>
+          <g class="lblxs" text-anchor="middle">
+            <text x="89" y="130">Sprint 1</text><text x="253" y="130">Sprint 2</text><text x="417" y="130">Sprint 2</text>
+            <text x="581" y="130" fill="var(--acc-deep)">Sprint 3</text><text x="745" y="130" fill="var(--acc-deep)">Sprint 3</text><text x="909" y="130" fill="var(--acc-deep)">Sprint 3</text>
+          </g>
+        </svg>
+        <div class="cap">Abb. 2 — Sechs Akte in einem Lauf. <b>Sprint 3 ergänzt die letzten drei: FIX → FREIGABE → DEPLOY.</b></div>
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">03 / 14</span></div>
+  </section>
+
+  <!-- ===== 4 · ARCHITEKTUR-DELTA ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>04</b> · Architektur</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Architektur: genau <span class="g">ein neuer Port</span> (Publisher), ein neuer Agent — sonst unverändert.</h2>
+      <div class="fig">
+        <svg viewBox="0 0 1000 446" role="img" aria-label="Hexagonale Schichten mit neuem PublisherPort">
+          <!-- Ringe -->
+          <rect class="nd line" x="60"  y="36"  width="600" height="384" rx="16"/>
+          <rect class="nd"      x="116" y="92"  width="488" height="272" rx="14"/>
+          <rect class="nd line" x="180" y="146" width="360" height="164" rx="12"/>
+          <rect class="nd core" x="252" y="198" width="216" height="64"  rx="10"/>
+          <!-- Ring-Labels -->
+          <text class="lbls" x="80"  y="58" fill="var(--acc-deep)" style="font-weight:700">agents / orchestration</text>
+          <text class="lblxs" x="80" y="76">Fix-Agent · Approval-Gate · Sprint3Flow</text>
+          <text class="lbls" x="136" y="114" fill="var(--acc-deep)" style="font-weight:700">adapters</text>
+          <text class="lblxs" x="136" y="132">MockPublisher · FilesystemPublisher · WP/GitHub-Stub · …</text>
+          <text class="lbls" x="200" y="168" fill="var(--acc-deep)" style="font-weight:700">ports (Protocols)</text>
+          <text class="lblxs" x="200" y="186"><tspan fill="#5a8f1f" style="font-weight:700">PublisherPort (neu)</tspan> · Reasoning · Storage · …</text>
+          <text class="lbl b" x="360" y="226" text-anchor="middle">domain</text>
+          <text class="lblxs" x="360" y="246" text-anchor="middle">fix.py · Contracts · kein I/O</text>
+          <!-- neu-Tag -->
+          <rect class="nd new" x="402" y="150" width="132" height="22" rx="11"/>
+          <text class="lblxs" x="468" y="165" text-anchor="middle" fill="#3f6614" style="font-weight:700">+ PublisherPort</text>
+          <!-- Dependency Rule -->
+          <rect class="nd line" x="700" y="150" width="272" height="172" rx="12"/>
+          <text class="lbls acc" x="716" y="176" style="font-weight:700">Dependency Rule</text>
+          <text class="lbls" x="716" y="200"><tspan x="716" dy="0">Der Deploy hängt nur am</tspan><tspan x="716" dy="17">abstrakten Port. Kein WordPress-</tspan><tspan x="716" dy="17">oder GitHub-Detail liegt im Kern —</tspan><tspan x="716" dy="17">eine fünfte Senke ergänzt man,</tspan><tspan x="716" dy="17">ohne ihn anzufassen.</tspan></text>
+          <path class="ed a" d="M698,224 L662,224"/>
+        </svg>
+        <div class="cap">Abb. 3 — Hexagonale Schichten. <b>Neu: der PublisherPort</b> (+ Fix-Agent); die Dependency Rule bleibt unverändert.</div>
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">04 / 14</span></div>
+  </section>
+
+  <!-- ===== 5 · FIX-AGENT ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>05</b> · Agent 3 · Fix-Agent</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Fix-Agent: aus jedem Finding ein <span class="g">konkreter, belegter Patch</span>.</h2>
+      <div class="cols c2" style="margin-top:6px;align-items:center">
+        <div class="fig" style="margin:0">
+          <svg viewBox="0 0 480 230" role="img" aria-label="Datenfluss Fix-Agent">
+            <rect class="nd" x="10" y="14" width="460" height="46" rx="9"/>
+            <text class="lbls" x="240" y="42" text-anchor="middle" fill="var(--ink)">Findings + Templates + On-Page-Inventar</text>
+            <rect class="nd core" x="90" y="90" width="300" height="44" rx="9"/>
+            <text class="lbls" x="240" y="117" text-anchor="middle" fill="var(--ink)" style="font-weight:700">ReasoningPort (Mock | SAIA | Claude)</text>
+            <rect class="nd new" x="60" y="164" width="360" height="50" rx="9"/>
+            <text class="lbls" x="240" y="186" text-anchor="middle" fill="var(--ink)" style="font-weight:700">FixPlan · 6 Patches, priorisiert</text>
+            <text class="lblxs" x="240" y="202" text-anchor="middle">je Patch: Hebel · Ebene · Änderungsart · Beleg · Konfidenz</text>
+            <g class="ed a"><line x1="240" y1="60" x2="240" y2="90"/><line x1="240" y1="134" x2="240" y2="164"/></g>
+          </svg>
+          <div class="cap">Abb. 4 — Spiegelt den GEO-Auditor: Retry, Per-Item-Validierung, Kosten-Tracking, Prompt <code>fix_agent.v1.md</code>.</div>
+        </div>
+        <div>
+          <div class="find step"><div class="h"><span class="sev chg">Schema +</span><span class="url">/firewall-grundlagen</span><span class="lever">Definitionsblöcke · 0.74</span></div><div class="fix">FAQPage-JSON-LD: „Was ist eine Firewall?" + 1-Satz-Antwort.</div><div class="ev">Beleg: keine maschinenlesbare Definition (Template t1).</div></div>
+          <div class="find step"><div class="h"><span class="sev chg">Block +</span><span class="url">/passwort-manager-vergleich</span><span class="lever">Maschinenlesbar · 0.80</span></div><div class="fix">Vergleichstabelle (Open Source · 2FA · Preis) statt Fließtext.</div><div class="ev">Beleg: Vergleich nur als Prosa (Template t1).</div></div>
+          <ul class="clean step" style="margin-top:6px">
+            <li><b>Ein Patch pro Finding</b> — Herkunft (<code>finding_id</code>) + Template bleiben erhalten.</li>
+            <li><b>proposed_content</b> ist einsetzbar (Textblock / valides JSON-LD), nicht vage.</li>
+            <li><b>Deterministische <code>patch_id</code></b> (<code>px-&lt;finding&gt;-&lt;typ&gt;</code>) → bit-genauer Fingerprint.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">05 / 14</span></div>
+  </section>
+
+  <!-- ===== 6 · HITL-GATE ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>06</b> · Sicherheit · HITL-Gate</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Human-in-the-Loop: kein Deploy ohne Freigabe — <span class="g">in Code erzwungen</span>.</h2>
+      <div class="fig" style="flex:none;margin:6px 0 2px">
+        <svg viewBox="0 0 1000 196" role="img" aria-label="Human-in-the-Loop-Gate zwischen FixPlan und Publisher">
+          <rect class="nd" x="20" y="74" width="180" height="52" rx="10"/>
+          <text class="lbl b" x="110" y="105" text-anchor="middle">FixPlan</text>
+          <rect class="nd core" x="340" y="62" width="240" height="76" rx="11"/>
+          <text class="lbl b" x="460" y="94" text-anchor="middle">HITL-Gate</text>
+          <text class="lbls" x="460" y="116" text-anchor="middle">der Mensch entscheidet je Patch</text>
+          <rect class="nd new" x="740" y="22"  width="240" height="56" rx="10"/>
+          <text class="lbls" x="860" y="46" text-anchor="middle" fill="var(--ink)" style="font-weight:700">✓ freigegeben →</text>
+          <text class="lbls" x="860" y="64" text-anchor="middle" fill="var(--ink)" style="font-weight:700">Publisher · Deploy (Dry-Run)</text>
+          <rect class="nd warn" x="740" y="120" width="240" height="56" rx="10"/>
+          <text class="lbls" x="860" y="144" text-anchor="middle" fill="var(--ink)" style="font-weight:700">✗ abgelehnt →</text>
+          <text class="lbls" x="860" y="162" text-anchor="middle" fill="var(--ink)" style="font-weight:700">skipped · kein Write</text>
+          <g class="ed a"><line x1="200" y1="100" x2="340" y2="100"/><path d="M580,86 L740,52"/></g>
+          <path class="ed warn" d="M580,114 L740,146"/>
+          <text class="lblxs" x="250" y="174" text-anchor="middle" fill="var(--red)">apply_patches ohne Freigabe → DeployBlocked (hartes Gate)</text>
+        </svg>
+        <div class="cap">Abb. 5 — Das Gate liegt zwischen Plan und Deploy; aus einem <code>FixPlan</code> wird nie <i>direkt</i> ein <code>DeployResult</code>.</div>
+      </div>
+      <div class="cols c3" style="margin-top:6px">
+        <div class="card"><div class="rh">AutoApproveGate</div><p>Gibt alle frei — die nicht-interaktive Demo (<code>--approve-all</code>).</p></div>
+        <div class="card"><div class="rh">Interaktiver Gate</div><p>Fragt je Patch im Terminal; ohne TTY: sicherer Default = ablehnen.</p></div>
+        <div class="card"><div class="rh">RejectAllGate</div><p>Lehnt alles ab — Sicherheits-Demo &amp; Test: 0 angewandt.</p></div>
+      </div>
+      <div class="note red"><b>Projektregeln §6:</b> Ein <code>Patch</code> wird nie ohne explizite menschliche Freigabe zu einem <code>DeployResult</code> — „auch nicht temporär zum Testen". Doppelt abgesichert: Pipeline-Reihenfolge <i>und</i> Publisher-Vertrag.</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">06 / 14</span></div>
+  </section>
+
+  <!-- ===== 7 · PUBLISHER-PORT ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>07</b> · Deploy · Publisher-Port</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Publisher-Port: ein Interface, drei Adapter — <span class="g">sicher per Default</span>.</h2>
+      <div class="fig">
+        <svg viewBox="0 0 1000 300" role="img" aria-label="PublisherPort mit drei Adaptern">
+          <!-- Consumer -->
+          <text class="lblxs" x="120" y="22" text-anchor="middle">Consumer (orchestration/)</text>
+          <rect class="nd" x="20" y="92" width="200" height="60" rx="9"/><text class="lbls" x="120" y="120" text-anchor="middle" fill="var(--ink)">Sprint3Pipeline</text><text class="lblxs" x="120" y="138" text-anchor="middle">.apply_patches()</text>
+          <!-- Port -->
+          <text class="lblxs" x="500" y="22" text-anchor="middle">ports/ · «Protocol»</text>
+          <rect class="nd coreln" x="365" y="78" width="270" height="92" rx="11"/>
+          <text class="lbl b" x="500" y="112" text-anchor="middle">PublisherPort</text>
+          <line x1="365" y1="126" x2="635" y2="126" stroke="var(--acc)" stroke-width="1.2"/>
+          <text class="lbls" x="382" y="152" fill="var(--ink)">publish(plan, decisions)</text>
+          <!-- Consumer→Port -->
+          <g class="ed a"><path d="M220,122 L365,124"/></g>
+          <!-- Adapter -->
+          <text class="lblxs" x="820" y="22" text-anchor="middle">adapters/publisher/</text>
+          <rect class="nd" x="700" y="36" width="280" height="58" rx="10"/>
+          <text class="lbl b" x="715" y="60">MockPublisher</text>
+          <text class="lblxs" x="715" y="80" fill="#5a8f1f">Default · Dry-Run · kein I/O</text>
+          <rect class="nd" x="700" y="108" width="280" height="58" rx="10"/>
+          <text class="lbl b" x="715" y="132">FilesystemPublisher</text>
+          <text class="lblxs" x="715" y="152">lokales Artefakt · Live-Domain unberührt</text>
+          <rect class="nd warn" x="700" y="180" width="280" height="58" rx="10"/>
+          <text class="lbl b" x="715" y="204">WordPress · GitHub</text>
+          <text class="lblxs" x="715" y="224">opt-in · in Sprint 3 blockiert</text>
+          <!-- Adapter ..|> Port -->
+          <g class="ed real"><path d="M700,64 L636,116"/><path d="M700,136 L636,128"/><path d="M700,206 L636,140"/></g>
+          <text class="lblxs" x="660" y="262">- - -▷  realisiert (implements)</text>
+        </svg>
+        <div class="cap">Abb. 6 — Harte Invariante (pro Adapter getestet): nicht freigegebene Patches landen <b>immer</b> in <code>skipped_patch_ids</code>; <code>dry_run = true</code> in ganz Sprint 3.</div>
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">07 / 14</span></div>
+  </section>
+
+  <!-- ===== 8 · DATENVERTRÄGE ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>08</b> · Datenverträge</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Datenverträge: <span class="g">geprüfte Strukturen</span> für Patch, Freigabe und Ergebnis.</h2>
+      <div class="fig">
+        <svg viewBox="0 0 1000 250" role="img" aria-label="Die drei Sprint-3-Contracts">
+          <!-- FixProposal -->
+          <rect class="nd line" x="20" y="24" width="320" height="190" rx="10"/>
+          <line x1="20" y1="56" x2="340" y2="56" stroke="var(--node)"/>
+          <text class="lbl b" x="36" y="46">FixProposal</text><text class="lblxs" x="324" y="46" text-anchor="end">Fix-Agent</text>
+          <text class="lbls" x="36" y="84">patch_id · finding_id · target_url</text>
+          <text class="lbls" x="36" y="110">lever · pyramid_level · change_type</text>
+          <text class="lbls" x="36" y="136">proposed_content (einsetzbar)</text>
+          <text class="lbls" x="36" y="162">rationale · confidence · template_id</text>
+          <text class="lblxs" x="36" y="194" fill="var(--acc-deep)">change_type: insert_block · add_schema · …</text>
+          <!-- ApprovalDecision -->
+          <rect class="nd line" x="360" y="24" width="280" height="190" rx="10"/>
+          <line x1="360" y1="56" x2="640" y2="56" stroke="var(--node)"/>
+          <text class="lbl b" x="376" y="46">ApprovalDecision</text><text class="lblxs" x="624" y="46" text-anchor="end">HITL-Gate</text>
+          <text class="lbls" x="376" y="84">patch_id · run_id</text>
+          <text class="lbls" x="376" y="110">approved (bool)</text>
+          <text class="lbls" x="376" y="136">reviewer</text>
+          <text class="lbls" x="376" y="162">decided_at · note</text>
+          <!-- DeployResult -->
+          <rect class="nd line" x="660" y="24" width="320" height="190" rx="10"/>
+          <line x1="660" y1="56" x2="980" y2="56" stroke="var(--node)"/>
+          <text class="lbl b" x="676" y="46">DeployResult</text><text class="lblxs" x="964" y="46" text-anchor="end">Publisher</text>
+          <text class="lbls" x="676" y="84">publisher · dry_run = True</text>
+          <text class="lbls" x="676" y="110">applied_patch_ids</text>
+          <text class="lbls" x="676" y="136">skipped_patch_ids</text>
+          <text class="lbls" x="676" y="162">status (DRY_RUN …) · artifact_path</text>
+          <!-- Flüsse -->
+          <path class="ed a" d="M340,128 L360,118"/><path class="ed a" d="M640,128 L660,118"/>
+          <text class="lbls" x="500" y="246" text-anchor="middle">Alle Modelle sind unveränderlich (frozen) · unbekannte Felder werden abgewiesen · patch_id deterministisch.</text>
+        </svg>
+        <div class="cap">Abb. 7 — Die Übergaben zwischen Fix-Agent → Gate → Publisher sind Pydantic-Verträge, kein Freitext (Projektregeln §3.2).</div>
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">08 / 14</span></div>
+  </section>
+
+  <!-- ===== 9 · ERGEBNIS EINES LAUFS ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>09</b> · Ergebnis · Live-Demo</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Ergebnis eines Laufs — <span class="g">it-sicherheit.de</span>, offline, Seed 42.</h2>
+      <div class="cols c2" style="margin-top:4px">
+        <div>
+          <div class="rh" style="margin-bottom:10px">1 · WAS — Top / Flop (Citation-Häufigkeit)</div>
+          <div class="bars">
+            <div class="bar"><span class="u">/nis2-richtlinie</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="v">71×</span></div>
+            <div class="bar"><span class="u">/ransomware-schutz</span><span class="track"><span class="fill" style="width:59%"></span></span><span class="v">42×</span></div>
+            <div class="bar"><span class="u">/zero-trust-architektur</span><span class="track"><span class="fill" style="width:55%"></span></span><span class="v">39×</span></div>
+            <div class="bar flop"><span class="u">/firewall-grundlagen</span><span class="track"><span class="fill" style="width:27%"></span></span><span class="v">19×</span></div>
+            <div class="bar flop"><span class="u">/passwort-manager-vergleich</span><span class="track"><span class="fill" style="width:24%"></span></span><span class="v">17×</span></div>
+            <div class="bar flop"><span class="u">/security-awareness-training</span><span class="track"><span class="fill" style="width:10%"></span></span><span class="v">7×</span></div>
+          </div>
+          <div class="cap" style="text-align:left;margin-top:9px">2 · WARUM — Muster: <code>[t1]</code> Antwortblock + FAQ-Schema (0.82).</div>
+        </div>
+        <div>
+          <div class="rh" style="margin-bottom:10px">3–5 · WAS TUN → FIX → FREIGABE → DEPLOY</div>
+          <div class="find"><div class="h"><span class="sev chg">Block +</span><span class="url">/passwort-manager-vergleich</span><span class="lever">px-f3-insert_block · 0.80</span></div><div class="fix">Vergleichstabelle + Product/Review-Schema ergänzen (→ Template t1).</div></div>
+          <div class="find"><div class="h"><span class="sev ok">✓ FREIGABE</span><span class="url">cli:--approve-all</span><span class="lever">Human-in-the-Loop</span></div><div class="fix">6 von 6 Patches freigegeben — kein Deploy ohne diese Entscheidung.</div></div>
+          <div class="codecard" style="margin-top:4px">
+            <span class="cm"># DEPLOY (Dry-Run)</span><br>
+            Publisher <b>mock</b> · <span class="ky">DRY-RUN · KEINE EXTERNEN WRITES</span><br>
+            Patches <b>6 angewandt · 0 übersprungen</b>
+          </div>
+        </div>
+      </div>
+      <div class="note">Reproduzierbarkeit: Derselbe Seed liefert exakt diese Zahlen — im Terminal wie auf dieser Folie.
+        Befehl: <code>uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all</code></div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">09 / 14</span></div>
+  </section>
+
+  <!-- ===== 10 · DEMO-AUSGABE ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>10</b> · Ergebnis · ein Befehl</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Demo-Ausgabe: der vollständige Loop mit <span class="g">einem Befehl</span>.</h2>
+      <pre style="margin-top:6px">$ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain <span class="k">--fix --apply --approve-all</span> --seed 42
+
+<span class="k">✓</span> Probe-Matrix sampeln  <span class="c">48 Probes · 2.0 s</span>      <span class="k">✓</span> Fix-Agent     <span class="c">6 Patches</span>
+<span class="k">✓</span> Crawl + Top/Flop      <span class="c">8 Seiten</span>            <span class="k">✓</span> HITL-Freigabe  <span class="c">6 freigegeben</span>
+<span class="k">✓</span> Pattern-Miner         <span class="c">3 Templates</span>         <span class="k">✓</span> Deploy         <span class="c">6 · Dry-Run</span>
+
+<span class="k">FIX</span>     1. [Block +] /passwort-manager-vergleich  · machine_readable · 0.80
+            Vorschlag: Vergleichstabelle + Product/Review-Schema   (… 6 Patches, priorisiert)
+<span class="k">FREIGABE</span>  ✓ 6 / 6 freigegeben (cli:--approve-all)   ·   Kein Deploy ohne Freigabe (§6)
+<span class="k">DEPLOY</span>    Publisher mock · <span class="s">DRY-RUN · KEINE EXTERNEN WRITES</span> · 6 angewandt · 0 übersprungen
+
+Kosten/Lauf         48 Probes · 9780 Tokens · $0.0617
+Report-Fingerprint  <span class="s">c1ecf54a2b27</span>  (Seed 42 — zweiter Lauf: identischer Fingerprint)</pre>
+      <div class="note"><b>Determinismus-Nachweis:</b> Der Report-Fingerprint (SHA-256 über das kanonische JSON aller Reports
+        <i>inkl. Fix-Plan</i>, ohne laufvariable Felder) ist beim zweiten Lauf identisch. Die Kostenzeile ist eine
+        kalkulatorische Hochrechnung — offline entstehen keine echten API-Kosten.</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">10 / 14</span></div>
+  </section>
+
+  <!-- ===== 11 · REPRODUZIERBARKEIT ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>11</b> · Master-Kriterium · Reproduzierbarkeit</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Zweimal laufen → <span class="g">derselbe Fingerprint</span>, jetzt inklusive Fix-Plan.</h2>
+      <p class="sub">Der Fix-Plan fließt in den Hash ein; Freigabe und Deploy mit ihren Zeitstempeln bewusst nicht.
+        So bleibt der ganze Handlungs-Loop trotz Sprachmodell bit-genau reproduzierbar.</p>
+      <div class="kpis" style="margin-top:22px">
+        <div class="kpi"><div class="v">6</div><div class="l">Patches je Lauf<br>deterministische patch_id</div></div>
+        <div class="kpi"><div class="v">100 %</div><div class="l">freigegeben<br>(--approve-all)</div></div>
+        <div class="kpi"><div class="v">0</div><div class="l">externe Writes<br>(Dry-Run)</div></div>
+        <div class="kpi"><div class="v">=</div><div class="l">identischer Fingerprint<br>c1ecf54a2b27</div></div>
+      </div>
+      <div class="note">Warum das funktioniert: Das Mock-Reasoning ist konstant, die <code>patch_id</code> wird abgeleitet
+        (nicht zufällig), und <code>ApprovalDecision</code>/<code>DeployResult</code> bleiben mit ihren Zeitstempeln
+        außerhalb des Hashes. Gleicher Seed ⇒ gleicher Fingerprint — als Integrationstest abgesichert.</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">11 / 14</span></div>
+  </section>
+
+  <!-- ===== 12 · SICHERHEIT / HITL-BEWEIS ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>12</b> · Sicherheit · der Beweis</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Das Gate ist nicht nur Konvention — es ist <span class="g">adversarial getestet</span>.</h2>
+      <div class="cols c2" style="margin-top:8px;align-items:start">
+        <div class="card line"><div class="rh">Test 1 · ohne Freigabe</div>
+          <p style="font-size:14.5px;color:#44473f"><code>apply_patches()</code> vor <code>await_approval()</code> →
+          wirft <b style="color:var(--red)">DeployBlocked</b>. Danach: <code>load_deploy_result()</code> ist
+          <code>None</code>, kein Artefakt geschrieben.</p>
+        </div>
+        <div class="card line"><div class="rh">Test 2 · RejectAllGate</div>
+          <p style="font-size:14.5px;color:#44473f">Alle Patches abgelehnt → <b>0 angewandt</b>, alle in
+          <code>skipped_patch_ids</code>, und der <code>FilesystemPublisher</code> schreibt
+          <b style="color:var(--red)">null Dateien</b>.</p>
+        </div>
+      </div>
+      <div class="codecard" style="margin-top:16px">
+        <span class="cm"># tests/integration/test_hitl_gate.py</span><br>
+        <span class="ky">def</span> test_apply_without_approval_is_blocked(...):<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;pipeline.propose_fixes()&nbsp;&nbsp;<span class="cm"># Freigabe BEWUSST übersprungen</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="ky">with</span> pytest.raises(<b>DeployBlocked</b>): pipeline.apply_patches()<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="ky">assert</span> storage.load_deploy_result(...) <span class="ky">is None</span>
+      </div>
+      <div class="note red"><b>Kernaussage Sprint 3:</b> Die wichtigste neue Anforderung — „kein Deploy ohne Freigabe" —
+        ist nicht dokumentiert, sondern in Code gegossen und durch einen harten Test bewiesen.</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">12 / 14</span></div>
+  </section>
+
+  <!-- ===== 13 · DEFINITION OF DONE ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>13</b> · Definition of Done</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Definition of Done (DoD)</h2>
+      <div class="kpis" style="margin-top:10px">
+        <div class="kpi"><div class="v">0</div><div class="l">Fehler bei<br>mypy --strict (128 Dateien)</div></div>
+        <div class="kpi"><div class="v">0</div><div class="l">Befunde bei<br>ruff</div></div>
+        <div class="kpi"><div class="v">182</div><div class="l">grüne Tests<br>(+ 4 Live übersprungen)</div></div>
+        <div class="kpi"><div class="v">3</div><div class="l">Agenten mit<br>eigenem Eval-Slot</div></div>
+      </div>
+      <ul class="clean lg" style="margin-top:18px">
+        <li>Contracts, Publisher-Sicherheit, Fix-Agent, Storage, Fingerprint — je <b>Unit-getestet</b>.</li>
+        <li>Der komplette <b>Sprint3Flow</b> + Reproduzierbarkeit als <b>Integrationstest</b>; das HITL-Gate adversarial.</li>
+        <li>Bewusst <b>nicht</b> gebaut: der echte externe Write (WordPress/GitHub) — das ist Sprint 4.</li>
+      </ul>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">13 / 14</span></div>
+  </section>
+
+  <!-- ===== 14 · STAND & AUSBLICK ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>14</b> · Stand &amp; Ausblick</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Stand &amp; Ausblick</h2>
+      <div class="fig" style="flex:none;margin:6px 0 10px">
+        <svg viewBox="0 0 1000 188" role="img" aria-label="Roadmap der vier Sprints, Sprint 3 erreicht">
+          <g text-anchor="middle">
+            <rect class="nd" x="20"  y="20" width="220" height="62" rx="9"/>
+            <rect class="nd" x="280" y="20" width="220" height="62" rx="9"/>
+            <rect class="nd core" x="540" y="20" width="220" height="62" rx="9"/>
+            <rect class="nd" x="780" y="20" width="200" height="62" rx="9"/>
+            <text class="lbl b" x="130" y="47">S1 · Foundation</text><text class="lblxs" x="130" y="68">Sampler · Crawler · Persistenz</text>
+            <text class="lbl b" x="390" y="47">S2 · Learning</text><text class="lblxs" x="390" y="68">Pattern-Miner · GEO-Auditor</text>
+            <text class="lbl b acc" x="650" y="47">S3 · Act</text><text class="lblxs" x="650" y="68">Fix · HITL · Deploy</text>
+            <text class="lbl b" x="880" y="47">S4 · Loop</text><text class="lblxs" x="880" y="68">Re-Prober · Memory</text>
+          </g>
+          <g class="ed plain" stroke="var(--node)" stroke-width="1.4">
+            <line x1="130" y1="82" x2="130" y2="112"/><line x1="390" y1="82" x2="390" y2="112"/>
+            <line x1="650" y1="82" x2="650" y2="112"/><line x1="880" y1="82" x2="880" y2="112"/>
+          </g>
+          <line x1="70" y1="124" x2="940" y2="124" stroke="var(--node)" stroke-width="2"/>
+          <line x1="70" y1="124" x2="650" y2="124" stroke="var(--acc)" stroke-width="3"/>
+          <circle cx="130" cy="124" r="11" fill="var(--acc)" stroke="#f6f5f1" stroke-width="2"/>
+          <circle cx="390" cy="124" r="11" fill="var(--acc)" stroke="#f6f5f1" stroke-width="2"/>
+          <circle cx="650" cy="124" r="12" fill="var(--acc)" stroke="#f6f5f1" stroke-width="2"/>
+          <circle cx="880" cy="124" r="11" fill="#fbfaf7" stroke="var(--node)" stroke-width="2"/>
+          <g class="lblxs" text-anchor="middle">
+            <text x="130" y="152">Woche 1–2</text><text x="390" y="152">Woche 3–4</text>
+            <text x="650" y="152">Woche 5–6</text><text x="880" y="152">Woche 7–8</text>
+          </g>
+          <text class="lbls acc" x="650" y="178" text-anchor="middle" style="font-weight:700">▲ Sie sind hier</text>
+        </svg>
+        <div class="cap">Abb. 8 — Drei von vier Sprints abgeschlossen. <b>Messen ✓ · Lernen ✓ · Handeln ✓.</b></div>
+      </div>
+      <div class="cols c2">
+        <div class="card step"><div class="rh">Erreicht in Sprint 3</div><h3>Fix · HITL · Dry-Run-Deploy</h3><p>Aus <code>AuditFinding</code> wird ein freigegebener <code>Patch</code> und ein sicherer Deploy — bit-genau reproduzierbar, ohne je eine Live-Seite zu berühren.</p></div>
+        <div class="card step"><div class="rh">Sprint 4 · Loop</div><h3>Re-Probe + Memory</h3><p>Echter WordPress-/GitHub-Deploy hinter dem bestehenden Port; nach 7/14/28 Tagen erneut messen → <code>EffectHypothesis</code> in Chroma — der Loop verfeinert künftige Fixes selbst.</p></div>
+      </div>
+    </div>
+    <div class="foot"><span>Vielen Dank für Ihre Aufmerksamkeit — Fragen?&nbsp;&nbsp;·&nbsp;&nbsp;mohammad.alboush@w-hs.de</span><span class="m">14 / 14</span></div>
+  </section>
+
+</div>
+
+<div class="nz l" id="nzl"></div>
+<div class="nz r" id="nzr"></div>
+<div class="dots" id="dots"></div>
+<div class="hint" id="hint">← →&nbsp;·&nbsp;Leertaste blättert&nbsp;·&nbsp;F = Vollbild&nbsp;·&nbsp;S = Sprecher-Skript (2. Bildschirm)</div>
+
+<!-- Sprecher-Skript (Teleprompter) — sichtbar nur im #script-Modus -->
+<div class="tp" id="tp" aria-hidden="true">
+  <div class="tp-top">
+    <span class="tp-no" id="tpNo">Sprecher-Skript</span>
+    <span class="tp-title" id="tpTitle">geo-audit-loop · Sprint 3</span>
+    <span class="tp-timer" id="tpTimer" title="Klick = Timer auf 00:00">00:00</span>
+  </div>
+  <div class="tp-kern" id="tpKern">—</div>
+  <div class="tp-body" id="tpBody">
+    <p class="tp-wait">Warte auf die Präsentation …<br>Im Präsentations-Fenster mit ← / → blättern — der Text hier folgt automatisch.</p>
+  </div>
+  <div class="tp-foot">
+    <span id="tpNext"></span>
+    <span>← / → blättern synchron&nbsp;·&nbsp;R = Timer auf 00:00</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ============================================================
+     Sprecher-Skript (Teleprompter) für die Video-Aufzeichnung
+     ------------------------------------------------------------
+     · Taste S im Deck öffnet das Skript-Fenster (→ 2. Bildschirm),
+       alternativ dieselbe Datei mit »#script« am Ende der URL öffnen.
+     · Jeder Pfeiltasten-Druck (auch Einblend-Schritte INNERHALB
+       einer Folie) schaltet den hervorgehobenen Sprechtext weiter.
+     · Sync über localStorage (Polling + storage-Event) UND
+       window.postMessage — funktioniert ohne Server über file://.
+     · SCRIPTS[n].seg[k] = wörtlicher Text zu Folie n+1, Schritt k.
+     ============================================================ */
+  var SCRIPTS = [
+    { t:'Titel', kern:'Sprint 3 schließt den Loop: aus dem Befund wird eine freigegebene, angewandte Maßnahme.', seg:[
+      'Ja, hallo zusammen. Ich bin Mohammad. Mein Projekt misst, wie oft eine Webseite von KI-Suchmaschinen als Quelle genannt wird. In Sprint 1 habe ich das Messen gebaut, in Sprint 2 das Verstehen — also warum manche Seiten zitiert werden und andere nicht. Heute, in Sprint 3, kommt der entscheidende Schritt dazu: Das System sagt nicht mehr nur, was zu tun ist, sondern macht aus jedem Befund einen konkreten Korrekturvorschlag. Und ganz wichtig: Bevor irgendetwas passiert, muss ein Mensch das freigeben.'
+    ]},
+    { t:'Einordnung — der Sechs-Baustein-Loop', kern:'Sprint 3 = Baustein 05: Fix, Freigabe, Deploy.', seg:[
+      'Kurz zur Einordnung, das kennen Sie schon. Das Gesamtsystem ist ein Kreislauf aus sechs Bausteinen. Links die zwei aus Sprint 1, die Messung. In der Mitte die zwei aus Sprint 2, das Lernen. Heute geht es um den grünen Baustein, die Nummer fünf: <b>Fix, Freigabe und Deploy</b>. Aus dem Befund wird eine echte Maßnahme. Was rechts noch fehlt, das Nachmessen und das Gedächtnis, das ist dann Sprint 4.'
+    ]},
+    { t:'Problemstellung', kern:'Der Auditor sagt was zu tun ist — aber er tut es nicht.', seg:[
+      'Womit ich Sprint 2 beendet habe: Der GEO-Auditor liefert mir eine schöne, priorisierte Liste, was an den schwachen Seiten fehlt. Aber er ändert nichts. Da klafft eine Lücke. Genau die schließe ich jetzt.',
+      'Meine Frage für Sprint 3 ist deshalb: Kann ich aus so einem Befund eine konkrete, einsetzbare Maßnahme machen, die ich auch ausführen kann — und zwar zwei Dinge gleichzeitig: <b>reproduzierbar</b>, obwohl wieder ein Sprachmodell beteiligt ist, und vor allem <b>sicher</b>. Also niemals ohne menschliche Freigabe und niemals direkt auf der echten Webseite. Sie sehen unten die sechs Akte: Die ersten drei kennen Sie, die letzten drei sind neu.'
+    ]},
+    { t:'Architektur', kern:'Genau EIN neuer Port — der Publisher. Die Architektur bleibt stabil.', seg:[
+      'Zur Architektur. Das Schichtenmodell ist dasselbe wie immer: innen die Datenmodelle, außen herum die Ports, dann die Adapter, dann die Agenten. In Sprint 3 ist genau <b>ein</b> neuer Port dazugekommen, der <b>PublisherPort</b>. Das ist die Schnittstelle, über die später eine Änderung rausgeht. Und ein neuer Agent, der Fix-Agent. Das Wichtige steht rechts: Der Kern weiß nichts von WordPress oder GitHub. Eine echte Deploy-Senke kann ich später anstecken, ohne den Kern anzufassen. Genau das wollte ich.'
+    ]},
+    { t:'Agent 3 · Fix-Agent', kern:'Aus jedem Finding wird ein konkreter, belegter Patch.', seg:[
+      'Das ist der neue Agent, der <b>Fix-Agent</b>. Der bekommt die Befunde, die Muster aus Sprint 2 und das Seiten-Inventar. Daraus macht er pro Befund genau einen <b>Patch</b>, also einen konkreten Änderungsvorschlag.',
+      'Rechts sehen Sie zwei Beispiele. Bei den Firewall-Grundlagen fehlt eine maschinenlesbare Definition, also schlägt er ein FAQ-Schema vor, fertig formuliert. Beim Passwort-Manager-Vergleich liegt alles nur als Fließtext vor, also eine Vergleichstabelle. Das ist kein vages „schreib das besser", sondern fertiger, einsetzbarer Inhalt. Und jeder Patch hat eine feste, ableitbare Kennung — das brauche ich gleich für die Reproduzierbarkeit.'
+    ]},
+    { t:'Human-in-the-Loop-Gate', kern:'Kein Deploy ohne Freigabe — in Code erzwungen.', seg:[
+      'Jetzt der für mich wichtigste Teil, die Sicherheit. Zwischen dem Plan und dem Deploy sitzt ein <b>Gate</b>, an dem ein Mensch entscheidet. Pro Patch: freigeben oder ablehnen.',
+      'Und das ist nicht nur eine nette Regel, das ist hart erzwungen. Wenn der Code versucht, ohne Freigabe zu deployen, fliegt eine Ausnahme, ein <b>DeployBlocked</b>. Aus dem Plan kann also nie direkt ein Ergebnis werden.',
+      'Es gibt drei Varianten von dem Gate: eine, die für die Demo automatisch alles freigibt, eine interaktive, die im Terminal nachfragt, und eine, die zum Testen alles ablehnt. Die Regel dahinter steht unten in Rot: Ein Patch wird nie ohne menschliche Freigabe wirksam, auch nicht mal eben zum Ausprobieren.'
+    ]},
+    { t:'Publisher-Port', kern:'Ein Interface, drei Adapter — sicher per Default.', seg:[
+      'Wenn ein Patch freigegeben ist, geht er an den <b>Publisher</b>. Auch hier wieder eine Schnittstelle, drei Adapter. Standard ist der <b>Mock</b>: der macht einen reinen Trockenlauf, er zeigt nur, was passieren würde, schreibt aber nichts.',
+      'Der zweite, der Filesystem-Publisher, schreibt die Vorschläge als Dateien in den Lauf-Ordner. Das ist ein echter Schreibvorgang, aber nur lokal — die echte Webseite bleibt unberührt. Und der dritte, WordPress und GitHub, ist bewusst noch blockiert. Den schalte ich erst in Sprint 4 scharf. Wichtig ist die Regel unten: Was nicht freigegeben ist, wird übersprungen — bei jedem Adapter, das ist getestet.'
+    ]},
+    { t:'Datenverträge', kern:'Geprüfte Strukturen für Patch, Freigabe und Ergebnis.', seg:[
+      'Auch hier fließt zwischen den Schritten kein freier Text, sondern feste Strukturen. Drei Stück. Der <b>FixProposal</b> ist der Patch selbst, mit Hebel, Änderungsart und dem fertigen Inhalt. Die <b>ApprovalDecision</b> ist die Freigabe-Entscheidung des Menschen. Und das <b>DeployResult</b> hält fest, was angewandt wurde und was übersprungen — und steht standardmäßig auf Trockenlauf. Alle drei sind eingefroren, unbekannte Felder werden abgewiesen. Und die Patch-Kennung ist deterministisch, nicht zufällig.'
+    ]},
+    { t:'Ergebnis eines Laufs', kern:'WAS, WARUM, WAS TUN, FIX, FREIGABE, DEPLOY — in einem Lauf.', seg:[
+      'Hier das Ergebnis von einem kompletten Lauf für it-sicherheit.de, offline, Seed 42. Links wieder die Rangliste — die NIS2-Seite wird einundsiebzigmal zitiert, das Awareness-Training nur siebenmal.',
+      'Rechts ist jetzt das Neue. Oben der konkrete Patch für den Passwort-Manager-Vergleich, die Vergleichstabelle. In der Mitte die Freigabe — sechs von sechs Patches freigegeben. Und unten das Deploy-Ergebnis: Publisher Mock, Trockenlauf, keine externen Schreibzugriffe, sechs angewandt, null übersprungen. Das ist der ganze Loop auf einer Folie. Und mit demselben Seed kommt das jedes Mal genau so heraus.'
+    ]},
+    { t:'Demo-Ausgabe · ein Befehl', kern:'Ein Befehl, sechs Schritte — und ein beweisbarer Fingerprint inklusive Fix-Plan.', seg:[
+      'Das Ganze läuft mit einem einzigen Befehl. Sie sehen oben die sechs abgehakten Schritte, von der Messung bis zum Deploy. Die Kostenzeile bitte ignorieren, das ist nur eine Hochrechnung, offline kostet das nichts. Wichtig ist die letzte Zeile, der <b>Fingerprint</b>. Das ist eine Prüfsumme über alle Ergebnisse, und jetzt rechnet die auch die Patches mit ein. Wenn ich den Befehl ein zweites Mal laufen lasse, kommt exakt dieselbe Prüfsumme heraus, c-1-e-c-f und so weiter. Bei einem Sprachmodell ist das alles andere als selbstverständlich. Ein Video von diesem doppelten Lauf lege ich dem Bericht bei.'
+    ]},
+    { t:'Reproduzierbarkeit', kern:'Zweimal laufen, derselbe Fingerprint — jetzt inklusive Fix-Plan.', seg:[
+      'Nochmal kurz, warum das überhaupt geht, obwohl ein Sprachmodell beteiligt ist. Der Fix-Plan fließt in die Prüfsumme ein. Die Patch-Kennungen sind abgeleitet, nicht zufällig. Und die Freigabe und das Deploy-Ergebnis bleiben mit ihren Zeitstempeln bewusst draußen, weil die sich natürlich pro Lauf ändern. Sechs Patches, alle freigegeben, null externe Schreibzugriffe — und dieselbe Prüfsumme über beide Läufe. Das ist sogar selbst als Test abgesichert.'
+    ]},
+    { t:'Sicherheit · der Beweis', kern:'Das Gate ist nicht nur Konvention — es ist adversarial getestet.', seg:[
+      'Mir war wichtig, dass die Sicherheitsregel nicht nur im Bericht steht, sondern bewiesen ist. Dafür habe ich zwei Tests, die das Gate absichtlich angreifen.',
+      'Erster Test: Ich versuche zu deployen, ohne vorher freizugeben. Ergebnis: Es fliegt ein DeployBlocked, und hinterher gibt es kein Deploy-Ergebnis und keine Datei. Zweiter Test: Ich lehne alle Patches ab. Ergebnis: null angewandt, und der Filesystem-Publisher schreibt null Dateien. Damit ist die zentrale Regel von Sprint 3 nicht nur behauptet, sondern in Code bewiesen.'
+    ]},
+    { t:'Definition of Done', kern:'Fertig heißt: typgeprüft, getestet, reproduzierbar, sicher.', seg:[
+      'Zum Stand der Qualität. Der Typ-Check ist sauber über alle 128 Dateien, der Linter auch, und es laufen <b>182 Tests</b>, alle grün. Alle drei Agenten haben einen eigenen Eval-Slot. Die Reproduzierbarkeit und das Sicherheits-Gate sind selbst Tests. Eine Sache habe ich bewusst noch nicht gebaut: den echten Schreibzugriff auf WordPress oder GitHub. Den hebe ich mir für Sprint 4 auf, weil er Zugangsdaten und eine eigene Sicherheitsprüfung braucht.'
+    ]},
+    { t:'Stand & Ausblick', kern:'Messen ✓, Lernen ✓, Handeln ✓ — jetzt aus der Wirkung lernen.', seg:[
+      'Damit sind drei von vier Sprints fertig. Messen, Verstehen und jetzt auch Handeln — sicher und reproduzierbar.',
+      'In <b>Sprint 4</b> kommt der echte Deploy hinter den bestehenden Port. Und dann der spannendste Teil: Ich messe nach sieben, vierzehn und achtundzwanzig Tagen nach, ob die Änderung wirklich etwas gebracht hat, und schreibe das Ergebnis als Hypothese in ein Gedächtnis. Ab da lernt das System aus seinen eigenen Korrekturen, und der Kreis ist geschlossen. Das war Sprint 3. Vielen Dank, und ich freue mich auf Ihre Fragen.'
+    ]}
+  ];
+
+  var LS_STATE = 'geoS3_state', LS_CMD = 'geoS3_cmd';
+
+  /* ================= Modus B: Teleprompter (#script) ================= */
+  if (/script/.test(location.hash)){
+    document.body.classList.add('tp-mode');
+    document.title = 'Sprecher-Skript · Sprint 3 — geo-audit-loop';
+    var elNo = document.getElementById('tpNo'), elTitle = document.getElementById('tpTitle'),
+        elKern = document.getElementById('tpKern'), elBody = document.getElementById('tpBody'),
+        elNext = document.getElementById('tpNext'), elTimer = document.getElementById('tpTimer');
+    var cur = {i:-1, s:-1}, lastRaw = '', t0 = Date.now();
+
+    function pad(x){ return (x < 10 ? '0' : '') + x; }
+    setInterval(function(){
+      var sec = Math.floor((Date.now() - t0) / 1000);
+      elTimer.textContent = pad(Math.floor(sec / 60)) + ':' + pad(sec % 60);
+    }, 1000);
+    function resetTimer(){ t0 = Date.now(); elTimer.textContent = '00:00'; }
+    elTimer.onclick = resetTimer;
+
+    function render(idx, st){
+      var sc = SCRIPTS[idx]; if (!sc) return;
+      var sg = Math.max(0, Math.min(st, sc.seg.length - 1));
+      if (idx === cur.i && sg === cur.s) return;
+      var fresh = (idx !== cur.i);
+      if (fresh){
+        elNo.textContent = 'Folie ' + (idx + 1) + ' / ' + SCRIPTS.length;
+        elTitle.textContent = sc.t;
+        elKern.innerHTML = sc.kern;
+        elBody.innerHTML = '';
+        for (var k = 0; k < sc.seg.length; k++){
+          var p = document.createElement('p');
+          p.className = 'tp-seg'; p.innerHTML = sc.seg[k];
+          elBody.appendChild(p);
+        }
+      }
+      var ps = elBody.querySelectorAll('.tp-seg');
+      for (var k2 = 0; k2 < ps.length; k2++){
+        ps[k2].classList.toggle('on',   k2 === sg);
+        ps[k2].classList.toggle('done', k2 <  sg);
+      }
+      if (ps[sg]) ps[sg].scrollIntoView({block:'center', behavior: fresh ? 'auto' : 'smooth'});
+      if (sg < sc.seg.length - 1){
+        elNext.innerHTML = 'nächster Tastendruck → <span class="nx">Abschnitt ' + (sg + 2) + ' / ' + sc.seg.length + '</span>';
+      } else if (idx < SCRIPTS.length - 1){
+        elNext.innerHTML = 'nächster Tastendruck → <span class="nx">Folie ' + (idx + 2) + ' · ' + SCRIPTS[idx + 1].t + '</span>';
+      } else {
+        elNext.innerHTML = '<span class="nx">Letzte Folie — danach Fragen.</span>';
+      }
+      cur = {i: idx, s: sg};
+    }
+
+    function pull(){
+      var raw = null; try { raw = localStorage.getItem(LS_STATE); } catch(e){}
+      if (raw && raw !== lastRaw){
+        lastRaw = raw;
+        try { var st = JSON.parse(raw); render(st.i, st.s); } catch(e){}
+      }
+    }
+    window.addEventListener('storage', pull);
+    setInterval(pull, 150);
+    pull();
+    window.addEventListener('message', function(e){
+      if (window.opener && e.source !== window.opener) return;
+      var d = e.data;
+      if (d && d.geoS3 === 'state' && typeof d.i === 'number' && typeof d.s === 'number'){ render(d.i, d.s); }
+    });
+    if (window.opener && !window.opener.closed){
+      try { window.opener.postMessage({geoS3:'ready'}, '*'); } catch(e){}
+    }
+
+    var localSeq = 0;
+    function sendCmd(a){
+      var cur = {};
+      try { cur = JSON.parse(localStorage.getItem(LS_CMD) || '{}') || {}; } catch(e){}
+      var n = Math.max(localSeq, cur.n || 0) + 1;
+      localSeq = n;
+      var list = (cur.list || []).concat([{a:a, n:n}]).slice(-12);
+      try { localStorage.setItem(LS_CMD, JSON.stringify({n:n, list:list})); } catch(e){}
+      if (window.opener && !window.opener.closed){
+        try { window.opener.postMessage({geoS3:'cmd', a:a, n:n}, '*'); } catch(e){}
+      }
+    }
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); sendCmd('next'); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); sendCmd('prev'); }
+      else if (e.key === 'Home'){ sendCmd('home'); }
+      else if (e.key === 'End'){ sendCmd('end'); }
+      else if (e.key === 'r' || e.key === 'R'){ resetTimer(); }
+    });
+    return;
+  }
+
+  /* ================= Modus A: Präsentation (Deck) ================= */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var progress = document.getElementById('progress');
+  var dotsWrap = document.getElementById('dots');
+  var i = 0, steps = [], s = 0, stateSeq = 0, presenterWin = null;
+
+  var dots = slides.map(function(_, k){
+    var b = document.createElement('button');
+    b.className = 'dot'; b.setAttribute('aria-label', 'Folie ' + (k+1));
+    b.onclick = function(){ show(k, false); };
+    dotsWrap.appendChild(b); return b;
+  });
+
+  function broadcast(){
+    stateSeq++;
+    try { localStorage.setItem(LS_STATE, JSON.stringify({i:i, s:s, n:stateSeq})); } catch(e){}
+    if (presenterWin && !presenterWin.closed){
+      try { presenterWin.postMessage({geoS3:'state', i:i, s:s}, '*'); } catch(e){}
+    }
+  }
+  function applySteps(){
+    for (var k = 0; k < steps.length; k++){ steps[k].classList.toggle('shown', k < s); }
+  }
+  function show(idx, atEnd){
+    idx = Math.max(0, Math.min(slides.length - 1, idx));
+    slides[i].classList.remove('active');
+    i = idx;
+    var sl = slides[i];
+    sl.classList.add('active');
+    steps = Array.prototype.slice.call(sl.querySelectorAll('.step'));
+    s = atEnd ? steps.length : 0;
+    applySteps();
+    dots.forEach(function(d, k){ d.classList.toggle('on', k === i); });
+    progress.style.width = (slides.length > 1 ? (i / (slides.length - 1) * 100) : 100) + '%';
+    broadcast();
+  }
+  function next(){ if (s < steps.length){ s++; applySteps(); broadcast(); } else if (i < slides.length - 1){ show(i + 1, false); } }
+  function prev(){ if (s > 0){ s--; applySteps(); broadcast(); } else if (i > 0){ show(i - 1, true); } }
+
+  function openScript(){
+    presenterWin = window.open(location.href.split('#')[0] + '#script', 'geoS3script', 'width=980,height=760');
+    if (!presenterWin){
+      hint.textContent = 'Popup blockiert — Datei zusätzlich mit »#script« am URL-Ende in einem zweiten Fenster öffnen.';
+      hint.style.opacity = '1';
+      setTimeout(function(){ hint.style.opacity = '0'; }, 6000);
+      return;
+    }
+    setTimeout(broadcast, 500);
+  }
+
+  var lastCmd = 0;
+  try { lastCmd = (JSON.parse(localStorage.getItem(LS_CMD) || '{}').n) || 0; } catch(e){}
+  function runCmd(a){
+    if (a === 'next'){ next(); }
+    else if (a === 'prev'){ prev(); }
+    else if (a === 'home'){ show(0, false); }
+    else if (a === 'end'){ show(slides.length - 1, true); }
+  }
+  function processCmds(raw){
+    if (!raw) return;
+    try {
+      var c = JSON.parse(raw), list = c.list || [];
+      for (var k = 0; k < list.length; k++){
+        if (list[k].n > lastCmd){ lastCmd = list[k].n; runCmd(list[k].a); }
+      }
+    } catch(e){}
+  }
+  window.addEventListener('storage', function(e){
+    if (e.key === LS_CMD){ processCmds(e.newValue); }
+  });
+  setInterval(function(){
+    var raw = null; try { raw = localStorage.getItem(LS_CMD); } catch(e){}
+    processCmds(raw);
+  }, 150);
+  window.addEventListener('message', function(e){
+    if (presenterWin && e.source !== presenterWin) return;
+    var d = e.data;
+    if (!d) return;
+    if (d.geoS3 === 'ready'){ broadcast(); return; }
+    if (d.geoS3 === 'cmd' && typeof d.n === 'number' && d.n > lastCmd){ lastCmd = d.n; runCmd(d.a); }
+  });
+
+  document.getElementById('nzr').onclick = next;
+  document.getElementById('nzl').onclick = prev;
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if (e.key === 'Home'){ show(0, false); }
+    else if (e.key === 'End'){ show(slides.length - 1, true); }
+    else if (e.key === 's' || e.key === 'S'){ openScript(); }
+    else if (e.key === 'f' || e.key === 'F'){ if (!document.fullscreenElement){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } else { document.exitFullscreen && document.exitFullscreen(); } }
+  });
+  show(0, false);
+  var hint = document.getElementById('hint');
+  setTimeout(function(){ hint.style.opacity = '0'; }, 4200);
+})();
+</script>
+</body>
+</html>
