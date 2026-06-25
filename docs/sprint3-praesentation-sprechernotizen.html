@@ -111,61 +111,63 @@ pre.cmd{background:#26251f;color:#eceae2;border-radius:14px;padding:16px 20px;fo
 <div class="folie">
   <div class="head"><span class="chip">Folie 1</span><h3>Titel</h3><span class="zeit">~45 s</span></div>
   <div class="kern">Sprint 3 schließt den Loop: aus dem Befund wird eine freigegebene, angewandte Maßnahme.</div>
-  <p class="sprich">„Guten Tag, mein Name ist Mohammad Alboush. Mein Projekt <em>geo-audit-loop</em> misst, wie oft eine Website
-  von KI-Antwortmaschinen als Quelle genannt wird. In Sprint 1 habe ich das Messen gebaut, in Sprint 2 das Verstehen —
-  also <em>warum</em> manche Seiten zitiert werden. Heute, in Sprint 3, kommt der entscheidende Schritt: Das System macht
-  aus jedem Befund einen konkreten Korrekturvorschlag. Und ganz wichtig: Bevor irgendetwas passiert, muss ein Mensch ihn freigeben."</p>
+  <p class="sprich">„Ja, hallo zusammen, ich bin Mohammad. Ganz kurz, worum es geht: Ich messe, wie oft eine Webseite von
+  KI-Suchmaschinen — also ChatGPT und so — überhaupt als Quelle genannt wird. In Sprint 1 hab ich das Messen gebaut, in Sprint 2
+  das Verstehen, also warum manche Seiten genannt werden und andere nicht. Und heute, Sprint 3, kommt der Teil, auf den ich mich am
+  meisten gefreut hab: Das System sagt jetzt nicht mehr nur, was man tun müsste — es macht aus jedem Befund einen konkreten Vorschlag.
+  Und das Wichtigste sag ich gleich vorweg: Bevor irgendwas rausgeht, muss ein Mensch das freigeben."</p>
   <div class="ueber"><b>Übergang</b>„Zur Einordnung kurz das Gesamtbild."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 2</span><h3>Einordnung — der Sechs-Baustein-Loop</h3><span class="zeit">~45 s</span></div>
   <div class="kern">Sprint 3 = Baustein 05: Fix, Freigabe, Deploy.</div>
-  <p class="sprich">„Das Gesamtsystem ist ein Kreislauf aus sechs Bausteinen. Links die Messung aus Sprint 1, in der Mitte das
-  Lernen aus Sprint 2. Heute geht es um den grünen Baustein in der Mitte-rechts, die Nummer fünf: <em>Fix, Freigabe und Deploy</em>.
-  Aus dem Befund wird eine echte Maßnahme. Was rechts noch fehlt — das Nachmessen und das Gedächtnis — ist Sprint 4."</p>
+  <p class="sprich">„Kurz zur Einordnung — das Bild kennen Sie schon. Das Ganze ist ein Kreislauf aus sechs Bausteinen. Links die
+  beiden aus Sprint 1, das Messen, in der Mitte die zwei aus Sprint 2, das Lernen. Und heute geht es um den grünen Kasten in der Mitte,
+  die Nummer fünf: <em>Fix, Freigabe und Deploy</em>. Aus dem Befund wird also eine echte Maßnahme. Was rechts noch fehlt — das Nachmessen
+  und das Gedächtnis — das mach ich dann in Sprint 4."</p>
   <div class="ueber"><b>Übergang</b>„Warum braucht es diesen Schritt überhaupt?"</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 3</span><h3>Problemstellung</h3><span class="zeit">~50 s</span></div>
   <div class="kern">Der Auditor sagt, was zu tun ist — aber er tut es nicht.</div>
-  <p class="sprich">„Sprint 2 endet mit einer schönen, priorisierten Liste, was an den schwachen Seiten fehlt. Aber das System
-  <em>ändert nichts</em>. Da klafft eine Lücke. Meine Frage für Sprint 3 lautet deshalb: Kann ich aus so einem Befund eine konkrete,
-  einsetzbare Maßnahme machen und ausführen — und zwar zwei Dinge gleichzeitig: <em>reproduzierbar</em>, obwohl ein Sprachmodell
-  beteiligt ist, und vor allem <em>sicher</em> — also nie ohne menschliche Freigabe und nie direkt auf der echten Seite. Unten sehen
-  Sie die sechs Akte: Die ersten drei kennen Sie, die letzten drei sind neu."</p>
+  <p class="sprich">„Ich mach das mal konkret. Sprint 2 endet so: Der Auditor gibt mir eine schöne, sortierte Liste, was an den
+  schwachen Seiten fehlt. Aber er ändert halt nichts — da ist eine Lücke. Meine Frage für Sprint 3 ist deshalb: Krieg ich aus so einem
+  Befund eine konkrete Maßnahme, die ich auch wirklich anwenden kann? Und zwar zwei Sachen gleichzeitig: <em>reproduzierbar</em>, obwohl
+  da wieder ein Sprachmodell mit drinhängt, und vor allem <em>sicher</em> — nie ohne dass ein Mensch zustimmt, und nie direkt auf der
+  echten Seite. Unten sehen Sie die sechs Schritte: die ersten drei kennen Sie, die letzten drei sind neu."</p>
   <div class="ueber"><b>Übergang</b>„Was musste sich dafür an der Architektur ändern? Erstaunlich wenig."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 4</span><h3>Architektur</h3><span class="zeit">~50 s</span></div>
   <div class="kern">Genau EIN neuer Port — der Publisher. Die Architektur bleibt stabil.</div>
-  <p class="sprich">„Das Schichtenmodell ist dasselbe wie immer: innen die Datenmodelle, dann die Ports, dann die Adapter, außen
-  die Agenten. In Sprint 3 ist genau <em>ein</em> neuer Port dazugekommen, der <em>PublisherPort</em> — die Schnittstelle, über die
-  eine Änderung rausgeht. Und ein neuer Agent, der Fix-Agent. Das Entscheidende steht rechts: Der Kern weiß nichts von WordPress oder
-  GitHub. Eine echte Deploy-Senke kann ich später anstecken, ohne den Kern anzufassen."</p>
+  <p class="sprich">„Kurz zur Architektur. Das Schichtenmodell ist dasselbe wie immer — innen die Datenmodelle, drumrum die Ports,
+  dann die Adapter, außen die Agenten. Neu in Sprint 3 ist genau <em>ein</em> Port, der <em>PublisherPort</em>; darüber geht später eine
+  Änderung raus. Plus der neue Fix-Agent. Und das Wichtige steht rechts: Der Kern weiß nichts von WordPress oder GitHub. Eine echte
+  Deploy-Senke kann ich später dranstecken, ohne im Kern irgendwas anzufassen."</p>
   <div class="ueber"><b>Übergang</b>„Schauen wir uns den neuen Agenten an."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 5</span><h3>Agent 3 · Fix-Agent</h3><span class="zeit">~55 s</span></div>
   <div class="kern">Aus jedem Finding wird ein konkreter, belegter Patch.</div>
-  <p class="sprich">„Das ist der neue Agent, der <em>Fix-Agent</em>. Er bekommt die Befunde, die gelernten Muster und das
-  Seiten-Inventar, und macht pro Befund genau einen <em>Patch</em> — einen konkreten Änderungsvorschlag. Rechts zwei Beispiele:
-  Bei den Firewall-Grundlagen fehlt eine maschinenlesbare Definition, also ein fertig formuliertes FAQ-Schema. Beim Passwort-Manager-Vergleich
-  liegt alles nur als Fließtext vor, also eine Vergleichstabelle. Das ist kein vages ‚schreib das besser', sondern einsetzbarer Inhalt.
-  Und jeder Patch hat eine feste, ableitbare Kennung — die brauche ich gleich für die Reproduzierbarkeit."</p>
+  <p class="sprich">„Das ist der neue Agent, der <em>Fix-Agent</em>. Der kriegt die Befunde, die gelernten Muster und das
+  Seiten-Inventar — und macht daraus pro Befund genau einen <em>Patch</em>, also einen konkreten Änderungsvorschlag. Rechts zwei
+  Beispiele: Bei den Firewall-Grundlagen fehlt eine maschinenlesbare Definition, also schlägt er ein fertig formuliertes FAQ-Schema vor.
+  Beim Passwort-Manager-Vergleich ist alles nur Fließtext, also eine Vergleichstabelle. Das ist eben kein vages ‚schreib das besser',
+  sondern Inhalt, den man direkt nehmen kann. Und jeder Patch hat eine feste, ableitbare Kennung — die brauch ich gleich für die Reproduzierbarkeit."</p>
   <div class="ueber"><b>Übergang</b>„Bevor so ein Patch wirksam wird, kommt der für mich wichtigste Teil: die Freigabe."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 6</span><h3>Human-in-the-Loop-Gate</h3><span class="zeit">~55 s</span></div>
   <div class="kern">Kein Deploy ohne Freigabe — in Code erzwungen.</div>
-  <p class="sprich">„Zwischen dem Plan und dem Deploy sitzt ein <em>Gate</em>, an dem ein Mensch entscheidet — pro Patch, freigeben
-  oder ablehnen. Und das ist nicht nur eine Regel, das ist hart erzwungen: Wenn der Code ohne Freigabe deployen will, fliegt eine
-  Ausnahme, ein <em>DeployBlocked</em>. Aus dem Plan kann also nie direkt ein Ergebnis werden. Es gibt drei Varianten des Gates:
-  eine, die für die Demo automatisch freigibt, eine interaktive, die nachfragt, und eine, die zum Testen alles ablehnt."</p>
+  <p class="sprich">„Zwischen dem Plan und dem Deploy sitzt ein <em>Gate</em>, und da entscheidet ein Mensch — pro Patch: freigeben
+  oder ablehnen. Und das ist nicht nur eine Regel im Bericht, das ist hart erzwungen: Wenn der Code deployen will, ohne dass freigegeben
+  wurde, fliegt sofort eine Ausnahme — ein <em>DeployBlocked</em>. Aus dem Plan kann also nie direkt ein Ergebnis werden. Das Gate gibt es
+  in drei Varianten: eine, die für die Demo automatisch freigibt, eine, die im Terminal nachfragt, und eine, die zum Testen alles ablehnt."</p>
   <div class="regie">Auf die rote Box zeigen: „Diese Regel umgehe ich nie — auch nicht mal eben zum Ausprobieren."</div>
   <div class="ueber"><b>Übergang</b>„Wenn ein Patch freigegeben ist — wohin geht er?"</div>
 </div>
@@ -174,9 +176,9 @@ pre.cmd{background:#26251f;color:#eceae2;border-radius:14px;padding:16px 20px;fo
   <div class="head"><span class="chip">Folie 7</span><h3>Publisher-Port</h3><span class="zeit">~50 s</span></div>
   <div class="kern">Ein Interface, drei Adapter — sicher per Default.</div>
   <p class="sprich">„Freigegebene Patches gehen an den <em>Publisher</em> — wieder eine Schnittstelle, drei Adapter. Standard ist der
-  <em>Mock</em>: ein reiner Trockenlauf, er zeigt nur, was passieren würde, schreibt aber nichts. Der Filesystem-Publisher schreibt die
-  Vorschläge als Dateien in den Lauf-Ordner — ein echter, aber rein lokaler Schreibvorgang, die Live-Seite bleibt unberührt. Und WordPress
-  und GitHub sind bewusst noch blockiert; die schalte ich erst in Sprint 4 scharf. Die Regel unten gilt für jeden Adapter: Was nicht freigegeben
+  <em>Mock</em>: ein reiner Trockenlauf, zeigt nur, was passieren würde, schreibt aber nichts. Der zweite schreibt die Vorschläge als
+  Dateien in den Lauf-Ordner — ein echter, aber rein lokaler Schreibvorgang, die Live-Seite bleibt unangetastet. Und WordPress und GitHub
+  sind mit Absicht noch blockiert; die schalt ich erst in Sprint 4 scharf. Und die Regel unten gilt für jeden Adapter: Was nicht freigegeben
   ist, wird übersprungen."</p>
   <div class="ueber"><b>Übergang</b>„Zwischen diesen Schritten fließt kein freier Text — sondern Verträge."</div>
 </div>
@@ -184,70 +186,72 @@ pre.cmd{background:#26251f;color:#eceae2;border-radius:14px;padding:16px 20px;fo
 <div class="folie">
   <div class="head"><span class="chip">Folie 8</span><h3>Datenverträge</h3><span class="zeit">~40 s</span></div>
   <div class="kern">Geprüfte Strukturen für Patch, Freigabe und Ergebnis.</div>
-  <p class="sprich">„Drei feste Strukturen. Der <em>FixProposal</em> ist der Patch selbst, mit Hebel, Änderungsart und dem fertigen
-  Inhalt. Die <em>ApprovalDecision</em> ist die Freigabe-Entscheidung des Menschen. Und das <em>DeployResult</em> hält fest, was angewandt
-  und was übersprungen wurde — und steht standardmäßig auf Trockenlauf. Alle drei sind eingefroren, unbekannte Felder werden abgewiesen,
-  und die Patch-Kennung ist deterministisch."</p>
+  <p class="sprich">„Drei feste Strukturen. Der <em>FixProposal</em>, das ist der Patch selbst, mit Hebel, Änderungsart und dem
+  fertigen Inhalt. Die <em>ApprovalDecision</em>, das ist die Freigabe vom Menschen. Und das <em>DeployResult</em> hält fest, was angewandt
+  und was übersprungen wurde — und steht standardmäßig auf Trockenlauf. Alle drei sind eingefroren, unbekannte Felder fliegen raus, und die
+  Patch-Kennung ist berechnet, nicht zufällig."</p>
   <div class="ueber"><b>Übergang</b>„Was kommt am Ende heraus? Ein Lauf, ein Bild."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 9</span><h3>Ergebnis eines Live-Laufs</h3><span class="zeit">~50 s</span></div>
   <div class="kern">Ein echter Live-Lauf: Gemini-Zitate + GPT-4o, von der Messung bis zum Deploy.</div>
-  <p class="sprich">„Das hier ist ein <em>echter Live-Lauf</em> für it-sicherheit.de. Links die Rangliste — sie kommt diesmal wirklich von
-  Gemini mit Google-Suche: am häufigsten genannt wird die Phishing-Seite mit zehn Treffern, das Awareness-Training gar nicht. Echte,
-  gemessene Zahlen. Rechts alles von GPT-4o: oben ein konkreter Patch für den Passwort-Manager-Vergleich — mehr Faktendichte —, in der Mitte
-  die Freigabe (acht von acht Patches) und unten das Deploy-Ergebnis: Trockenlauf, keine externen Schreibzugriffe, acht angewandt. Der ganze
-  Loop, einmal komplett mit echten Modellen."</p>
+  <p class="sprich">„So, das hier ist jetzt ein <em>echter Live-Lauf</em> für it-sicherheit.de. Links die Rangliste — die kommt diesmal
+  wirklich von Gemini, mit Google-Suche im Hintergrund: am häufigsten genannt wird die Phishing-Seite, zehn Mal, das Awareness-Training kein
+  einziges Mal. Also echt gemessene Zahlen, nichts simuliert. Rechts das Neue, alles von GPT-4o: oben ein konkreter Patch für den
+  Passwort-Manager-Vergleich — das Modell sagt, da muss mehr Faktendichte rein —, in der Mitte die Freigabe, acht von acht, und unten das
+  Ergebnis: Trockenlauf, keine externen Schreibzugriffe, acht angewandt. Also der ganze Loop, einmal komplett, mit echten Modellen."</p>
   <div class="ueber"><b>Übergang</b>„Und das Ganze als ein Befehl im Terminal."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 10</span><h3>Demo-Ausgabe · Live-Lauf</h3><span class="zeit">~50 s</span></div>
   <div class="kern">Ein Befehl, sechs Schritte — live mit echten Modellen.</div>
-  <p class="sprich">„Hier die Terminal-Ausgabe des Live-Laufs. Sechs abgehakte Schritte. Auffällig: die Messung dauert fast vier Minuten,
-  weil Gemini im Free-Tier rate-limitiert ist — deshalb zeige ich das als <em>Aufnahme</em> (<code>sprint3-demo.mp4</code>), statt es live
-  vier Minuten laufen zu lassen. Die Kostenzeile ist diesmal echt, rund elf Cent für GPT-4o. Unten der Fingerprint <em>b6ed70488487</em>.
-  Wichtig: Ein Live-Lauf ist naturgemäß nicht bit-reproduzierbar — den Determinismus-Beweis liefere ich auf der nächsten Folie, offline."</p>
+  <p class="sprich">„Hier die Terminal-Ausgabe von dem Live-Lauf. Sechs abgehakte Schritte. Was auffällt: Das Messen dauert fast vier
+  Minuten — Gemini ist im kostenlosen Tarif ziemlich gedrosselt. Deshalb zeig ich das als <em>Aufnahme</em> (<code>sprint3-demo.mp4</code>),
+  statt es hier vier Minuten laufen zu lassen. Die Kostenzeile ist diesmal echt, so um die elf Cent für GPT-4o. Und unten der Fingerprint
+  <em>b6ed70488487</em>. Jetzt aber wichtig: So ein Live-Lauf ist natürlich nicht bit-genau wiederholbar — den Determinismus-Beweis bring ich
+  auf der nächsten Folie, offline."</p>
   <div class="ueber"><b>Übergang</b>„Und genau diesen Determinismus-Beweis — offline."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 11</span><h3>Reproduzierbarkeit (offline)</h3><span class="zeit">~40 s</span></div>
   <div class="kern">Offline zweimal laufen, derselbe Fingerprint — der Determinismus-Beweis.</div>
-  <p class="sprich">„Der Live-Lauf zeigt die echte Wirkung, variiert aber. Den Beweis der Reproduzierbarkeit liefere ich deshalb offline,
-  mit dem deterministischen Mock und festem Seed. Der Fix-Plan fließt in die Prüfsumme ein, die Patch-Kennungen sind abgeleitet, nicht
-  zufällig, Freigabe und Deploy bleiben mit ihren Zeitstempeln draußen. Führe ich den Offline-Lauf zweimal aus, kommt exakt dieselbe
-  Prüfsumme heraus — <em>c1ecf54a2b27</em>. Das ist sogar selbst als Test abgesichert."</p>
+  <p class="sprich">„Der Live-Lauf zeigt die echte Wirkung — aber er schwankt halt. Den Beweis für die Reproduzierbarkeit mach ich deshalb
+  offline, mit dem deterministischen Mock und festem Seed. Der Fix-Plan fließt in die Prüfsumme ein, die Patch-Kennungen sind berechnet statt
+  zufällig, und Freigabe und Deploy mit ihren Zeitstempeln lass ich raus. Und dann: Lauf ich das offline zweimal, kommt exakt dieselbe
+  Prüfsumme raus — <em>c1ecf54a2b27</em>. Das hab ich sogar als Test abgesichert."</p>
   <div class="ueber"><b>Übergang</b>„Die wichtigste neue Regel ist die Sicherheit — und die habe ich bewiesen."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 12</span><h3>Sicherheit · der Beweis</h3><span class="zeit">~50 s</span></div>
   <div class="kern">Das Gate ist nicht nur Konvention — es ist adversarial getestet.</div>
-  <p class="sprich">„Mir war wichtig, dass die Sicherheitsregel nicht nur im Bericht steht, sondern bewiesen ist. Dafür greife ich das
-  Gate in zwei Tests absichtlich an. Erster Test: Ich versuche zu deployen, ohne freizugeben — Ergebnis: ein <em>DeployBlocked</em>, kein
-  Ergebnis, keine Datei. Zweiter Test: Ich lehne alle Patches ab — Ergebnis: null angewandt, und der Filesystem-Publisher schreibt null Dateien.
-  Damit ist die zentrale Regel von Sprint 3 nicht behauptet, sondern in Code bewiesen."</p>
+  <p class="sprich">„Mir war wichtig, dass die Sicherheitsregel nicht nur dasteht, sondern auch wirklich bewiesen ist. Deshalb greif ich
+  das Gate in zwei Tests absichtlich an. Erster Test: Ich versuch zu deployen, ohne freizugeben — Ergebnis: ein <em>DeployBlocked</em>, kein
+  Ergebnis, keine Datei. Zweiter Test: Ich lehn alle Patches ab — Ergebnis: null angewandt, und es wird auch keine einzige Datei geschrieben.
+  Damit ist die zentrale Regel von Sprint 3 nicht nur behauptet, sondern echt in Code bewiesen."</p>
   <div class="ueber"><b>Übergang</b>„Womit wir bei der Abnahme wären — was heißt bei mir ‚fertig'?"</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 13</span><h3>Definition of Done</h3><span class="zeit">~35 s</span></div>
   <div class="kern">Fertig heißt: typgeprüft, getestet, reproduzierbar, sicher.</div>
-  <p class="sprich">„Der Typ-Check ist sauber über alle 128 Dateien, der Linter auch, und es laufen <em>182 Tests</em>, alle grün. Alle drei
-  Agenten haben einen eigenen Eval-Slot. Die Reproduzierbarkeit und das Sicherheits-Gate sind selbst Tests. Bewusst noch <em>nicht</em> gebaut:
-  der echte Schreibzugriff auf WordPress oder GitHub — der braucht Zugangsdaten und eine eigene Sicherheitsprüfung, das ist Sprint 4."</p>
+  <p class="sprich">„Kurz zur Qualität: Der Typ-Check ist sauber über alle 128 Dateien, der Linter auch, und es laufen <em>182 Tests</em>,
+  alle grün. Jeder der drei Agenten hat seinen eigenen Eval. Die Reproduzierbarkeit und das Sicherheits-Gate sind sogar selbst Tests. Eine
+  Sache hab ich bewusst noch weggelassen: den echten Schreibzugriff auf WordPress oder GitHub — der braucht Zugangsdaten und eine eigene
+  Sicherheitsprüfung, das ist dann Sprint 4."</p>
   <div class="ueber"><b>Übergang</b>„Womit wir beim Ausblick wären."</div>
 </div>
 
 <div class="folie">
   <div class="head"><span class="chip">Folie 14</span><h3>Stand &amp; Ausblick</h3><span class="zeit">~45 s</span></div>
   <div class="kern">Messen ✓, Lernen ✓, Handeln ✓ — jetzt aus der Wirkung lernen.</div>
-  <p class="sprich">„Drei von vier Sprints sind fertig: Messen, Verstehen und jetzt auch Handeln — sicher und reproduzierbar. In <em>Sprint 4</em>
-  kommt der echte Deploy hinter den bestehenden Port. Und dann der spannendste Teil: Ich messe nach sieben, vierzehn und achtundzwanzig Tagen nach,
-  ob die Änderung etwas gebracht hat, und schreibe das Ergebnis als Hypothese in ein Gedächtnis. Ab da lernt das System aus seinen eigenen Korrekturen,
-  und der Kreis ist geschlossen. Das war Sprint 3. Vielen Dank, und ich freue mich auf Ihre Fragen."</p>
+  <p class="sprich">„Drei von vier Sprints sind durch: Messen, Verstehen — und jetzt auch Handeln, sicher und reproduzierbar. In <em>Sprint 4</em>
+  kommt dann der echte Deploy, hinter denselben Port. Und der spannendste Teil: Ich mess nach sieben, vierzehn und achtundzwanzig Tagen nochmal nach,
+  ob die Änderung wirklich was gebracht hat — und schreib das Ergebnis als Hypothese in ein Gedächtnis. Ab da lernt das System aus seinen eigenen
+  Korrekturen, und der Kreis ist geschlossen. Das war es von mir zu Sprint 3 — vielen Dank, und ich freue mich auf Ihre Fragen."</p>
   <div class="ueber"><b>Ende</b>Lächeln, stehen bleiben, Fragen abwarten.</div>
 </div>
 
