@@ -27,6 +27,8 @@
   .cmd .p{color:var(--green)}.cmd .flag{color:var(--green);font-weight:600}
   .ok{color:var(--green);font-weight:700}
   .muted{color:var(--mut)}
+  .patchtxt{color:#cdcabc}
+  .fixrow{margin-top:2px}
   .sec{color:var(--acc);font-weight:700;letter-spacing:.04em;margin-top:10px}
   .sec.gold{color:var(--gold)}
   .gold{color:var(--gold)}.blue{color:var(--blue)}.coral{color:var(--coral)}.green{color:var(--green)}
@@ -47,7 +49,7 @@
   <div class="titlebar">
     <div class="dotrow"><i class="r"></i><i class="y"></i><i class="g"></i></div>
     <div class="tt">geo-audit-loop — Sprint 3 · Fix &amp; Deploy</div>
-    <div class="live"><span class="pulse"></span>LIVE · echte Ergebnisse</div>
+    <div class="live"><span class="pulse"></span>LIVE-Lauf</div>
   </div>
   <div class="term" id="term"><div class="scroll" id="scroll"></div></div>
   <div class="foot"><span id="footL">Gemini-Zitate + GPT-4o-Reasoning</span><span id="footR"></span></div>
@@ -380,7 +382,7 @@ blank(200);
 blank();
 
 // WAS
-add('<span class="sec">WAS — GEO-Sichtbarkeit (echte Gemini-Zitate)</span>', 360);
+add('<span class="sec">WAS — GEO-Sichtbarkeit (Gemini · Google-Search-Grounding)</span>', 360);
 const all = [...(DATA.top||[]).map(e=>({...e,top:true})), ...(DATA.flop||[]).map(e=>({...e,top:false}))];
 const maxc = Math.max(1, ...all.map(e=>e.count));
 all.slice(0,6).forEach(e => add(
@@ -401,11 +403,12 @@ add('<span class="sec">WAS TUN — Priorisierte Findings (GEO-Auditor · GPT-4o)
   `<span class="badge ${sevCls(f.severity)}">${f.severity.toUpperCase()}</span>${pad(f.url,28)} <span class="muted">${clip(f.recommendation,46)}</span>`, 320));
 blank();
 
-// FIX
-add('<span class="sec gold">FIX — Vorgeschlagene Patches (Fix-Agent · GPT-4o)</span>', 360);
-(DATA.patches||[]).slice(0,3).forEach(p => add(
-  `<span class="b-chg badge">${chg(p.change_type)}</span>${pad(p.url,26)} <span class="muted">· ${p.lever} · ${p.confidence}</span><br>`+
-  `<span class="muted">   ${clip(p.proposed_content,72)}</span>`, 460));
+// FIX — der Kern von Sprint 3: konkrete Patches prominent zeigen
+add('<span class="sec gold">FIX — Konkrete Patches je Finding (Fix-Agent · GPT-4o)</span>', 480);
+(DATA.patches||[]).slice(0,4).forEach(p => add(
+  `<span class="b-chg badge">${chg(p.change_type)}</span> <span class="bold">${esc(p.url)}</span> `+
+  `<span class="muted">· ${p.lever} · Konf. ${p.confidence}</span><br>`+
+  `<span class="fixrow"><span class="green">   → </span><span class="patchtxt">${clip(p.proposed_content,150)}</span></span>`, 820));
 blank();
 
 // FREIGABE
@@ -424,8 +427,8 @@ blank();
 // SUMMARY
 const c = DATA.cost||{};
 add(`<span class="muted">Kosten/Lauf</span>  <span class="bold">${c.probes} Probes · ${c.tokens} Tokens · $${(c.usd||0).toFixed(4)}</span>`, 380);
-add(`<span class="muted">Report-Fingerprint</span>  <span class="gold bold">${DATA.fingerprint}</span> <span class="muted">(Live — nicht-reproduzierbar, echte Modelle)</span>`, 380);
-add(`<span class="green bold">✓ Voll live: Gemini-Zitate + GPT-4o-Reasoning · nur echte Ergebnisse</span>`, 200);
+add(`<span class="muted">Report-Fingerprint</span>  <span class="gold bold">${DATA.fingerprint}</span> <span class="muted">(Live-Lauf — nicht bit-reproduzierbar)</span>`, 380);
+add(`<span class="green bold">✓ Live-Lauf · Gemini-Citation-Messung + GPT-4o-Reasoning (${DATA.model_reasoning||'gpt-4o'})</span>`, 200);
 
 const END = t + 3000;
 document.getElementById('footR').textContent = 'Domain ' + DATA.domain + ' · Modell ' + (DATA.model_reasoning||'gpt-4o');
