@@ -8,6 +8,15 @@ from pathlib import Path
 from geo_audit_loop.adapters.sample_data import build_sample_inventory
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
+from geo_audit_loop.domain.fix import (
+    ApprovalDecision,
+    ChangeType,
+    DeployResult,
+    DeployStatus,
+    FixPlan,
+    FixProposal,
+)
+from geo_audit_loop.domain.geo import Lever, PyramidLevel
 from geo_audit_loop.domain.probe import Citation, EngineId, ProbeResult, ProbeStatus, ProbeUsage
 from geo_audit_loop.domain.run import RunRecord, RunStatus
 
@@ -151,3 +160,95 @@ def test_report_roundtrip(tmp_path: Path) -> None:
     )
     storage.save_report(report)
     assert storage.load_report("run-1") == report
+
+
+def _fix_plan() -> FixPlan:
+    return FixPlan(
+        run_id="run-1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        prompt_version="v1",
+        proposals=(
+            FixProposal(
+                patch_id="px-f1-add_schema",
+                finding_id="f1",
+                target_url="https://it-sicherheit.de/firewall-grundlagen",
+                lever=Lever.ENTITY_CLARITY,
+                pyramid_level=PyramidLevel.SUBSTANCE,
+                change_type=ChangeType.ADD_SCHEMA,
+                proposed_content='{"@type": "Person"}',
+                rationale="Autor-Schema fehlt.",
+                confidence=0.8,
+            ),
+        ),
+    )
+
+
+def test_fix_plan_roundtrip_and_projection(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    plan = _fix_plan()
+    storage.save_fix_plan(plan)
+    assert storage.load_fix_plan("run-1") == plan
+    assert storage.load_fix_plan("unknown") is None
+    # Projektion in patches-Tabelle (fuer das Dashboard) ist vorhanden:
+    rows = storage._fetchall("SELECT patch_id FROM patches WHERE run_id = ?", ("run-1",))
+    assert [r["patch_id"] for r in rows] == ["px-f1-add_schema"]
+    storage.save_fix_plan(plan)  # idempotent (Upsert), kein Duplikat
+    rows = storage._fetchall("SELECT patch_id FROM patches WHERE run_id = ?", ("run-1",))
+    assert len(rows) == 1
+
+
+def test_approvals_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    d = ApprovalDecision(
+        patch_id="px-f1-add_schema",
+        run_id="run-1",
+        approved=True,
+        reviewer="cli:--approve-all",
+        decided_at=FIXED,
+    )
+    storage.save_approvals("run-1", [d])
+    assert storage.load_approvals("run-1") == [d]
+    # Einzel-Upsert ueberschreibt dieselbe (run_id, patch_id):
+    storage.save_decision(d.model_copy(update={"approved": False}))
+    loaded = storage.load_approvals("run-1")
+    assert len(loaded) == 1
+    assert loaded[0].approved is False
+
+
+def test_deploy_result_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    result = DeployResult(
+        run_id="run-1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        publisher="mock",
+        applied_patch_ids=("px-f1-add_schema",),
+        status=DeployStatus.DRY_RUN,
+    )
+    storage.save_deploy_result(result)
+    assert storage.load_deploy_result("run-1") == result
+    assert storage.load_deploy_result("unknown") is None
+
+
+def test_delete_run_removes_fix_artifacts(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    storage.save_fix_plan(_fix_plan())
+    storage.save_decision(
+        ApprovalDecision(
+            patch_id="px-f1-add_schema",
+            run_id="run-1",
+            approved=True,
+            reviewer="t",
+            decided_at=FIXED,
+        )
+    )
+    storage.save_deploy_result(
+        DeployResult(
+            run_id="run-1", target_domain="it-sicherheit.de", generated_at=FIXED, publisher="mock"
+        )
+    )
+    storage.delete_run("run-1")
+    assert storage.load_fix_plan("run-1") is None
+    assert storage.load_approvals("run-1") == []
+    assert storage.load_deploy_result("run-1") is None

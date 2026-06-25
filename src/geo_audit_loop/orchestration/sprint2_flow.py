@@ -89,6 +89,14 @@ class Sprint2Pipeline:
             self._pages = tuple(self._storage.load_pages(self._run_context.run_id))
         return self._pages
 
+    def load_pages(self) -> tuple[PageInventory, ...]:
+        """Oeffentlicher Zugriff auf das (gecachte) Seiten-Inventar (fuer Sprint 3)."""
+        return self._load_pages()
+
+    def finalize_completed(self) -> None:
+        """Schliesst den Run als COMPLETED ab (idempotent; Sprint 3 finalisiert spaeter erneut)."""
+        self._base.finalize_completed()
+
     def mine_patterns(self) -> PatternReport:
         """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren)."""
         self._pattern_report = self._pattern_miner.run(

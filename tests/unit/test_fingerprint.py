@@ -7,6 +7,7 @@ from datetime import datetime
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fingerprint import report_fingerprint
+from geo_audit_loop.domain.fix import ChangeType, FixPlan, FixProposal
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
 from geo_audit_loop.domain.templates import PatternReport, Template
 
@@ -93,4 +94,46 @@ def test_content_change_changes_fingerprint() -> None:
 def test_sprint1_only_differs_from_sprint2() -> None:
     a = report_fingerprint(_topflop())
     b = report_fingerprint(_topflop(), _patterns(), _audit())
+    assert a != b
+
+
+def _fixplan(
+    run_id: str = "a", generated_at: datetime = FIXED, content: str = "Block A"
+) -> FixPlan:
+    return FixPlan(
+        run_id=run_id,
+        target_domain="it-sicherheit.de",
+        generated_at=generated_at,
+        prompt_version="v1",
+        proposals=(
+            FixProposal(
+                patch_id="px-f1-insert_block",
+                finding_id="f1",
+                target_url="/firewall-grundlagen",
+                lever=Lever.ANSWER_BLOCKS,
+                pyramid_level=PyramidLevel.EXTRACTABILITY,
+                change_type=ChangeType.INSERT_BLOCK,
+                proposed_content=content,
+                rationale="Antwortblock fehlt.",
+                confidence=0.8,
+            ),
+        ),
+    )
+
+
+def test_fixplan_folded_into_fingerprint() -> None:
+    without = report_fingerprint(_topflop(), _patterns(), _audit())
+    with_fix = report_fingerprint(_topflop(), _patterns(), _audit(), _fixplan())
+    assert without != with_fix  # Sprint 3 aendert den Fingerprint
+
+
+def test_fixplan_stable_across_volatile_fields() -> None:
+    a = report_fingerprint(_topflop("a", FIXED), fix_plan=_fixplan("a", FIXED))
+    b = report_fingerprint(_topflop("b", OTHER), fix_plan=_fixplan("b", OTHER))
+    assert a == b
+
+
+def test_fixplan_content_change_changes_fingerprint() -> None:
+    a = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block A"))
+    b = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block B"))
     assert a != b

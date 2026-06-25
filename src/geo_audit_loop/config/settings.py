@@ -70,6 +70,13 @@ class Settings(BaseSettings):
 
     # --- Pfade ---
     db_path: Path = Field(default=Path("runs/geo_audit.db"), validation_alias="GEO_DB_PATH")
+    runs_dir: Path = Field(default=Path("runs"), validation_alias="GEO_RUNS_DIR")
+
+    # --- Sprint 3: Deploy-Ziel (sicher; wordpress/github bewusst NICHT waehlbar) ---
+    # mock (Default, Dry-Run, kein Write) | filesystem (Patch-Artefakte nach runs/<id>/patches/).
+    publisher: Literal["mock", "filesystem"] = Field(
+        default="mock", validation_alias="GEO_PUBLISHER"
+    )
 
     @field_validator("live_engines", mode="before")
     @classmethod

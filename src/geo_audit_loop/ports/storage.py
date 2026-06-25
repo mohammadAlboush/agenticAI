@@ -6,10 +6,12 @@ erlaubt es dem Sampler, bereits erledigte Probes beim Neustart zu ueberspringen.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.findings import TopFlopReport
+from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
@@ -95,4 +97,33 @@ class StoragePort(Protocol):
         self, run_id: str, task: str, model: str, prompt_version: str, raw_text: str
     ) -> None:
         """Haengt die rohe LLM-Antwort eines Reasoning-Schritts an (Auditierbarkeit/Replay)."""
+        ...
+
+    # --- Sprint-3-Fix-/Deploy-Artefakte ---
+    def save_fix_plan(self, plan: FixPlan) -> None:
+        """Persistiert den Fix-Plan eines Runs (Upsert ueber run_id) + Patch-Projektion."""
+        ...
+
+    def load_fix_plan(self, run_id: str) -> FixPlan | None:
+        """Laedt den FixPlan eines Runs oder ``None``."""
+        ...
+
+    def save_decision(self, decision: ApprovalDecision) -> None:
+        """Persistiert eine einzelne HITL-Entscheidung (Upsert ueber run_id/patch_id)."""
+        ...
+
+    def save_approvals(self, run_id: str, decisions: Sequence[ApprovalDecision]) -> None:
+        """Persistiert mehrere HITL-Entscheidungen eines Runs (Upsert je Patch)."""
+        ...
+
+    def load_approvals(self, run_id: str) -> list[ApprovalDecision]:
+        """Laedt alle HITL-Entscheidungen eines Runs."""
+        ...
+
+    def save_deploy_result(self, result: DeployResult) -> None:
+        """Persistiert das Deploy-Ergebnis eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_deploy_result(self, run_id: str) -> DeployResult | None:
+        """Laedt das Deploy-Ergebnis eines Runs oder ``None``."""
         ...

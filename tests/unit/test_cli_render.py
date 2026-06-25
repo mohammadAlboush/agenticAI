@@ -7,15 +7,26 @@ from datetime import datetime
 from rich.console import Console
 
 from geo_audit_loop.cli.render import (
+    render_deploy,
     render_error,
     render_findings,
+    render_fixplan,
     render_header,
+    render_hitl,
     render_patterns,
     render_summary,
     render_topflop,
 )
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
+from geo_audit_loop.domain.fix import (
+    ApprovalDecision,
+    ChangeType,
+    DeployResult,
+    DeployStatus,
+    FixPlan,
+    FixProposal,
+)
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
 from geo_audit_loop.domain.templates import PatternReport, Template
 from geo_audit_loop.observability.cost import CostSnapshot
@@ -142,6 +153,76 @@ def test_summary_shows_cost_and_fingerprint() -> None:
     assert "abcdef123456" in text
     assert "$0.3115" in text
     assert "reproduzierbar" in text
+
+
+def _fix_plan() -> FixPlan:
+    return FixPlan(
+        run_id="r1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        prompt_version="v1",
+        proposals=(
+            FixProposal(
+                patch_id="px-f1-insert_block",
+                finding_id="f1",
+                target_url="https://www.it-sicherheit.de/firewall-grundlagen",
+                lever=Lever.ANSWER_BLOCKS,
+                pyramid_level=PyramidLevel.EXTRACTABILITY,
+                change_type=ChangeType.INSERT_BLOCK,
+                proposed_content="Praegnanter Antwortblock direkt unter der H1.",
+                rationale="Template t1 verlangt einen extrahierbaren Antwortblock.",
+                confidence=0.78,
+            ),
+        ),
+    )
+
+
+def test_fixplan_shows_patch_and_confidence() -> None:
+    console = _console()
+    render_fixplan(console, _fix_plan())
+    text = console.export_text()
+    assert "px-f1-insert_block" not in text  # patch_id steht erst im HITL-Block
+    assert "/firewall-grundlagen" in text
+    assert "0.78" in text
+    assert "Antwortbloecke" in text
+    assert "Patches" in text
+
+
+def test_hitl_shows_decision_and_gate_note() -> None:
+    console = _console()
+    plan = _fix_plan()
+    decisions = {
+        "px-f1-insert_block": ApprovalDecision(
+            patch_id="px-f1-insert_block",
+            run_id="r1",
+            approved=True,
+            reviewer="cli:--approve-all",
+            decided_at=FIXED,
+        )
+    }
+    render_hitl(console, plan, decisions)
+    text = console.export_text()
+    assert "FREIGABE" in text
+    assert "cli:--approve-all" in text
+    assert "Kein Deploy ohne Freigabe" in text
+
+
+def test_deploy_shows_dry_run_safety() -> None:
+    console = _console()
+    result = DeployResult(
+        run_id="r1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        publisher="mock",
+        applied_patch_ids=("px-f1-insert_block",),
+        status=DeployStatus.DRY_RUN,
+        detail="Dry-Run.",
+    )
+    render_deploy(console, result)
+    text = console.export_text()
+    assert "DRY-RUN" in text
+    assert "KEINE EXTERNEN WRITES" in text
+    assert "1 angewandt" in text
 
 
 def test_empty_reports_do_not_crash() -> None:

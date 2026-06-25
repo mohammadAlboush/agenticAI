@@ -17,6 +17,13 @@ from rich.text import Text
 
 from geo_audit_loop.domain.audit import AuditReport, Severity
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
+from geo_audit_loop.domain.fix import (
+    ApprovalDecision,
+    ChangeType,
+    DeployResult,
+    DeployStatus,
+    FixPlan,
+)
 from geo_audit_loop.domain.geo import LEVER_LABELS, PYRAMID_LABELS
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.observability.cost import CostSnapshot
@@ -37,6 +44,23 @@ _SEVERITY_STYLES: Final[dict[Severity, str]] = {
 
 #: Achtel-Bloecke fuer feinaufgeloeste Balken.
 _BLOCKS: Final = " ▏▎▍▌▋▊▉█"
+
+#: Kurzlabels der Aenderungsarten (Sprint 3).
+_CHANGE_TYPE_LABELS: Final[dict[ChangeType, str]] = {
+    ChangeType.INSERT_BLOCK: "Block +",
+    ChangeType.REWRITE_BLOCK: "Umschreiben",
+    ChangeType.ADD_SCHEMA: "Schema +",
+    ChangeType.ADD_HEADING: "Ueberschrift +",
+    ChangeType.META_UPDATE: "Meta",
+}
+
+#: Badge-Stile der Deploy-Status (Sprint 3).
+_DEPLOY_STYLES: Final[dict[DeployStatus, str]] = {
+    DeployStatus.DRY_RUN: f"bold black on {ACCENT}",
+    DeployStatus.APPLIED: f"bold black on {ACCENT}",
+    DeployStatus.BLOCKED: "bold black on #e4b73f",
+    DeployStatus.FAILED: "bold white on #a8392c",
+}
 
 
 def _bar(fraction: float, width: int, style: str) -> Text:
@@ -72,6 +96,7 @@ def render_header(
     offline: bool,
     prompt_version: str,
     top_n: int,
+    stage_label: str = "Sprint 2 — Learning",
 ) -> None:
     """Rendert das Kopf-Panel mit Run-Metadaten."""
     mode = (
@@ -81,7 +106,7 @@ def render_header(
     )
     title = Text()
     title.append("geo-audit-loop", style=f"bold {ACCENT}")
-    title.append(" · Sprint 2 — Learning", style="bold")
+    title.append(f" · {stage_label}", style="bold")
     meta = Text()
     meta.append(domain, style="bold")
     meta.append("   ")
@@ -209,6 +234,131 @@ def render_findings(console: Console, report: AuditReport) -> None:
         fix.append(f"\nBeleg: {finding.evidence}", style=GREY)
         table.add_row(str(position), _severity_badge(finding.severity), page, fix)
     console.print(table)
+
+
+def render_fixplan(console: Console, plan: FixPlan) -> None:
+    """Rendert Akt 4 (FIX): die konkreten Patches des Fix-Agents."""
+    console.print()
+    console.rule(
+        Text("FIX — Vorgeschlagene Patches (Fix-Agent)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption=f"{len(plan.proposals)} Patches · Prompt {plan.prompt_version} · vor Freigabe",
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("#", justify="right", width=3)
+    table.add_column("Typ", width=13)
+    table.add_column("Seite · Hebel", ratio=2)
+    table.add_column("Vorschlag · Beleg", ratio=3)
+    table.add_column("Konfidenz", width=18)
+    for position, patch in enumerate(plan.proposals, start=1):
+        page = Text()
+        page.append(_short_url(patch.target_url), style="bold")
+        page.append(
+            f"\n{PYRAMID_LABELS[patch.pyramid_level]} · {LEVER_LABELS[patch.lever]}",
+            style=ACCENT_DIM,
+        )
+        proposal = Text()
+        snippet = patch.proposed_content.replace("\n", " ")
+        proposal.append(snippet[:140] + ("…" if len(snippet) > 140 else ""))
+        proposal.append(f"\n{patch.rationale}", style=GREY)
+        confidence = Text()
+        confidence.append_text(_bar(patch.confidence, 12, ACCENT))
+        confidence.append(f" {patch.confidence:.2f}", style="bold")
+        table.add_row(
+            str(position),
+            Text(f" {_CHANGE_TYPE_LABELS[patch.change_type]} ", style=f"bold black on {AMBER}"),
+            page,
+            proposal,
+            confidence,
+        )
+    console.print(table)
+
+
+def render_hitl(
+    console: Console, plan: FixPlan, decisions: dict[str, ApprovalDecision]
+) -> None:
+    """Rendert Akt 5 (FREIGABE): die Human-in-the-Loop-Entscheidung je Patch."""
+    console.print()
+    console.rule(
+        Text("FREIGABE — Human-in-the-Loop", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption="Kein Deploy ohne Freigabe — der Mensch entscheidet (Projektregeln §6)",
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("Entscheidung", width=14)
+    table.add_column("Seite · Patch", ratio=3)
+    table.add_column("Reviewer", ratio=1)
+    for patch in plan.proposals:
+        decision = decisions.get(patch.patch_id)
+        approved = decision is not None and decision.approved
+        badge = (
+            Text(" ✓ FREIGABE ", style=f"bold black on {ACCENT}")
+            if approved
+            else Text(" ✗ ABLEHNUNG ", style="bold white on #a8392c")
+        )
+        page = Text()
+        page.append(_short_url(patch.target_url), style="bold")
+        page.append(f"  {patch.patch_id}", style=GREY)
+        reviewer = Text(decision.reviewer if decision is not None else "—", style=GREY)
+        table.add_row(badge, page, reviewer)
+    console.print(table)
+
+
+def render_deploy(console: Console, result: DeployResult) -> None:
+    """Rendert Akt 6 (DEPLOY): das Ergebnis des sicheren Dry-Run-Deploys."""
+    console.print()
+    console.rule(
+        Text("DEPLOY — Anwenden (Dry-Run)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    grid = Table.grid(padding=(0, 2))
+    grid.add_column(style=GREY, justify="right")
+    grid.add_column()
+    grid.add_row("Publisher", Text(result.publisher, style="bold"))
+    safety = (
+        Text(" DRY-RUN · KEINE EXTERNEN WRITES ", style=f"bold black on {ACCENT}")
+        if result.dry_run
+        else Text(" LIVE ", style="bold white on #a8392c")
+    )
+    grid.add_row("Sicherheit", safety)
+    status_badge = Text(f" {result.status.value.upper()} ", style=_DEPLOY_STYLES[result.status])
+    grid.add_row("Status", status_badge)
+    grid.add_row(
+        "Patches",
+        Text(
+            f"{len(result.applied_patch_ids)} angewandt · "
+            f"{len(result.skipped_patch_ids)} uebersprungen",
+            style="bold",
+        ),
+    )
+    if result.artifact_path is not None:
+        grid.add_row("Artefakt", Text(result.artifact_path, style=GREY))
+    if result.detail:
+        grid.add_row("", Text(result.detail, style=GREY))
+    console.print(
+        Panel(
+            grid,
+            title=Text(" Deploy (Dry-Run) ", style=f"bold black on {ACCENT}"),
+            title_align="left",
+            border_style=ACCENT_DIM,
+            padding=(1, 2),
+        )
+    )
 
 
 def render_summary(

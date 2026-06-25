@@ -6,18 +6,21 @@ Pruefung; ``isinstance`` prueft zusaetzlich zur Laufzeit (runtime_checkable).
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.findings import TopFlopReport
+from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeRequest, ProbeResult
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
-from geo_audit_loop.domain.run import RunRecord
+from geo_audit_loop.domain.run import RunContext, RunRecord
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
 from geo_audit_loop.ports.proxy import ProxyPort
+from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.reasoning import ReasoningPort
 from geo_audit_loop.ports.storage import StoragePort
 
@@ -104,6 +107,42 @@ class _StubStorage:
         self, run_id: str, task: str, model: str, prompt_version: str, raw_text: str
     ) -> None: ...
 
+    def save_fix_plan(self, plan: FixPlan) -> None: ...
+
+    def load_fix_plan(self, run_id: str) -> FixPlan | None:
+        return None
+
+    def save_decision(self, decision: ApprovalDecision) -> None: ...
+
+    def save_approvals(self, run_id: str, decisions: Sequence[ApprovalDecision]) -> None: ...
+
+    def load_approvals(self, run_id: str) -> list[ApprovalDecision]:
+        return []
+
+    def save_deploy_result(self, result: DeployResult) -> None: ...
+
+    def load_deploy_result(self, run_id: str) -> DeployResult | None:
+        return None
+
+
+class _StubPublisher:
+    name = "stub"
+
+    def publish(
+        self,
+        plan: FixPlan,
+        decisions: Mapping[str, ApprovalDecision],
+        *,
+        run_context: RunContext,
+        dry_run: bool = True,
+    ) -> DeployResult:
+        return DeployResult(
+            run_id=plan.run_id,
+            target_domain=plan.target_domain,
+            generated_at=FIXED,
+            publisher=self.name,
+        )
+
 
 def test_engine_port_conformance() -> None:
     engine: EnginePort = _StubEngine()
@@ -140,3 +179,9 @@ def test_reasoning_port_conformance() -> None:
     reasoning: ReasoningPort = _StubReasoning()
     assert isinstance(reasoning, ReasoningPort)
     assert reasoning.model == "stub-model"
+
+
+def test_publisher_port_conformance() -> None:
+    publisher: PublisherPort = _StubPublisher()
+    assert isinstance(publisher, PublisherPort)
+    assert publisher.name == "stub"

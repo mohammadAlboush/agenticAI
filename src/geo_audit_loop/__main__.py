@@ -18,9 +18,12 @@ from datetime import UTC, datetime
 from rich.console import Console
 
 from geo_audit_loop.cli.render import (
+    render_deploy,
     render_error,
     render_findings,
+    render_fixplan,
     render_header,
+    render_hitl,
     render_patterns,
     render_summary,
     render_topflop,
@@ -45,6 +48,22 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--explain",
         action="store_true",
         help="Sprint-2-Lern-Loop: Muster (warum) + priorisierte Findings (was tun) ausgeben",
+    )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Sprint-3-Fix-/Deploy-Loop: Patches ableiten, Freigabe (HITL), Dry-Run-Deploy "
+        "(impliziert --explain)",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Deploy-Schritt aktivieren (Alias zu --fix; reiner Dry-Run, kein externer Write)",
+    )
+    parser.add_argument(
+        "--approve-all",
+        action="store_true",
+        help="Alle Patches automatisch freigeben (nicht-interaktive Demo); sonst wird gefragt",
     )
     parser.add_argument("--log-level", default="INFO", help="Logging-Level")
     parser.add_argument(
@@ -109,6 +128,15 @@ def main(argv: list[str] | None = None) -> int:
 
     version, prompts = load_probe_set(settings.prompt_set_version)
     run_id = args.run_id if args.run_id else uuid.uuid4().hex[:12]
+    fix = args.fix or args.apply
+    explain = args.explain or fix
+    stage_label = (
+        "Sprint 3 — Fix & Deploy"
+        if fix
+        else "Sprint 2 — Learning"
+        if explain
+        else "Sprint 1 — Foundation"
+    )
 
     # Header sofort rendern — die schweren (deferred) CrewAI-Imports kommen erst danach,
     # damit die CLI nicht sekundenlang stumm bleibt.
@@ -121,16 +149,25 @@ def main(argv: list[str] | None = None) -> int:
         offline=not args.live,
         prompt_version=version,
         top_n=settings.top_n,
+        stage_label=stage_label,
     )
 
     # Deferred Imports: erst nach dem Setzen der Telemetrie-Env (crewai wird dort geladen).
+    from geo_audit_loop.cli.approval import InteractiveApproveGate
     from geo_audit_loop.cli.progress import (
         FlowProgressListener,
         build_progress,
         silence_crewai_console,
     )
+    from geo_audit_loop.orchestration.approval import ApprovalGate
     from geo_audit_loop.orchestration.factory import assemble_run
     from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
+    from geo_audit_loop.orchestration.sprint3_flow import Sprint3Pipeline
+
+    # HITL-Gate: interaktiv (Default) oder Auto (--approve-all). Nur relevant bei --fix.
+    gate: ApprovalGate | None = (
+        InteractiveApproveGate(console) if (fix and not args.approve_all) else None
+    )
 
     # Vor assemble_run: dort wird der Flow konstruiert und das erste CrewAI-Panel gefeuert.
     silence_crewai_console()
@@ -142,7 +179,9 @@ def main(argv: list[str] | None = None) -> int:
         now=datetime.now(UTC),
         prompts=prompts,
         prompt_version=version,
-        explain=args.explain,
+        explain=explain,
+        fix=fix,
+        approval_gate=gate,
         live_crawl=args.live_crawl,
     )
 
@@ -172,10 +211,11 @@ def main(argv: list[str] | None = None) -> int:
     report = assembly.pipeline.report
     patterns = None
     audit = None
+    fix_plan = None
     if report is not None:
         _pace()
         render_topflop(console, report)
-    if isinstance(assembly.pipeline, Sprint2Pipeline):
+    if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline):
         patterns = assembly.pipeline.pattern_report
         audit = assembly.pipeline.audit_report
         if patterns is not None:
@@ -184,12 +224,25 @@ def main(argv: list[str] | None = None) -> int:
         if audit is not None:
             _pace()
             render_findings(console, audit)
+    if isinstance(assembly.pipeline, Sprint3Pipeline):
+        fix_plan = assembly.pipeline.fix_plan
+        decisions = assembly.pipeline.decisions
+        deploy = assembly.pipeline.deploy_result
+        if fix_plan is not None:
+            _pace()
+            render_fixplan(console, fix_plan)
+        if fix_plan is not None and decisions is not None:
+            _pace()
+            render_hitl(console, fix_plan, decisions)
+        if deploy is not None:
+            _pace()
+            render_deploy(console, deploy)
     if report is not None:
         _pace()
         render_summary(
             console,
             snapshot=assembly.cost_tracker.snapshot(),
-            fingerprint=report_fingerprint(report, patterns, audit),
+            fingerprint=report_fingerprint(report, patterns, audit, fix_plan),
             seed=settings.run_seed,
             duration_s=duration,
         )

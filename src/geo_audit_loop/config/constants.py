@@ -46,6 +46,10 @@ TOP_N: Final = 10
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
 
+# --- Sprint 3: Fix-Agent / Deploy ---
+FIX_AGENT_TASK: Final = "fix_agent"
+PATCHES_SUBDIR: Final = "patches"  # Unterordner je Run fuer FilesystemPublisher-Artefakte
+
 # --- Budget-Cap-Defaults (hart, Projektregeln §6) ---
 DEFAULT_MAX_PROBES: Final = EXPECTED_PROBES_PER_RUN
 DEFAULT_MAX_USD: Final = 2.0

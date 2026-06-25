@@ -18,9 +18,12 @@ from geo_audit_loop.adapters.engines.gemini import GeminiEngineAdapter
 from geo_audit_loop.adapters.engines.mock import MockEngineAdapter
 from geo_audit_loop.adapters.engines.perplexity import PerplexityEngineAdapter
 from geo_audit_loop.adapters.proxy.webshare import WebshareProxyPool
+from geo_audit_loop.adapters.publisher.filesystem import FilesystemPublisher
+from geo_audit_loop.adapters.publisher.mock import MockPublisher
 from geo_audit_loop.adapters.reasoning.mock import MockReasoningAdapter
 from geo_audit_loop.adapters.sample_data import build_sample_inventory, sample_target_urls
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+from geo_audit_loop.agents.fix_agent import FixAgentService
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
@@ -33,11 +36,14 @@ from geo_audit_loop.domain.inventory import CrawlOptions
 from geo_audit_loop.domain.probe import EngineId, EngineProbeSpec, ProbePrompt
 from geo_audit_loop.domain.run import RunContext
 from geo_audit_loop.observability.cost import CostTracker
+from geo_audit_loop.orchestration.approval import ApprovalGate, AutoApproveGate
 from geo_audit_loop.orchestration.sprint1_flow import Sprint1Flow, Sprint1Pipeline
 from geo_audit_loop.orchestration.sprint2_flow import Sprint2Flow, Sprint2Pipeline
+from geo_audit_loop.orchestration.sprint3_flow import Sprint3Flow, Sprint3Pipeline
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
 from geo_audit_loop.ports.proxy import ProxyPort
+from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.reasoning import ReasoningPort
 from geo_audit_loop.prompts.loader import load_prompt
 
@@ -46,15 +52,26 @@ from geo_audit_loop.prompts.loader import load_prompt
 class RunAssembly:
     """Alles, was ein Run braucht (vom Composition Root erstellt).
 
-    ``flow``/``pipeline`` sind je nach Modus die Sprint-1- (Messung) oder die
-    Sprint-2-Variante (Messung + Lern-Loop); beide teilen die ``report``-Property.
+    ``flow``/``pipeline`` sind je nach Modus die Sprint-1- (Messung), Sprint-2- (Lern-Loop)
+    oder Sprint-3-Variante (Fix + HITL + Deploy); alle teilen die ``report``-Property.
     """
 
-    flow: Sprint1Flow | Sprint2Flow
-    pipeline: Sprint1Pipeline | Sprint2Pipeline
+    flow: Sprint1Flow | Sprint2Flow | Sprint3Flow
+    pipeline: Sprint1Pipeline | Sprint2Pipeline | Sprint3Pipeline
     storage: SqliteStorage
     cost_tracker: CostTracker
     run_context: RunContext
+
+
+def build_publisher(settings: Settings) -> PublisherPort:
+    """Waehlt den Deploy-Publisher: ``mock`` (Default, Dry-Run) | ``filesystem`` (lokales Artefakt).
+
+    WordPress/GitHub sind bewusst NICHT waehlbar (``Settings.publisher`` laesst sie nicht zu) —
+    der Demo-/CLI-Pfad kann strukturell keinen echten externen Write ausloesen (Projektregeln §6).
+    """
+    if settings.publisher == "filesystem":
+        return FilesystemPublisher(settings.runs_dir)
+    return MockPublisher()
 
 
 def build_specs() -> dict[EngineId, EngineProbeSpec]:
@@ -161,15 +178,20 @@ def assemble_run(
     prompts: Sequence[ProbePrompt],
     prompt_version: str,
     explain: bool = False,
+    fix: bool = False,
+    approval_gate: ApprovalGate | None = None,
     live_crawl: bool = False,
     logger: logging.Logger | None = None,
 ) -> RunAssembly:
     """Verdrahtet Storage, CostTracker, Engines, Services und den Flow fuer einen Run.
 
     ``explain=True`` haengt den Sprint-2-Lern-Loop (Pattern-Miner + GEO-Auditor) an die
-    Sprint-1-Messung; sonst laeuft der reine Sprint-1-Flow. ``live_crawl=True`` crawlt die
-    Zieldomain real (advertools) statt das schnelle Sample-Inventar zu nutzen.
+    Sprint-1-Messung. ``fix=True`` haengt zusaetzlich den Sprint-3-Fix-/Deploy-Loop an
+    (Fix-Agent + HITL-Gate + Publisher); es impliziert ``explain``. Das HITL-Gate ist
+    ``approval_gate`` (Default: ``AutoApproveGate`` — die CLI reicht bei interaktiver
+    Freigabe einen eigenen Gate durch). ``live_crawl=True`` crawlt die Zieldomain real.
     """
+    explain = explain or fix
     storage = SqliteStorage(settings.db_path)
     storage.initialize()
     cost_tracker = CostTracker(
@@ -256,9 +278,37 @@ def assemble_run(
         run_context=run_context,
         logger=logger,
     )
+    if not fix:
+        return RunAssembly(
+            flow=Sprint2Flow(sprint2),
+            pipeline=sprint2,
+            storage=storage,
+            cost_tracker=cost_tracker,
+            run_context=run_context,
+        )
+
+    fx_version, fx_prompt = load_prompt("fix_agent")
+    fix_agent = FixAgentService(
+        reasoning=reasoning,
+        system_prompt=fx_prompt,
+        prompt_version=fx_version,
+        cost_tracker=cost_tracker,
+        storage=storage,
+        logger=logger,
+    )
+    gate: ApprovalGate = approval_gate if approval_gate is not None else AutoApproveGate()
+    sprint3 = Sprint3Pipeline(
+        base=sprint2,
+        fix_agent=fix_agent,
+        publisher=build_publisher(settings),
+        approval_gate=gate,
+        storage=storage,
+        run_context=run_context,
+        logger=logger,
+    )
     return RunAssembly(
-        flow=Sprint2Flow(sprint2),
-        pipeline=sprint2,
+        flow=Sprint3Flow(sprint3),
+        pipeline=sprint3,
         storage=storage,
         cost_tracker=cost_tracker,
         run_context=run_context,

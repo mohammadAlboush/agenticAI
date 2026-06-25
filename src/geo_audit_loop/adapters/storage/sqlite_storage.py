@@ -18,6 +18,7 @@ from typing import cast
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
+from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import PageInventory
 from geo_audit_loop.domain.probe import EngineId, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
@@ -60,6 +61,26 @@ CREATE TABLE IF NOT EXISTS reasoning_log (
     model          TEXT NOT NULL,
     prompt_version TEXT NOT NULL,
     raw_text       TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS fix_plans (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS patches (
+    run_id   TEXT NOT NULL,
+    patch_id TEXT NOT NULL,
+    payload  TEXT NOT NULL,
+    PRIMARY KEY (run_id, patch_id)
+);
+CREATE TABLE IF NOT EXISTS approvals (
+    run_id   TEXT NOT NULL,
+    patch_id TEXT NOT NULL,
+    payload  TEXT NOT NULL,
+    PRIMARY KEY (run_id, patch_id)
+);
+CREATE TABLE IF NOT EXISTS deploy_results (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
 );
 """
 
@@ -165,7 +186,19 @@ class SqliteStorage:
 
     def delete_run(self, run_id: str) -> None:
         """Loescht einen Run samt aller Artefakte (eine Transaktion ueber alle Tabellen)."""
-        tables = ("runs", "probes", "pages", "reports", "patterns", "audits", "reasoning_log")
+        tables = (
+            "runs",
+            "probes",
+            "pages",
+            "reports",
+            "patterns",
+            "audits",
+            "reasoning_log",
+            "fix_plans",
+            "patches",
+            "approvals",
+            "deploy_results",
+        )
         conn = self._connection()
         try:
             with self._lock:
@@ -276,3 +309,70 @@ class SqliteStorage:
             "VALUES (?, ?, ?, ?, ?)",
             (run_id, task, model, prompt_version, raw_text),
         )
+
+    # --- Sprint-3-Fix-/Deploy-Artefakte ------------------------------------
+    def save_fix_plan(self, plan: FixPlan) -> None:
+        """Persistiert den Fix-Plan (Upsert) und projiziert die Patches in die patches-Tabelle.
+
+        Die Patch-Projektion erlaubt dem Dashboard, einzelne Patches zu listen/freizugeben,
+        ohne den ganzen Plan neu zu parsen. Eine Transaktion ueber beide Tabellen.
+        """
+        conn = self._connection()
+        try:
+            with self._lock:
+                conn.execute(
+                    "INSERT OR REPLACE INTO fix_plans (run_id, payload) VALUES (?, ?)",
+                    (plan.run_id, plan.model_dump_json()),
+                )
+                conn.executemany(
+                    "INSERT OR REPLACE INTO patches (run_id, patch_id, payload) VALUES (?, ?, ?)",
+                    [(plan.run_id, p.patch_id, p.model_dump_json()) for p in plan.proposals],
+                )
+                conn.commit()
+        except sqlite3.Error as exc:
+            raise StorageError(f"Fix-Plan speichern fehlgeschlagen: {exc}") from exc
+
+    def load_fix_plan(self, run_id: str) -> FixPlan | None:
+        """Laedt den FixPlan eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM fix_plans WHERE run_id = ?", (run_id,))
+        return FixPlan.model_validate_json(row["payload"]) if row is not None else None
+
+    def save_decision(self, decision: ApprovalDecision) -> None:
+        """Persistiert eine einzelne HITL-Entscheidung (Upsert ueber run_id/patch_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO approvals (run_id, patch_id, payload) VALUES (?, ?, ?)",
+            (decision.run_id, decision.patch_id, decision.model_dump_json()),
+        )
+
+    def save_approvals(self, run_id: str, decisions: Sequence[ApprovalDecision]) -> None:
+        """Persistiert mehrere HITL-Entscheidungen eines Runs (Upsert je Patch)."""
+        conn = self._connection()
+        try:
+            with self._lock:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO approvals (run_id, patch_id, payload) "
+                    "VALUES (?, ?, ?)",
+                    [(run_id, d.patch_id, d.model_dump_json()) for d in decisions],
+                )
+                conn.commit()
+        except sqlite3.Error as exc:
+            raise StorageError(f"Freigaben speichern fehlgeschlagen: {exc}") from exc
+
+    def load_approvals(self, run_id: str) -> list[ApprovalDecision]:
+        """Laedt alle HITL-Entscheidungen eines Runs."""
+        rows = self._fetchall(
+            "SELECT payload FROM approvals WHERE run_id = ? ORDER BY patch_id", (run_id,)
+        )
+        return [ApprovalDecision.model_validate_json(row["payload"]) for row in rows]
+
+    def save_deploy_result(self, result: DeployResult) -> None:
+        """Persistiert das Deploy-Ergebnis eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO deploy_results (run_id, payload) VALUES (?, ?)",
+            (result.run_id, result.model_dump_json()),
+        )
+
+    def load_deploy_result(self, run_id: str) -> DeployResult | None:
+        """Laedt das Deploy-Ergebnis eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM deploy_results WHERE run_id = ?", (run_id,))
+        return DeployResult.model_validate_json(row["payload"]) if row is not None else None
