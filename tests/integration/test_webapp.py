@@ -12,6 +12,14 @@ from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
 from geo_audit_loop.config.settings import Settings
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
+from geo_audit_loop.domain.fix import (
+    ApprovalDecision,
+    ChangeType,
+    DeployResult,
+    DeployStatus,
+    FixPlan,
+    FixProposal,
+)
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
 from geo_audit_loop.domain.probe import Citation, EngineId, ProbeResult, ProbeUsage
 from geo_audit_loop.domain.run import RunRecord, RunStatus
@@ -113,6 +121,46 @@ def _seed(tmp_path: Path, *, with_results: bool = True) -> None:
             ),
         )
     )
+    storage.save_fix_plan(
+        FixPlan(
+            run_id=RUN,
+            target_domain="it-sicherheit.de",
+            generated_at=FIXED,
+            prompt_version="v1",
+            proposals=(
+                FixProposal(
+                    patch_id="px-f1-add_schema",
+                    finding_id="f1",
+                    target_url="/firewall-grundlagen",
+                    lever=Lever.DEFINITION_BLOCKS,
+                    pyramid_level=PyramidLevel.EXTRACTABILITY,
+                    change_type=ChangeType.ADD_SCHEMA,
+                    proposed_content='{"@type": "FAQPage"}',
+                    rationale="Template t1 verlangt FAQ-Schema.",
+                    confidence=0.74,
+                ),
+            ),
+        )
+    )
+    storage.save_decision(
+        ApprovalDecision(
+            patch_id="px-f1-add_schema",
+            run_id=RUN,
+            approved=True,
+            reviewer="cli:--approve-all",
+            decided_at=FIXED,
+        )
+    )
+    storage.save_deploy_result(
+        DeployResult(
+            run_id=RUN,
+            target_domain="it-sicherheit.de",
+            generated_at=FIXED,
+            publisher="mock",
+            applied_patch_ids=("px-f1-add_schema",),
+            status=DeployStatus.DRY_RUN,
+        )
+    )
     storage.close()
 
 
@@ -169,6 +217,35 @@ def test_probe_detail_and_results(tmp_path: Path) -> None:
     assert results["report"]["top"][0]["url"] == "/nis2-richtlinie"
     assert results["patterns"]["templates"][0]["template_id"] == "t1"
     assert results["audit"]["findings"][0]["severity"] == "medium"
+    # Sprint 3: Fix-Plan + Deploy-Ergebnis sind read-only verfuegbar
+    assert results["fix_plan"]["proposals"][0]["patch_id"] == "px-f1-add_schema"
+    assert results["deploy"]["dry_run"] is True
+    assert results["deploy"]["applied_patch_ids"] == ["px-f1-add_schema"]
+
+
+def test_state_surfaces_sprint3_counts(tmp_path: Path) -> None:
+    _seed(tmp_path)
+    client = TestClient(create_app(_settings(tmp_path)))
+    state = client.get("/api/state").json()
+    assert state["n_proposals"] == 1
+    assert state["deploy_status"] == "dry_run"
+
+
+def test_start_run_with_fix_spawns_fix_flags(tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def spawn(args: list[str], env: dict[str, str]) -> _FakeProc:
+        captured["args"] = args
+        return _FakeProc()
+
+    client = TestClient(create_app(_settings(tmp_path), spawn=spawn))
+    response = client.post(
+        "/api/runs", json={"domain": "it-sicherheit.de", "explain": True, "fix": True}
+    )
+    assert response.status_code == 201
+    args = captured["args"]
+    assert isinstance(args, list)
+    assert "--fix" in args and "--approve-all" in args
 
 
 def test_running_run_has_no_fingerprint(tmp_path: Path) -> None:

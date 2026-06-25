@@ -187,6 +187,7 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
     </div>
     <div class="toggles">
       <label><input type="checkbox" id="f-explain" checked> Lern-Loop (Pattern-Miner + GEO-Auditor)</label>
+      <label><input type="checkbox" id="f-fix"> Fix &amp; Deploy (Fix-Agent + HITL-Freigabe + Dry-Run)</label>
       <span id="engine-toggles" class="hidden"></span>
     </div>
     <div class="startrow">
@@ -245,6 +246,12 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
       <div id="findings"></div>
     </div>
 
+    <div id="sec-fix" class="hidden">
+      <h2 class="sec"><span class="n">SCHRITT 6</span>Fix &amp; Deploy — Patches, Freigabe, Dry-Run</h2>
+      <div id="deploybox"></div>
+      <div id="fixes"></div>
+    </div>
+
     <div class="footer">
       <span id="fpwrap" class="hidden">Report-Fingerprint <span class="fp" id="fp"></span></span>
       <span style="margin-left:auto;font-family:var(--mono);font-size:11.5px" id="poll"></span>
@@ -270,6 +277,7 @@ const LEVER = {crawler_access:"Crawler-Zugang",answer_blocks:"Antwortblöcke",he
 const PYR = {access:"Zugang",extractability:"Extrahierbarkeit",substance:"Substanz",corroboration:"Korroboration",citation:"Zitation"};
 const ENGINE_NAME = {perplexity:"Perplexity",chatgpt:"ChatGPT",claude:"Claude",gemini:"Gemini"};
 const REASON_NAME = {mock:"Mock (Simulation)", saia:"SAIA · Hochschule (kostenlos)", claude:"Claude (Anthropic)"};
+const CHG = {insert_block:"Block +", rewrite_block:"Umschreiben", add_schema:"Schema +", add_heading:"Überschrift +", meta_update:"Meta"};
 
 let targetDomain = "";
 let resultsLoaded = false;
@@ -288,7 +296,7 @@ async function getJSON(url){ const r = await fetch(url); return r.json(); }
 
 function resetForNewRun(){
   resultsLoaded = false;
-  for (const id of ["sec-pages","sec-topflop","sec-patterns","sec-findings","fpwrap"]) $(id).classList.add("hidden");
+  for (const id of ["sec-pages","sec-topflop","sec-patterns","sec-findings","sec-fix","fpwrap"]) $(id).classList.add("hidden");
   closeDrawer();
 }
 
@@ -355,6 +363,7 @@ $("startbtn").addEventListener("click", async () => {
       domain: $("f-domain").value.trim(),
       offline: !live,
       explain: $("f-explain").checked,
+      fix: $("f-fix").checked,
       top_n: parseInt($("f-topn").value, 10),
       seed: parseInt($("f-seed").value, 10),
       n_proxy_ips: parseInt($("f-ips").value, 10),
@@ -550,7 +559,25 @@ function renderResults(res){
       `<span class="lever">${esc(PYR[f.pyramid_level]||f.pyramid_level)} · ${esc(LEVER[f.lever]||f.lever)}</span></div>` +
       `<div class="fix">Fix: ${esc(f.recommendation)}</div><div class="ev">Beleg: ${esc(f.evidence)}</div></div>`).join("");
   }
-  resultsLoaded = Boolean(res.report && res.audit);
+  if (res.fix_plan && res.fix_plan.proposals.length){
+    $("sec-fix").classList.remove("hidden");
+    if (res.deploy){
+      const d = res.deploy, safe = d.dry_run;
+      $("deploybox").innerHTML =
+        `<div class="card" style="border-left:3px solid var(--acc)">` +
+        `<h4>Deploy · ${esc(d.publisher)} <span class="sev ${safe?"low":"high"}" style="margin-left:8px">` +
+        `${safe?"DRY-RUN · KEINE EXTERNEN WRITES":"LIVE"}</span></h4>` +
+        `<p><b>${d.applied_patch_ids.length}</b> angewandt · <b>${d.skipped_patch_ids.length}</b> übersprungen` +
+        ` · Status ${esc(d.status)}</p>` +
+        `<p style="margin-top:6px;color:var(--mut)">Kein Deploy ohne Freigabe — der Mensch entscheidet (Projektregeln §6).</p></div>`;
+    }
+    $("fixes").innerHTML = res.fix_plan.proposals.map((p,i) =>
+      `<div class="find"><div class="h"><b>${i+1}.</b>` +
+      `<span class="sev low">${esc(CHG[p.change_type]||p.change_type)}</span>` +
+      `<span class="url">${esc(shortUrl(p.target_url))}</span>` +
+      `<span class="lever">${esc(PYR[p.pyramid_level]||p.pyramid_level)} · ${esc(LEVER[p.lever]||p.lever)} · Konf. ${(p.confidence).toFixed(2)}</span></div>` +
+      `<div class="fix">${esc(p.proposed_content)}</div><div class="ev">${esc(p.rationale)}</div></div>`).join("");
+  }
 }
 
 /* ---------- Poll-Schleife ---------- */
@@ -564,7 +591,12 @@ async function tick(){
     if (s.run){
       renderMatrix(await getJSON("/api/matrix" + q()));
       if (s.n_pages > 0) renderPages(await getJSON("/api/pages" + q()));
-      if (s.has_report && !resultsLoaded) renderResults(await getJSON("/api/results" + q()));
+      // Solange der Lauf nicht final ist, Ergebnisse weiter nachladen (Fix/Deploy kommen spaet).
+      const finalized = s.run && ["completed","failed","aborted"].includes(s.run.status);
+      if (s.has_report && (!resultsLoaded || !finalized)){
+        renderResults(await getJSON("/api/results" + q()));
+        if (finalized) resultsLoaded = true;
+      }
     }
     if (live || !s.run){
       $("poll").textContent = "live · aktualisiert " + new Date().toLocaleTimeString();
