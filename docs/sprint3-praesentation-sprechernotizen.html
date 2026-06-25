@@ -85,12 +85,13 @@ pre.cmd{background:#26251f;color:#eceae2;border-radius:14px;padding:16px 20px;fo
 <ul>
   <li><code>sprint3-praesentation.html</code> im Browser öffnen, <strong>F</strong> drücken (Vollbild). Blättern: <strong>→ / Leertaste</strong> vor, <strong>←</strong> zurück. Manche Folien haben Einblend-Schritte — einfach weiterblättern.</li>
   <li>Optional 2. Bildschirm: im Deck <strong>S</strong> drücken → das Sprecher-Skript öffnet sich in einem zweiten Fenster und folgt beim Blättern automatisch mit (Timer per Klick auf 00:00).</li>
-  <li>Falls Live-Demo geplant: Terminal im Ordner <code>ProjektPitch</code> öffnen und den Befehl schon <em>eintippen</em> (noch nicht abschicken):</li>
+  <li><b>Live-Demo (Folien 9–10):</b> über das Video <code>docs/sprint3-demo.mp4</code> zeigen — der echte Live-Lauf dauert ~4 min (Gemini-Rate-Limit), also nicht live im Vortrag laufen lassen.</li>
+  <li><b>Determinismus live (Folie 11):</b> diesen Offline-Befehl schon eintippen — läuft in Sekunden, zweimal ausführen → identischer Fingerprint:</li>
 </ul>
-<pre class="cmd">uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all --seed 42 --pace 3</pre>
+<pre class="cmd">uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all --seed 42</pre>
 <ul>
   <li>Hinweis: <code>uv</code> liegt nicht im PATH. Vorher einmalig: <code>$env:Path = "C:\Users\moham\AppData\Roaming\Python\Python312\Scripts;$env:Path"</code> (PowerShell).</li>
-  <li>Fallback, wenn das Terminal zickt: das Video <code>docs/sprint3-demo.mp4</code> (Doppellauf) bereithalten.</li>
+  <li>Für einen <em>echten</em> Live-Lauf (statt Video): in <code>.env</code> <code>GEO_REASONING_PROVIDER=saia</code> setzen + frischen OpenAI-Key; dann <code>--live</code> statt <code>--offline</code>.</li>
   <li>Wasser. Ruhig atmen. Du kennst das System besser als jeder im Raum.</li>
 </ul>
 
@@ -191,34 +192,33 @@ pre.cmd{background:#26251f;color:#eceae2;border-radius:14px;padding:16px 20px;fo
 </div>
 
 <div class="folie">
-  <div class="head"><span class="chip">Folie 9</span><h3>Ergebnis eines Laufs</h3><span class="zeit">~50 s</span></div>
-  <div class="kern">WAS, WARUM, WAS TUN, FIX, FREIGABE, DEPLOY — in einem Lauf.</div>
-  <p class="sprich">„Hier das Ergebnis eines kompletten Laufs für it-sicherheit.de, offline, Seed 42. Links die Rangliste — NIS2 wird
-  einundsiebzigmal zitiert, das Awareness-Training nur siebenmal. Rechts das Neue: oben der konkrete Patch, die Vergleichstabelle; in der
-  Mitte die Freigabe, sechs von sechs Patches; unten das Deploy-Ergebnis — Mock, Trockenlauf, keine externen Schreibzugriffe, sechs angewandt,
-  null übersprungen. Der ganze Loop auf einer Folie — und mit demselben Seed jedes Mal genau so."</p>
-  <div class="ueber"><b>Übergang</b>„Und das Ganze live, mit einem einzigen Befehl."</div>
+  <div class="head"><span class="chip">Folie 9</span><h3>Ergebnis eines Live-Laufs</h3><span class="zeit">~50 s</span></div>
+  <div class="kern">Ein echter Live-Lauf: Gemini-Zitate + GPT-4o, von der Messung bis zum Deploy.</div>
+  <p class="sprich">„Das hier ist ein <em>echter Live-Lauf</em> für it-sicherheit.de. Links die Rangliste — sie kommt diesmal wirklich von
+  Gemini mit Google-Suche: am häufigsten genannt wird die Phishing-Seite mit zehn Treffern, das Awareness-Training gar nicht. Echte,
+  gemessene Zahlen. Rechts alles von GPT-4o: oben ein konkreter Patch für den Passwort-Manager-Vergleich — mehr Faktendichte —, in der Mitte
+  die Freigabe (acht von acht Patches) und unten das Deploy-Ergebnis: Trockenlauf, keine externen Schreibzugriffe, acht angewandt. Der ganze
+  Loop, einmal komplett mit echten Modellen."</p>
+  <div class="ueber"><b>Übergang</b>„Und das Ganze als ein Befehl im Terminal."</div>
 </div>
 
 <div class="folie">
-  <div class="head"><span class="chip">Folie 10</span><h3>Demo-Ausgabe · ein Befehl</h3><span class="zeit">~55 s</span></div>
-  <div class="kern">Ein Befehl, sechs Schritte — und ein beweisbarer Fingerprint inklusive Fix-Plan.</div>
-  <p class="sprich"><strong>Variante A (Live-Demo, empfohlen):</strong> „Das zeige ich Ihnen jetzt live. … Sechs Schritte, von der
-  Messung bis zum Deploy. … Die Kostenzeile ignorieren wir, offline kostet das nichts. Wichtig ist die letzte Zeile, der <em>Fingerprint</em> —
-  eine Prüfsumme über alle Ergebnisse, jetzt inklusive der Patches. Wenn ich den Befehl gleich noch einmal ausführe, kommt <em>exakt dieselbe</em>
-  Prüfsumme heraus. Bei einem Sprachmodell ist das alles andere als selbstverständlich."</p>
-  <p class="sprich"><strong>Variante B (ohne Live-Demo):</strong> „Die Folie zeigt die echte Terminal-Ausgabe: sechs abgehakte Schritte,
-  die drei Akte FIX, FREIGABE, DEPLOY, unten der Fingerprint <em>c1ecf54a2b27</em>. Führt man den Befehl zweimal aus, ist er identisch —
-  dokumentiert als Bildschirmaufnahme, die ich gerne zeige." (→ <code>sprint3-demo.mp4</code>)</p>
-  <div class="ueber"><b>Übergang</b>„Warum geht das überhaupt, trotz Sprachmodell?"</div>
+  <div class="head"><span class="chip">Folie 10</span><h3>Demo-Ausgabe · Live-Lauf</h3><span class="zeit">~50 s</span></div>
+  <div class="kern">Ein Befehl, sechs Schritte — live mit echten Modellen.</div>
+  <p class="sprich">„Hier die Terminal-Ausgabe des Live-Laufs. Sechs abgehakte Schritte. Auffällig: die Messung dauert fast vier Minuten,
+  weil Gemini im Free-Tier rate-limitiert ist — deshalb zeige ich das als <em>Aufnahme</em> (<code>sprint3-demo.mp4</code>), statt es live
+  vier Minuten laufen zu lassen. Die Kostenzeile ist diesmal echt, rund elf Cent für GPT-4o. Unten der Fingerprint <em>b6ed70488487</em>.
+  Wichtig: Ein Live-Lauf ist naturgemäß nicht bit-reproduzierbar — den Determinismus-Beweis liefere ich auf der nächsten Folie, offline."</p>
+  <div class="ueber"><b>Übergang</b>„Und genau diesen Determinismus-Beweis — offline."</div>
 </div>
 
 <div class="folie">
-  <div class="head"><span class="chip">Folie 11</span><h3>Reproduzierbarkeit</h3><span class="zeit">~40 s</span></div>
-  <div class="kern">Zweimal laufen, derselbe Fingerprint — jetzt inklusive Fix-Plan.</div>
-  <p class="sprich">„Kurz, warum das funktioniert. Der Fix-Plan fließt in die Prüfsumme ein. Die Patch-Kennungen sind abgeleitet, nicht
-  zufällig. Und Freigabe und Deploy-Ergebnis bleiben mit ihren Zeitstempeln bewusst draußen, weil die sich pro Lauf ändern. Sechs Patches,
-  alle freigegeben, null externe Schreibzugriffe — und dieselbe Prüfsumme über beide Läufe. Das ist sogar selbst als Test abgesichert."</p>
+  <div class="head"><span class="chip">Folie 11</span><h3>Reproduzierbarkeit (offline)</h3><span class="zeit">~40 s</span></div>
+  <div class="kern">Offline zweimal laufen, derselbe Fingerprint — der Determinismus-Beweis.</div>
+  <p class="sprich">„Der Live-Lauf zeigt die echte Wirkung, variiert aber. Den Beweis der Reproduzierbarkeit liefere ich deshalb offline,
+  mit dem deterministischen Mock und festem Seed. Der Fix-Plan fließt in die Prüfsumme ein, die Patch-Kennungen sind abgeleitet, nicht
+  zufällig, Freigabe und Deploy bleiben mit ihren Zeitstempeln draußen. Führe ich den Offline-Lauf zweimal aus, kommt exakt dieselbe
+  Prüfsumme heraus — <em>c1ecf54a2b27</em>. Das ist sogar selbst als Test abgesichert."</p>
   <div class="ueber"><b>Übergang</b>„Die wichtigste neue Regel ist die Sicherheit — und die habe ich bewiesen."</div>
 </div>
 
@@ -291,10 +291,10 @@ pre.cmd{background:#26251f;color:#eceae2;border-radius:14px;padding:16px 20px;fo
 
 <h2><span class="chnum">Spickzettel</span>Für den Notfall</h2>
 <div class="callout">
-  <b>Demo-Befehl:</b> <code>uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all --seed 42</code><br>
-  <b>Erwarteter Fingerprint (Seed 42):</b> <code>c1ecf54a2b27</code> — beim zweiten Lauf identisch.<br>
-  <b>Kennzahlen:</b> 48 Probes · 3 Templates · 6 Findings · 6 Patches · 6 freigegeben · 0 übersprungen · 182 Tests grün.<br>
-  <b>Backup-Video:</b> <code>docs/sprint3-demo.mp4</code> (Doppellauf — zeigt den identischen Fingerprint).
+  <b>Live-Demo (Folien 9–10):</b> Video <code>docs/sprint3-demo.mp4</code> — echte Gemini-Zitate + GPT-4o, Fingerprint <code>b6ed70488487</code> (Live, variiert pro Lauf).<br>
+  <b>Live-Kennzahlen:</b> 48 Probes · 3 Templates · 8 Findings · 8 Patches · 8 freigegeben · 0 übersprungen · ≈ $0.11.<br>
+  <b>Determinismus (Folie 11, offline):</b> <code>… --offline --explain --fix --apply --approve-all --seed 42</code> → Fingerprint <code>c1ecf54a2b27</code>, beim zweiten Lauf identisch.<br>
+  <b>Qualität:</b> 182 Tests grün · 0 mypy-Fehler · ruff sauber.
 </div>
 <div class="callout red">
   <b>Wenn etwas hakt:</b> Ruhig bleiben. Die Kernaussage trägt auch ohne Live-Demo: „Aus dem Befund wird ein konkreter Patch, ein Mensch gibt ihn frei,

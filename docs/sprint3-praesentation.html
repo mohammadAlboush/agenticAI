@@ -535,33 +535,34 @@ body.tp-mode .tp{position:fixed;inset:0;display:flex;flex-direction:column;backg
   <section class="slide">
     <div class="top"><div class="sec"><b>09</b> · Ergebnis · Live-Demo</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Ergebnis eines Laufs — <span class="g">it-sicherheit.de</span>, offline, Seed 42.</h2>
+      <h2>Ergebnis eines <span class="g">Live-Laufs</span> — it-sicherheit.de · Gemini + GPT-4o.</h2>
       <div class="cols c2" style="margin-top:4px">
         <div>
-          <div class="rh" style="margin-bottom:10px">1 · WAS — Top / Flop (Citation-Häufigkeit)</div>
+          <div class="rh" style="margin-bottom:10px">1 · WAS — Gemini-Citation-Messung (Google-Search-Grounding)</div>
           <div class="bars">
-            <div class="bar"><span class="u">/nis2-richtlinie</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="v">71×</span></div>
-            <div class="bar"><span class="u">/ransomware-schutz</span><span class="track"><span class="fill" style="width:59%"></span></span><span class="v">42×</span></div>
-            <div class="bar"><span class="u">/zero-trust-architektur</span><span class="track"><span class="fill" style="width:55%"></span></span><span class="v">39×</span></div>
-            <div class="bar flop"><span class="u">/firewall-grundlagen</span><span class="track"><span class="fill" style="width:27%"></span></span><span class="v">19×</span></div>
-            <div class="bar flop"><span class="u">/passwort-manager-vergleich</span><span class="track"><span class="fill" style="width:24%"></span></span><span class="v">17×</span></div>
-            <div class="bar flop"><span class="u">/security-awareness-training</span><span class="track"><span class="fill" style="width:10%"></span></span><span class="v">7×</span></div>
+            <div class="bar"><span class="u">/phishing-erkennen</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="v">10×</span></div>
+            <div class="bar"><span class="u">/nis2-richtlinie</span><span class="track"><span class="fill" style="width:70%"></span></span><span class="v">7×</span></div>
+            <div class="bar"><span class="u">/zero-trust-architektur</span><span class="track"><span class="fill" style="width:70%"></span></span><span class="v">7×</span></div>
+            <div class="bar flop"><span class="u">/firewall-grundlagen</span><span class="track"><span class="fill" style="width:30%"></span></span><span class="v">3×</span></div>
+            <div class="bar flop"><span class="u">/passwort-manager-vergleich</span><span class="track"><span class="fill" style="width:12%"></span></span><span class="v">1×</span></div>
+            <div class="bar flop"><span class="u">/security-awareness-training</span><span class="track"><span class="fill" style="width:3%"></span></span><span class="v">0×</span></div>
           </div>
-          <div class="cap" style="text-align:left;margin-top:9px">2 · WARUM — Muster: <code>[t1]</code> Antwortblock + FAQ-Schema (0.82).</div>
+          <div class="cap" style="text-align:left;margin-top:9px">2 · WARUM — GPT-4o-Muster: <code>[t1]</code> Integration von FAQ-/HowTo-Schemata (0.90).</div>
         </div>
         <div>
           <div class="rh" style="margin-bottom:10px">3–5 · WAS TUN → FIX → FREIGABE → DEPLOY</div>
-          <div class="find"><div class="h"><span class="sev chg">Block +</span><span class="url">/passwort-manager-vergleich</span><span class="lever">px-f3-insert_block · 0.80</span></div><div class="fix">Vergleichstabelle + Product/Review-Schema ergänzen (→ Template t1).</div></div>
-          <div class="find"><div class="h"><span class="sev ok">✓ FREIGABE</span><span class="url">cli:--approve-all</span><span class="lever">Human-in-the-Loop</span></div><div class="fix">6 von 6 Patches freigegeben — kein Deploy ohne diese Entscheidung.</div></div>
+          <div class="find"><div class="h"><span class="sev chg">Umschreiben</span><span class="url">/passwort-manager-vergleich</span><span class="lever">px-f2-rewrite_block · 0.90</span></div><div class="fix">Faktendichte erhöhen: 2FA, Passwort-Generierung, Vergleich führender Manager (→ Template t2).</div></div>
+          <div class="find"><div class="h"><span class="sev ok">✓ FREIGABE</span><span class="url">cli:--approve-all</span><span class="lever">Human-in-the-Loop</span></div><div class="fix">8 von 8 Patches freigegeben — kein Deploy ohne diese Entscheidung.</div></div>
           <div class="codecard" style="margin-top:4px">
             <span class="cm"># DEPLOY (Dry-Run)</span><br>
             Publisher <b>mock</b> · <span class="ky">DRY-RUN · KEINE EXTERNEN WRITES</span><br>
-            Patches <b>6 angewandt · 0 übersprungen</b>
+            Patches <b>8 angewandt · 0 übersprungen</b>
           </div>
         </div>
       </div>
-      <div class="note">Reproduzierbarkeit: Derselbe Seed liefert exakt diese Zahlen — im Terminal wie auf dieser Folie.
-        Befehl: <code>uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all</code></div>
+      <div class="note"><b>Live-Lauf:</b> echte Gemini-Zitate + GPT-4o-Reasoning/Fix-Agent. Befehl:
+        <code>uv run python -m geo_audit_loop --domain it-sicherheit.de --live --explain --fix --apply --approve-all</code>
+        — Live-Läufe messen die reale Wirkung; den Determinismus-Beweis liefert der Offline-Lauf (Folie 11).</div>
     </div>
     <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">09 / 14</span></div>
   </section>
@@ -570,23 +571,24 @@ body.tp-mode .tp{position:fixed;inset:0;display:flex;flex-direction:column;backg
   <section class="slide">
     <div class="top"><div class="sec"><b>10</b> · Ergebnis · ein Befehl</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Demo-Ausgabe: der vollständige Loop mit <span class="g">einem Befehl</span>.</h2>
-      <pre style="margin-top:6px">$ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain <span class="k">--fix --apply --approve-all</span> --seed 42
+      <h2>Demo-Ausgabe: der vollständige <span class="g">Live-Lauf</span> mit einem Befehl.</h2>
+      <pre style="margin-top:6px">$ uv run python -m geo_audit_loop --domain it-sicherheit.de <span class="k">--live --explain --fix --apply --approve-all</span>
 
-<span class="k">✓</span> Probe-Matrix sampeln  <span class="c">48 Probes · 2.0 s</span>      <span class="k">✓</span> Fix-Agent     <span class="c">6 Patches</span>
-<span class="k">✓</span> Crawl + Top/Flop      <span class="c">8 Seiten</span>            <span class="k">✓</span> HITL-Freigabe  <span class="c">6 freigegeben</span>
-<span class="k">✓</span> Pattern-Miner         <span class="c">3 Templates</span>         <span class="k">✓</span> Deploy         <span class="c">6 · Dry-Run</span>
+<span class="k">✓</span> Probe-Matrix sampeln (Gemini live)  <span class="c">48 Probes · 229.5 s</span>   <span class="k">✓</span> Fix-Agent (GPT-4o)  <span class="c">8 Patches · 22.6 s</span>
+<span class="k">✓</span> Crawl + Top/Flop                     <span class="c">8 Seiten</span>             <span class="k">✓</span> HITL-Freigabe       <span class="c">8 freigegeben</span>
+<span class="k">✓</span> Pattern-Miner (GPT-4o)               <span class="c">3 Templates · 7.4 s</span>    <span class="k">✓</span> Deploy              <span class="c">8 · Dry-Run</span>
 
-<span class="k">FIX</span>     1. [Block +] /passwort-manager-vergleich  · machine_readable · 0.80
-            Vorschlag: Vergleichstabelle + Product/Review-Schema   (… 6 Patches, priorisiert)
-<span class="k">FREIGABE</span>  ✓ 6 / 6 freigegeben (cli:--approve-all)   ·   Kein Deploy ohne Freigabe (§6)
-<span class="k">DEPLOY</span>    Publisher mock · <span class="s">DRY-RUN · KEINE EXTERNEN WRITES</span> · 6 angewandt · 0 übersprungen
+<span class="k">WAS</span>      TOP  10x /phishing-erkennen · 7x /nis2-richtlinie · 7x /zero-trust-architektur
+<span class="k">WARUM</span>    [t1] Integration von FAQ-/HowTo-Schemata (Konfidenz 0.90)
+<span class="k">FIX</span>      [rewrite] /passwort-manager-vergleich · fact_density · 0.90
+         → Faktendichte erhöhen: 2FA, Passwort-Generierung, Vergleich führender Manager
+<span class="k">DEPLOY</span>   Publisher mock · <span class="s">DRY-RUN · KEINE EXTERNEN WRITES</span> · 8 angewandt · 0 übersprungen
 
-Kosten/Lauf         48 Probes · 9780 Tokens · $0.0617
-Report-Fingerprint  <span class="s">c1ecf54a2b27</span>  (Seed 42 — zweiter Lauf: identischer Fingerprint)</pre>
-      <div class="note"><b>Determinismus-Nachweis:</b> Der Report-Fingerprint (SHA-256 über das kanonische JSON aller Reports
-        <i>inkl. Fix-Plan</i>, ohne laufvariable Felder) ist beim zweiten Lauf identisch. Die Kostenzeile ist eine
-        kalkulatorische Hochrechnung — offline entstehen keine echten API-Kosten.</div>
+Kosten/Lauf         48 Probes · 16713 Tokens · $0.1110
+Report-Fingerprint  <span class="s">b6ed70488487</span>  (Live-Lauf — echte Modelle, nicht bit-reproduzierbar)</pre>
+      <div class="note"><b>Live-Lauf:</b> echte Gemini-Citation-Messung (Google-Search-Grounding) + GPT-4o-Reasoning.
+        Die Kosten sind real (OpenAI). Live-Läufe variieren pro Lauf und sind nicht bit-reproduzierbar —
+        der Determinismus-Beweis erfolgt offline auf der nächsten Folie.</div>
     </div>
     <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">10 / 14</span></div>
   </section>
@@ -595,9 +597,10 @@ Report-Fingerprint  <span class="s">c1ecf54a2b27</span>  (Seed 42 — zweiter La
   <section class="slide">
     <div class="top"><div class="sec"><b>11</b> · Master-Kriterium · Reproduzierbarkeit</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Zweimal laufen → <span class="g">derselbe Fingerprint</span>, jetzt inklusive Fix-Plan.</h2>
-      <p class="sub">Der Fix-Plan fließt in den Hash ein; Freigabe und Deploy mit ihren Zeitstempeln bewusst nicht.
-        So bleibt der ganze Handlungs-Loop trotz Sprachmodell bit-genau reproduzierbar.</p>
+      <h2>Offline zweimal laufen → <span class="g">derselbe Fingerprint</span> (inkl. Fix-Plan).</h2>
+      <p class="sub">Der Live-Lauf (Folie 9–10) misst die <i>echte</i> Wirkung — variiert aber pro Lauf. Den Beweis der
+        Reproduzierbarkeit liefert der <b style="color:var(--ink)">Offline-Lauf</b> (Mock-Reasoning, Seed 42): der
+        Fix-Plan fließt in den Hash ein, Freigabe/Deploy mit ihren Zeitstempeln bewusst nicht — bit-genau reproduzierbar.</p>
       <div class="kpis" style="margin-top:22px">
         <div class="kpi"><div class="v">6</div><div class="l">Patches je Lauf<br>deterministische patch_id</div></div>
         <div class="kpi"><div class="v">100 %</div><div class="l">freigegeben<br>(--approve-all)</div></div>
@@ -771,15 +774,15 @@ Report-Fingerprint  <span class="s">c1ecf54a2b27</span>  (Seed 42 — zweiter La
     { t:'Datenverträge', kern:'Geprüfte Strukturen für Patch, Freigabe und Ergebnis.', seg:[
       'Auch hier fließt zwischen den Schritten kein freier Text, sondern feste Strukturen. Drei Stück. Der <b>FixProposal</b> ist der Patch selbst, mit Hebel, Änderungsart und dem fertigen Inhalt. Die <b>ApprovalDecision</b> ist die Freigabe-Entscheidung des Menschen. Und das <b>DeployResult</b> hält fest, was angewandt wurde und was übersprungen — und steht standardmäßig auf Trockenlauf. Alle drei sind eingefroren, unbekannte Felder werden abgewiesen. Und die Patch-Kennung ist deterministisch, nicht zufällig.'
     ]},
-    { t:'Ergebnis eines Laufs', kern:'WAS, WARUM, WAS TUN, FIX, FREIGABE, DEPLOY — in einem Lauf.', seg:[
-      'Hier das Ergebnis von einem kompletten Lauf für it-sicherheit.de, offline, Seed 42. Links wieder die Rangliste — die NIS2-Seite wird einundsiebzigmal zitiert, das Awareness-Training nur siebenmal.',
-      'Rechts ist jetzt das Neue. Oben der konkrete Patch für den Passwort-Manager-Vergleich, die Vergleichstabelle. In der Mitte die Freigabe — sechs von sechs Patches freigegeben. Und unten das Deploy-Ergebnis: Publisher Mock, Trockenlauf, keine externen Schreibzugriffe, sechs angewandt, null übersprungen. Das ist der ganze Loop auf einer Folie. Und mit demselben Seed kommt das jedes Mal genau so heraus.'
+    { t:'Ergebnis eines Live-Laufs', kern:'Ein echter Live-Lauf: Gemini-Zitate + GPT-4o, von der Messung bis zum Deploy.', seg:[
+      'Das hier ist ein echter Live-Lauf für it-sicherheit.de. Links die Rangliste — die kommt diesmal wirklich von Gemini mit Google-Suche. Am häufigsten genannt wird die Phishing-Seite mit zehn Treffern, das Awareness-Training gar nicht. Das sind die echten, gemessenen Zahlen, keine Simulation.',
+      'Rechts das Neue, alles von GPT-4o. Oben ein konkreter Patch für den Passwort-Manager-Vergleich — das Modell schlägt mehr Faktendichte vor. In der Mitte die Freigabe, acht von acht Patches. Und unten das Deploy-Ergebnis: Trockenlauf, keine externen Schreibzugriffe, acht angewandt. Der ganze Loop, einmal komplett mit echten Modellen.'
     ]},
-    { t:'Demo-Ausgabe · ein Befehl', kern:'Ein Befehl, sechs Schritte — und ein beweisbarer Fingerprint inklusive Fix-Plan.', seg:[
-      'Das Ganze läuft mit einem einzigen Befehl. Sie sehen oben die sechs abgehakten Schritte, von der Messung bis zum Deploy. Die Kostenzeile bitte ignorieren, das ist nur eine Hochrechnung, offline kostet das nichts. Wichtig ist die letzte Zeile, der <b>Fingerprint</b>. Das ist eine Prüfsumme über alle Ergebnisse, und jetzt rechnet die auch die Patches mit ein. Wenn ich den Befehl ein zweites Mal laufen lasse, kommt exakt dieselbe Prüfsumme heraus, c-1-e-c-f und so weiter. Bei einem Sprachmodell ist das alles andere als selbstverständlich. Ein Video von diesem doppelten Lauf lege ich dem Bericht bei.'
+    { t:'Demo-Ausgabe · Live-Lauf', kern:'Ein Befehl, sechs Schritte — live mit echten Modellen.', seg:[
+      'Das Ganze läuft mit einem einzigen Befehl, hier wirklich live. Oben die sechs Schritte. Auffällig: die Messung dauert fast vier Minuten, weil Gemini im Free-Tier rate-limitiert ist. Die Kostenzeile ist diesmal echt — der GPT-4o-Teil kostet rund elf Cent. Unten der Fingerprint, b-6-e-d und so weiter. Wichtig: Ein Live-Lauf ist naturgemäß nicht bit-reproduzierbar, jedes Mal kommen leicht andere Zahlen heraus. Den Beweis, dass der Loop trotzdem reproduzierbar sein kann, zeige ich auf der nächsten Folie — offline.'
     ]},
-    { t:'Reproduzierbarkeit', kern:'Zweimal laufen, derselbe Fingerprint — jetzt inklusive Fix-Plan.', seg:[
-      'Nochmal kurz, warum das überhaupt geht, obwohl ein Sprachmodell beteiligt ist. Der Fix-Plan fließt in die Prüfsumme ein. Die Patch-Kennungen sind abgeleitet, nicht zufällig. Und die Freigabe und das Deploy-Ergebnis bleiben mit ihren Zeitstempeln bewusst draußen, weil die sich natürlich pro Lauf ändern. Sechs Patches, alle freigegeben, null externe Schreibzugriffe — und dieselbe Prüfsumme über beide Läufe. Das ist sogar selbst als Test abgesichert.'
+    { t:'Reproduzierbarkeit (offline)', kern:'Offline zweimal laufen, derselbe Fingerprint — der Determinismus-Beweis.', seg:[
+      'Der Live-Lauf von eben zeigt die echte Wirkung, aber er variiert. Den Beweis der Reproduzierbarkeit liefere ich deshalb offline, mit dem deterministischen Mock und festem Seed. Da fließt der Fix-Plan in die Prüfsumme ein, die Patch-Kennungen sind abgeleitet, nicht zufällig, und Freigabe und Deploy bleiben mit ihren Zeitstempeln draußen. Ergebnis: Führe ich den Offline-Lauf zweimal aus, kommt exakt dieselbe Prüfsumme heraus. Das ist sogar selbst als Test abgesichert.'
     ]},
     { t:'Sicherheit · der Beweis', kern:'Das Gate ist nicht nur Konvention — es ist adversarial getestet.', seg:[
       'Mir war wichtig, dass die Sicherheitsregel nicht nur im Bericht steht, sondern bewiesen ist. Dafür habe ich zwei Tests, die das Gate absichtlich angreifen.',
