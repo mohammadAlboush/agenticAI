@@ -25,9 +25,7 @@ def _utc_now() -> datetime:
 class InteractiveApproveGate:
     """Fragt pro Patch im Terminal nach Freigabe (rich ``Confirm``)."""
 
-    def __init__(
-        self, console: Console, *, clock: Callable[[], datetime] | None = None
-    ) -> None:
+    def __init__(self, console: Console, *, clock: Callable[[], datetime] | None = None) -> None:
         self._console = console
         self._clock = clock if clock is not None else _utc_now
 

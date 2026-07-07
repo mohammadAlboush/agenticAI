@@ -281,9 +281,7 @@ def render_fixplan(console: Console, plan: FixPlan) -> None:
     console.print(table)
 
 
-def render_hitl(
-    console: Console, plan: FixPlan, decisions: dict[str, ApprovalDecision]
-) -> None:
+def render_hitl(console: Console, plan: FixPlan, decisions: dict[str, ApprovalDecision]) -> None:
     """Rendert Akt 5 (FREIGABE): die Human-in-the-Loop-Entscheidung je Patch."""
     console.print()
     console.rule(

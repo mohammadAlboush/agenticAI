@@ -80,9 +80,7 @@ def test_derive_patch_id_is_deterministic() -> None:
 def test_prioritize_proposals_by_pyramid_then_confidence() -> None:
     low_pyramid = _proposal("px-a", pyramid_level=PyramidLevel.EXTRACTABILITY, confidence=0.5)
     high_pyramid = _proposal("px-b", pyramid_level=PyramidLevel.CITATION, confidence=0.9)
-    same_low_better = _proposal(
-        "px-c", pyramid_level=PyramidLevel.EXTRACTABILITY, confidence=0.9
-    )
+    same_low_better = _proposal("px-c", pyramid_level=PyramidLevel.EXTRACTABILITY, confidence=0.9)
     ordered = prioritize_proposals((high_pyramid, low_pyramid, same_low_better))
     # untere Pyramide zuerst; innerhalb gleicher Ebene hoehere Konfidenz zuerst
     assert [p.patch_id for p in ordered] == ["px-c", "px-a", "px-b"]
