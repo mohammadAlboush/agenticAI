@@ -16,11 +16,12 @@ from pathlib import Path
 from typing import cast
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import PageInventory
-from geo_audit_loop.domain.probe import EngineId, ProbeResult
+from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
 from geo_audit_loop.domain.templates import PatternReport
 
@@ -34,8 +35,9 @@ CREATE TABLE IF NOT EXISTS probes (
     prompt_id   TEXT NOT NULL,
     engine_id   TEXT NOT NULL,
     proxy_label TEXT NOT NULL,
+    phase       TEXT NOT NULL DEFAULT 'baseline',
     payload     TEXT NOT NULL,
-    PRIMARY KEY (run_id, prompt_id, engine_id, proxy_label)
+    PRIMARY KEY (run_id, prompt_id, engine_id, proxy_label, phase)
 );
 CREATE TABLE IF NOT EXISTS pages (
     run_id  TEXT NOT NULL,
@@ -82,6 +84,10 @@ CREATE TABLE IF NOT EXISTS deploy_results (
     run_id  TEXT PRIMARY KEY,
     payload TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS effect_reports (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
 """
 
 
@@ -119,9 +125,41 @@ class SqliteStorage:
             # Lock: CLI- und Dashboard-Prozess koennen dieselbe DB gleichzeitig oeffnen.
             with self._lock:
                 conn.executescript(_SCHEMA)
+                self._migrate_probes_phase(conn)
                 conn.commit()
         except sqlite3.Error as exc:
             raise StorageError(f"Schema-Initialisierung fehlgeschlagen: {exc}") from exc
+
+    @staticmethod
+    def _migrate_probes_phase(conn: sqlite3.Connection) -> None:
+        """Ergaenzt aelteren ``probes``-Tabellen die ``phase``-Spalte + den PK (Sprint 4).
+
+        SQLite kann einen Primaerschluessel nicht in-place aendern; daher wird die Tabelle
+        neu angelegt und der Altbestand als ``phase='baseline'`` uebernommen. Fuer frische
+        DBs (Spalte bereits vorhanden) ist das ein No-Op — die bestehende ``runs/geo_audit.db``
+        wird so verlustfrei migriert statt geloescht.
+        """
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(probes)")}
+        if not columns or "phase" in columns:
+            return
+        conn.executescript(
+            """
+            ALTER TABLE probes RENAME TO probes_legacy;
+            CREATE TABLE probes (
+                run_id      TEXT NOT NULL,
+                prompt_id   TEXT NOT NULL,
+                engine_id   TEXT NOT NULL,
+                proxy_label TEXT NOT NULL,
+                phase       TEXT NOT NULL DEFAULT 'baseline',
+                payload     TEXT NOT NULL,
+                PRIMARY KEY (run_id, prompt_id, engine_id, proxy_label, phase)
+            );
+            INSERT INTO probes (run_id, prompt_id, engine_id, proxy_label, phase, payload)
+                SELECT run_id, prompt_id, engine_id, proxy_label, 'baseline', payload
+                FROM probes_legacy;
+            DROP TABLE probes_legacy;
+            """
+        )
 
     def close(self) -> None:
         """Schliesst die Verbindung (im Test/CLI nach dem Run)."""
@@ -186,6 +224,8 @@ class SqliteStorage:
 
     def delete_run(self, run_id: str) -> None:
         """Loescht einen Run samt aller Artefakte (eine Transaktion ueber alle Tabellen)."""
+        # Hinweis: die Effekt-HYPOTHESEN (memory/) werden NICHT geloescht — das Gedaechtnis
+        # ist laufuebergreifendes Lernen und soll ein Run-Cleanup ueberdauern (Sprint 4).
         tables = (
             "runs",
             "probes",
@@ -198,6 +238,7 @@ class SqliteStorage:
             "patches",
             "approvals",
             "deploy_results",
+            "effect_reports",
         )
         conn = self._connection()
         try:
@@ -210,37 +251,51 @@ class SqliteStorage:
 
     # --- Probes -------------------------------------------------------------
     def save_probe(self, result: ProbeResult) -> None:
-        """Persistiert eine Probe idempotent (UNIQUE run/prompt/engine/proxy)."""
+        """Persistiert eine Probe idempotent (UNIQUE run/prompt/engine/proxy/phase)."""
         self._execute(
             "INSERT OR REPLACE INTO probes "
-            "(run_id, prompt_id, engine_id, proxy_label, payload) VALUES (?, ?, ?, ?, ?)",
+            "(run_id, prompt_id, engine_id, proxy_label, phase, payload) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (
                 result.run_id,
                 result.prompt_id,
                 result.engine_id.value,
                 result.proxy_label or "",
+                result.phase.value,
                 result.model_dump_json(),
             ),
         )
 
     def has_probe(
-        self, run_id: str, prompt_id: str, engine_id: EngineId, proxy_label: str | None
+        self,
+        run_id: str,
+        prompt_id: str,
+        engine_id: EngineId,
+        proxy_label: str | None,
+        phase: ProbePhase = ProbePhase.BASELINE,
     ) -> bool:
-        """Prueft, ob diese Probe-Zelle bereits erledigt ist (Checkpoint-Resume)."""
+        """Prueft, ob diese Probe-Zelle (inkl. Phase) bereits erledigt ist (Checkpoint-Resume)."""
         row = self._fetchone(
-            "SELECT 1 FROM probes "
-            "WHERE run_id = ? AND prompt_id = ? AND engine_id = ? AND proxy_label = ?",
-            (run_id, prompt_id, engine_id.value, proxy_label or ""),
+            "SELECT 1 FROM probes WHERE run_id = ? AND prompt_id = ? AND engine_id = ? "
+            "AND proxy_label = ? AND phase = ?",
+            (run_id, prompt_id, engine_id.value, proxy_label or "", phase.value),
         )
         return row is not None
 
-    def load_probes(self, run_id: str) -> list[ProbeResult]:
-        """Laedt alle Probes eines Runs (fuer Aggregation/Report)."""
-        rows = self._fetchall(
-            "SELECT payload FROM probes WHERE run_id = ? "
-            "ORDER BY prompt_id, engine_id, proxy_label",
-            (run_id,),
-        )
+    def load_probes(self, run_id: str, phase: ProbePhase | None = None) -> list[ProbeResult]:
+        """Laedt die Probes eines Runs (optional auf eine Phase gefiltert; sonst alle)."""
+        if phase is None:
+            rows = self._fetchall(
+                "SELECT payload FROM probes WHERE run_id = ? "
+                "ORDER BY phase, prompt_id, engine_id, proxy_label",
+                (run_id,),
+            )
+        else:
+            rows = self._fetchall(
+                "SELECT payload FROM probes WHERE run_id = ? AND phase = ? "
+                "ORDER BY prompt_id, engine_id, proxy_label",
+                (run_id, phase.value),
+            )
         return [ProbeResult.model_validate_json(row["payload"]) for row in rows]
 
     # --- Pages --------------------------------------------------------------
@@ -350,8 +405,7 @@ class SqliteStorage:
         try:
             with self._lock:
                 conn.executemany(
-                    "INSERT OR REPLACE INTO approvals (run_id, patch_id, payload) "
-                    "VALUES (?, ?, ?)",
+                    "INSERT OR REPLACE INTO approvals (run_id, patch_id, payload) VALUES (?, ?, ?)",
                     [(run_id, d.patch_id, d.model_dump_json()) for d in decisions],
                 )
                 conn.commit()
@@ -376,3 +430,16 @@ class SqliteStorage:
         """Laedt das Deploy-Ergebnis eines Runs oder ``None``."""
         row = self._fetchone("SELECT payload FROM deploy_results WHERE run_id = ?", (run_id,))
         return DeployResult.model_validate_json(row["payload"]) if row is not None else None
+
+    # --- Sprint-4-Effekt-/Lern-Artefakte -----------------------------------
+    def save_effect_report(self, report: EffectReport) -> None:
+        """Persistiert den Effekt-Report eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO effect_reports (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_effect_report(self, run_id: str) -> EffectReport | None:
+        """Laedt den EffectReport eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM effect_reports WHERE run_id = ?", (run_id,))
+        return EffectReport.model_validate_json(row["payload"]) if row is not None else None

@@ -7,6 +7,12 @@ from pathlib import Path
 
 from geo_audit_loop.adapters.sample_data import build_sample_inventory
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+from geo_audit_loop.domain.effect import (
+    EffectDirection,
+    EffectHypothesis,
+    EffectReport,
+    derive_hypothesis_id,
+)
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -17,7 +23,14 @@ from geo_audit_loop.domain.fix import (
     FixProposal,
 )
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
-from geo_audit_loop.domain.probe import Citation, EngineId, ProbeResult, ProbeStatus, ProbeUsage
+from geo_audit_loop.domain.probe import (
+    Citation,
+    EngineId,
+    ProbePhase,
+    ProbeResult,
+    ProbeStatus,
+    ProbeUsage,
+)
 from geo_audit_loop.domain.run import RunRecord, RunStatus
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -41,7 +54,11 @@ def _run(status: RunStatus = RunStatus.RUNNING) -> RunRecord:
     )
 
 
-def _probe(prompt_id: str = "p1", proxy_label: str = "proxy-0") -> ProbeResult:
+def _probe(
+    prompt_id: str = "p1",
+    proxy_label: str = "proxy-0",
+    phase: ProbePhase = ProbePhase.BASELINE,
+) -> ProbeResult:
     return ProbeResult(
         run_id="run-1",
         engine_id=EngineId.PERPLEXITY,
@@ -57,6 +74,7 @@ def _probe(prompt_id: str = "p1", proxy_label: str = "proxy-0") -> ProbeResult:
         usage=ProbeUsage(total_tokens=10),
         status=ProbeStatus.OK,
         probed_at=FIXED,
+        phase=phase,
     )
 
 
@@ -229,6 +247,69 @@ def test_deploy_result_roundtrip(tmp_path: Path) -> None:
     storage.save_deploy_result(result)
     assert storage.load_deploy_result("run-1") == result
     assert storage.load_deploy_result("unknown") is None
+
+
+def test_probe_phase_no_collision(tmp_path: Path) -> None:
+    # Baseline- und Re-Probe-Zelle mit identischem (prompt/engine/proxy) koexistieren.
+    storage = _storage(tmp_path)
+    storage.save_probe(_probe(phase=ProbePhase.BASELINE))
+    storage.save_probe(_probe(phase=ProbePhase.REPROBE))
+    assert len(storage.load_probes("run-1")) == 2  # keine gegenseitige Verdraengung
+    assert storage.has_probe("run-1", "p1", EngineId.PERPLEXITY, "proxy-0", ProbePhase.BASELINE)
+    assert storage.has_probe("run-1", "p1", EngineId.PERPLEXITY, "proxy-0", ProbePhase.REPROBE)
+
+
+def test_load_probes_phase_filter(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    storage.save_probe(_probe("p1", phase=ProbePhase.BASELINE))
+    storage.save_probe(_probe("p2", phase=ProbePhase.BASELINE))
+    storage.save_probe(_probe("p1", phase=ProbePhase.REPROBE))
+    assert len(storage.load_probes("run-1", ProbePhase.BASELINE)) == 2
+    assert len(storage.load_probes("run-1", ProbePhase.REPROBE)) == 1
+    assert len(storage.load_probes("run-1")) == 3  # ohne Filter: alle Phasen
+
+
+def _effect_report() -> EffectReport:
+    hyp = EffectHypothesis(
+        hypothesis_id=derive_hypothesis_id("run-1", "px-f1-insert_block"),
+        run_id="run-1",
+        target_domain="it-sicherheit.de",
+        target_url="https://it-sicherheit.de/firewall-grundlagen",
+        patch_id="px-f1-insert_block",
+        finding_id="f1",
+        lever=Lever.FACT_DENSITY,
+        pyramid_level=PyramidLevel.SUBSTANCE,
+        change_type=ChangeType.INSERT_BLOCK,
+        before_citation_rate=0.05,
+        after_citation_rate=0.95,
+        before_n=240,
+        after_n=240,
+        delta=0.9,
+        direction=EffectDirection.IMPROVED,
+        confidence=0.86,
+        suspected_cause="x",
+        observed_at=FIXED,
+    )
+    return EffectReport(
+        run_id="run-1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        prompt_version="v2",
+        reprobe_matrix_size=240,
+        mean_delta=0.9,
+        n_improved=1,
+        hypotheses=(hyp,),
+    )
+
+
+def test_effect_report_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    report = _effect_report()
+    storage.save_effect_report(report)
+    assert storage.load_effect_report("run-1") == report
+    assert storage.load_effect_report("unknown") is None
+    storage.delete_run("run-1")
+    assert storage.load_effect_report("run-1") is None
 
 
 def test_delete_run_removes_fix_artifacts(tmp_path: Path) -> None:

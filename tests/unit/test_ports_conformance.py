@@ -10,15 +10,18 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
-from geo_audit_loop.domain.probe import EngineId, ProbeRequest, ProbeResult
+from geo_audit_loop.domain.memory import MemoryQuery
+from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeRequest, ProbeResult
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
 from geo_audit_loop.domain.run import RunContext, RunRecord
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
+from geo_audit_loop.ports.memory import MemoryPort
 from geo_audit_loop.ports.proxy import ProxyPort
 from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.reasoning import ReasoningPort
@@ -76,11 +79,16 @@ class _StubStorage:
     def save_probe(self, result: ProbeResult) -> None: ...
 
     def has_probe(
-        self, run_id: str, prompt_id: str, engine_id: EngineId, proxy_label: str | None
+        self,
+        run_id: str,
+        prompt_id: str,
+        engine_id: EngineId,
+        proxy_label: str | None,
+        phase: ProbePhase = ProbePhase.BASELINE,
     ) -> bool:
         return False
 
-    def load_probes(self, run_id: str) -> list[ProbeResult]:
+    def load_probes(self, run_id: str, phase: ProbePhase | None = None) -> list[ProbeResult]:
         return []
 
     def save_pages(self, run_id: str, pages: list[PageInventory]) -> None: ...
@@ -123,6 +131,18 @@ class _StubStorage:
 
     def load_deploy_result(self, run_id: str) -> DeployResult | None:
         return None
+
+    def save_effect_report(self, report: EffectReport) -> None: ...
+
+    def load_effect_report(self, run_id: str) -> EffectReport | None:
+        return None
+
+
+class _StubMemory:
+    def store(self, hypothesis: EffectHypothesis) -> None: ...
+
+    def retrieve(self, context: MemoryQuery) -> list[EffectHypothesis]:
+        return []
 
 
 class _StubPublisher:
@@ -185,3 +205,9 @@ def test_publisher_port_conformance() -> None:
     publisher: PublisherPort = _StubPublisher()
     assert isinstance(publisher, PublisherPort)
     assert publisher.name == "stub"
+
+
+def test_memory_port_conformance() -> None:
+    memory: MemoryPort = _StubMemory()
+    assert isinstance(memory, MemoryPort)
+    assert memory.retrieve(MemoryQuery(target_domain="it-sicherheit.de")) == []
