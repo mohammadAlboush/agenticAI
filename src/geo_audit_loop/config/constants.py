@@ -53,6 +53,21 @@ DEFAULT_PROMPT_SET_VERSION: Final = "v1"
 FIX_AGENT_TASK: Final = "fix_agent"
 PATCHES_SUBDIR: Final = "patches"  # Unterordner je Run fuer FilesystemPublisher-Artefakte
 
+# --- Sprint 4: Effekt-Re-Probe + Gedaechtnis (geschlossener Lern-Loop) ---
+EFFECT_ANALYST_TASK: Final = "effect_analyst"
+# Memory-aware Fix-Prompt: unter --learn genutzt (v1 bleibt fuer reines --fix, Sprint 3).
+FIX_AGENT_LEARN_VERSION: Final = "v2"
+# Deterministische Confidence-Formel: n/(n+SHRINKAGE) daempft kleine Stichproben (kein RNG).
+EFFECT_CONFIDENCE_SHRINKAGE: Final = 10
+# Schwelle, ab der ein Delta als Verbesserung/Verschlechterung gilt (sonst UNCHANGED).
+EFFECT_DIRECTION_EPSILON: Final = 0.01
+# Memory-Retrieval: wie viele Hypothesen der naechste Fix-Run maximal einbezieht.
+MEMORY_TOP_K: Final = 5
+# Gewicht, mit dem eine erwiesene Hypothese die Patch-Confidence nudged (explizites Lern-Signal).
+MEMORY_PRIOR_WEIGHT: Final = 0.15
+# bge-m3 (CLAUDE.md §2): Standard-Embedding-Modell des optionalen Chroma-Memory-Adapters.
+DEFAULT_EMBEDDING_MODEL: Final = "BAAI/bge-m3"
+
 # --- Budget-Cap-Defaults (hart, Projektregeln §6) ---
 DEFAULT_MAX_PROBES: Final = EXPECTED_PROBES_PER_RUN
 DEFAULT_MAX_USD: Final = 2.0
