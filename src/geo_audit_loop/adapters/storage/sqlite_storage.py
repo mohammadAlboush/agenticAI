@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import cast
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
@@ -85,6 +86,10 @@ CREATE TABLE IF NOT EXISTS deploy_results (
     payload TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS effect_reports (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS share_of_voice (
     run_id  TEXT PRIMARY KEY,
     payload TEXT NOT NULL
 );
@@ -239,6 +244,7 @@ class SqliteStorage:
             "approvals",
             "deploy_results",
             "effect_reports",
+            "share_of_voice",
         )
         conn = self._connection()
         try:
@@ -443,3 +449,16 @@ class SqliteStorage:
         """Laedt den EffectReport eines Runs oder ``None``."""
         row = self._fetchone("SELECT payload FROM effect_reports WHERE run_id = ?", (run_id,))
         return EffectReport.model_validate_json(row["payload"]) if row is not None else None
+
+    # --- Session-3-Wettbewerbs-Artefakt (Share of Voice) -------------------
+    def save_sov_report(self, report: ShareOfVoiceReport) -> None:
+        """Persistiert den Share-of-Voice-Report eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO share_of_voice (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_sov_report(self, run_id: str) -> ShareOfVoiceReport | None:
+        """Laedt den Share-of-Voice-Report eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM share_of_voice WHERE run_id = ?", (run_id,))
+        return ShareOfVoiceReport.model_validate_json(row["payload"]) if row is not None else None

@@ -168,13 +168,16 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         fix_plan = storage.load_fix_plan(run.run_id)
         deploy = storage.load_deploy_result(run.run_id)
         effect = storage.load_effect_report(run.run_id)
+        share = storage.load_sov_report(run.run_id)
         # Nur die Baseline-Probes zaehlen als Fortschritt gegen die erwartete Matrix (Sprint 4:
         # die Re-Probe-Phase verdoppelt sonst die Zahl und laesst den Balken ueberlaufen).
         baseline_probes = [p for p in probes if p.phase.value == "baseline"]
         n_ips = len({probe.proxy_label or "" for probe in baseline_probes}) or cfg.n_proxy_ips
         expected = len(EngineId) * len(prompts) * n_ips
+        # ``share`` MUSS mit gehasht werden, damit der Dashboard-Fingerprint identisch zur CLI ist
+        # (sonst zwei verschiedene Hashes fuer denselben Lauf, §7).
         fingerprint = (
-            report_fingerprint(report, patterns, audit, fix_plan, effect)
+            report_fingerprint(report, patterns, audit, fix_plan, effect, share=share)
             if report is not None
             else None
         )
@@ -190,6 +193,10 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             "n_hypotheses": len(effect.hypotheses) if effect is not None else None,
             "n_improved": effect.n_improved if effect is not None else None,
             "mean_delta": effect.mean_delta if effect is not None else None,
+            "n_competitor_domains": (
+                sum(1 for s in share.shares if not s.is_target) if share is not None else None
+            ),
+            "target_share": share.target_share if share is not None else None,
             "has_report": report is not None,
             "fingerprint": fingerprint,
             "dashboard_alive": manager.is_alive(run.run_id),
@@ -280,6 +287,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                     "fix_plan": None,
                     "deploy": None,
                     "effect": None,
+                    "share_of_voice": None,
                 }
             )
         report = storage.load_report(run.run_id)
@@ -288,6 +296,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         fix_plan = storage.load_fix_plan(run.run_id)
         deploy = storage.load_deploy_result(run.run_id)
         effect = storage.load_effect_report(run.run_id)
+        share = storage.load_sov_report(run.run_id)
         return JSONResponse(
             {
                 "report": report.model_dump(mode="json") if report is not None else None,
@@ -296,6 +305,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                 "fix_plan": fix_plan.model_dump(mode="json") if fix_plan is not None else None,
                 "deploy": deploy.model_dump(mode="json") if deploy is not None else None,
                 "effect": effect.model_dump(mode="json") if effect is not None else None,
+                "share_of_voice": share.model_dump(mode="json") if share is not None else None,
             }
         )
 

@@ -10,6 +10,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
@@ -135,6 +136,11 @@ class _StubStorage:
     def save_effect_report(self, report: EffectReport) -> None: ...
 
     def load_effect_report(self, run_id: str) -> EffectReport | None:
+        return None
+
+    def save_sov_report(self, report: ShareOfVoiceReport) -> None: ...
+
+    def load_sov_report(self, run_id: str) -> ShareOfVoiceReport | None:
         return None
 
 

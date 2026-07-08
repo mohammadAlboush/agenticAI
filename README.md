@@ -290,6 +290,15 @@ FLOP (selten/nie zitiert):
 > denselben Report. Im Live-Modus wird ausschließlich **Perplexity** real abgefragt;
 > die übrigen Engines bleiben in Sprint 1 gemockt.
 
+### Wettbewerbs-Analyse (Share of Voice)
+
+Jeder Lauf leitet aus denselben Baseline-Citations zusätzlich die **Wettbewerbslandschaft** ab:
+**welche externen Domains** die AI-Engines für die Prompts der Zieldomain zitieren und mit welchem
+Anteil (`ShareOfVoiceReport`). Reine, deterministische Domänen-Mathematik (kein LLM, wie der
+Effekt-Analyst) — offline bit-reproduzierbar und Teil des Fingerprints. Die CLI zeigt eine
+„WER"-Tabelle (Zieldomain hervorgehoben); das Dashboard liefert Anteil + Wettbewerber-Zahl über die
+API. Die Top-Wettbewerber-Seiten sind die Grundlage, um vom Feld zu lernen (wer gewinnt die Zitate?).
+
 ## Steuerzentrale (Web-Dashboard)
 
 Läufe **starten, stoppen, verwalten und live beobachten** — „Neuer Lauf"-Formular (Domain,

@@ -26,6 +26,7 @@ from geo_audit_loop.cli.render import (
     render_header,
     render_hitl,
     render_patterns,
+    render_share_of_voice,
     render_summary,
     render_topflop,
 )
@@ -225,9 +226,13 @@ def main(argv: list[str] | None = None) -> int:
     audit = None
     fix_plan = None
     effect = None
+    share = assembly.storage.load_sov_report(assembly.run_context.run_id)
     if report is not None:
         _pace()
         render_topflop(console, report)
+        if share is not None:
+            _pace()
+            render_share_of_voice(console, share)
     if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline):
         patterns = assembly.pipeline.pattern_report
         audit = assembly.pipeline.audit_report
@@ -260,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         render_summary(
             console,
             snapshot=assembly.cost_tracker.snapshot(),
-            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect),
+            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect, share=share),
             seed=settings.run_seed,
             duration_s=duration,
         )

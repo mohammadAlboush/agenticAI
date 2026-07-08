@@ -55,6 +55,11 @@ RETRY_MAX_DELAY_S: Final = 30.0
 # --- Report ---
 TOP_N: Final = 10
 
+# --- Competitive Intelligence (Share of Voice) ---
+# Wie viele Wettbewerber-Domains bzw. -Seiten der SoV-Report maximal auflistet.
+SOV_TOP_DOMAINS: Final = 10
+SOV_TOP_COMPETITOR_PAGES: Final = 10
+
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
 
