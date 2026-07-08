@@ -18,3 +18,13 @@ Pattern-Miner und GEO-Auditor nutzen ein LLM. Ihre Evals docken an dieselbe Stru
 an, vergleichen aber **toleranzbasiert** (z. B. erwartete Template-Merkmale, Hebel-
 Bezug, Pyramide-Ebene statt exakter Stringgleichheit). Prompt-Aenderungen werden
 gegen diese Evals regressionsgetestet (Projektregeln §5.3).
+
+## Sprint 4 (Effekt / Lern-Loop, deterministisch)
+
+Der Effekt-Analyst ist deterministisch (reine Domaenen-Mathematik, kein LLM).
+`test_eval_effect_golden.py` pinnt toleranzbasiert die Vorher/Nachher-Re-Probe gegen
+`golden/effect_seed42.json`: Anzahl gebildeter Hypothesen in `[min,max]`, jede Hypothese
+an einem tatsaechlich angewandten Patch verankert, nicht-negatives Delta (Offline-Boost)
+und Confidence in `[0,1]`. Dass das Gedaechtnis den **naechsten** Fix-Run messbar
+veraendert (das eigentliche „Lernen"), sichern zusaetzlich die Integrationstests
+`tests/integration/test_memory_influence.py`.

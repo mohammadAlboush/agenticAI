@@ -6,9 +6,11 @@ Templates auditiert, Fixes vorschlägt (Human-in-the-Loop), deployt und den Effe
 
 Master-Modulprojekt · Agentic AI · Westfälische Hochschule · Master Informatik.
 
-> **Status:** Sprint 3 (FIX & DEPLOY) abgeschlossen — Fix-Agent leitet aus den Findings konkrete
-> Patches ab, ein Human-in-the-Loop-Gate gibt sie frei, ein sicherer Dry-Run-Deploy schließt den
-> Loop (kein externer Write). `mypy --strict` · `ruff` · alle Tests grün, bit-genau reproduzierbar.
+> **Status:** Sprint 4 (LERN-LOOP) abgeschlossen — der Regelkreis ist **geschlossen**: nach dem
+> (Dry-Run-)Deploy misst das System den Effekt per Re-Probe, bildet daraus strukturierte
+> `EffectHypothesis`-Objekte, schreibt sie ins `MemoryPort`-Gedächtnis und lässt sie den **nächsten**
+> Fix-Run messbar verfeinern. `mypy --strict` · `ruff` · alle Tests grün, offline bit-genau
+> reproduzierbar (der Effekt fließt in den Fingerprint).
 
 ---
 
@@ -94,10 +96,42 @@ sondern es **umsetzen**: konkrete Patches vorschlagen, nach **menschlicher Freig
 formulieren, freigeben und (Dry-Run) anwenden — offline deterministisch, ohne je eine Live-Seite zu
 berühren (Projektregeln §6: kein Auto-Deploy ohne HITL).
 
-**Bewusst offen (Sprint 4):** echter WordPress/GitHub-Deploy hinter dem bestehenden Port; Re-Probe
-des Effekts; `MemoryPort` + Chroma/`bge-m3`; `EffectHypothesis` (Vorher/Nachher + Confidence).
-
 > Demo: `docs/demo-sprint3.md` · Folien: `docs/sprint3-praesentation.html`.
+
+---
+
+## Sprint 4 — Summary
+
+**Ziel:** Den Regelkreis **schließen** — nicht nur fixen, sondern den **Effekt messen** und daraus
+**lernen**, sodass jeder Lauf die nächsten besser macht (Projektregeln §8).
+
+**Gebaut:**
+- **Effekt-Re-Probe:** Nach dem Dry-Run-Deploy misst der Sampler denselben Matrix-Schnitt erneut
+  (`ProbePhase.REPROBE`, kollisionsfrei neben der Baseline unter **einer** `run_id`). Offline sorgt
+  ein **deterministischer** Boost der gepatchten URLs im Mock-Engine für einen reproduzierbaren
+  Vorher/Nachher-Lift; live wird die Realität gemessen (unter Dry-Run ehrlich ≈ 0).
+- **`EffectHypothesis` (Contract §3.2):** je angewandtem Patch strukturiert — Vorher-/Nachher-Rate,
+  Delta, **deterministische** Confidence (`|Δ|·n/(n+k)`), vermutete Ursache als `(Hebel, ChangeType)`,
+  Provenienz zum Patch/Finding. Der **Effekt-Analyst** ist deterministisch (reine Domänen-Mathematik,
+  kein LLM) → bleibt bit-reproduzierbar.
+- **`MemoryPort` (genau `store`/`retrieve`, §8):** `MockMemoryAdapter` (Default, SQLite, deterministisch)
+  **und** `ChromaMemoryAdapter` (bge-m3, opt-in Extra `memory`). Domain-isoliert (Lernen leckt nicht
+  zwischen Domains).
+- **Der Lern-Hebel — explizit in Code UND Prompt (§8):** vor dem Fix ruft der Loop passende
+  Hypothesen ab; sie fließen (a) in `fix_agent.v2.md` (Live-LLM) **und** (b) deterministisch über
+  `apply_memory_prior` in die Patch-Confidence → `prioritize_proposals` ordnet den Plan messbar um.
+  Kein implizites „das LLM wird's schon nutzen".
+- **Sicherheit unverändert:** Deploy bleibt Dry-Run; das HITL-Gate bleibt hart (ohne Freigabe kein
+  Re-Probe, kein Lernen). Der Effekt fließt in den Report-Fingerprint (offline bit-genau).
+
+**Das System kann jetzt:** in **einem** Lauf messen, verstehen, priorisieren, fixen, freigeben,
+(Dry-Run-)deployen, den **Effekt re-proben** und als Hypothese ins Gedächtnis schreiben — und beim
+**nächsten** Lauf nachweislich anders (besser) fixen. Der Regelkreis ist geschlossen.
+
+**Bewusst offen (später):** echter WordPress/GitHub-Live-Deploy hinter dem bestehenden Port
+(Credentials + Sicherheits-Review); reichere semantische Retrieval-Strategien im Chroma-Adapter.
+
+> Demo: `docs/demo-sprint4.md`.
 
 ---
 
@@ -108,12 +142,13 @@ Hexagonal (Ports & Adapters). Der Kern (`domain` + `ports`) kennt keine konkrete
 ```
 src/geo_audit_loop/
   config/         Settings, Engine-Registry, Konstanten, Budget-/Preis-Tabelle
-  domain/         reine Pydantic-Contracts + Domänenlogik (kein I/O)
-  ports/          abstrakte Protocols (EnginePort, ProxyPort, CrawlPort, StoragePort)
-  adapters/       konkrete I/O-Implementierungen (engines, proxy, crawl, storage)
-  agents/         Sampler, Inventory-Crawler (deterministische Services)
-  orchestration/  CrewAI-Flow am Rand, verdrahtet die Pipeline
-  prompts/        versionierte Probe-Sets
+  domain/         reine Pydantic-Contracts + Domänenlogik (kein I/O) — inkl. effect/memory
+  ports/          abstrakte Protocols (EnginePort, ProxyPort, CrawlPort, StoragePort, MemoryPort)
+  adapters/       konkrete I/O-Implementierungen (engines, proxy, crawl, publisher, storage)
+  agents/         Sampler, Crawler, Pattern-Miner, GEO-Auditor, Fix-Agent, Effekt-Analyst
+  memory/         Gedächtnis hinter MemoryPort: MockMemoryAdapter (SQLite) + ChromaMemoryAdapter (bge-m3)
+  orchestration/  CrewAI-Flow am Rand, verdrahtet den geschlossenen Loop (Sprint 1–4)
+  prompts/        versionierte Probe-Sets + Agenten-Prompts (fix_agent.v2 = gedächtnis-informiert)
   observability/  JSON-Logging (run_id), Cost-/Budget-Tracking, Retry
 ```
 
@@ -145,6 +180,10 @@ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --
 
 # Sprint-3-Fix-/Deploy-Loop: zusätzlich FIX (Patches) + FREIGABE (HITL) + DEPLOY (Dry-Run):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all --top-n 3
+
+# Sprint-4-Lern-Loop: zusätzlich RE-PROBE (Effekt) + GEDÄCHTNIS — schließt den Regelkreis:
+uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --learn --approve-all --top-n 3
+# Zweiter Lauf auf derselben DB nutzt das Gedächtnis des ersten -> der Fix-Plan ändert sich (Lernen).
 
 # Opt-in Live-Probing (nur Perplexity, budget-gedeckelt; braucht .env + Proxies):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --live
