@@ -46,6 +46,13 @@ RETRY_MAX_DELAY_S: Final = 30.0
 # --- Report ---
 TOP_N: Final = 10
 
+# --- Continuous Monitoring / Trend (Session 7) ---
+# Delta der Gesamt-Zitationsrate (letzter vs. vorheriger Lauf), unter dem ein Intent-uebergreifender
+# Rueckgang als Drift-Alert gilt (deterministischer Schwellenwert; KI-Signifikanz folgt mit #1).
+TREND_DRIFT_THRESHOLD: Final = 0.10
+# Betrag, ab dem ein Delta ueberhaupt als Richtung (besser/schlechter) statt STABIL gilt.
+TREND_DIRECTION_EPSILON: Final = 0.01
+
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
 
