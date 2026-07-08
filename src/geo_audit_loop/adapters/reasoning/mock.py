@@ -152,9 +152,132 @@ _AUDIT_FINDINGS: dict[str, object] = {
     ]
 }
 
+# Konkrete Patches je Finding (Sprint 3): finding_id/target_url/template_id stimmen mit
+# _AUDIT_FINDINGS ueberein; patch_id ist deterministisch (px-<finding>-<change_type>).
+_FIX_PROPOSALS: dict[str, object] = {
+    "proposals": [
+        {
+            "patch_id": "px-f1-insert_block",
+            "finding_id": "f1",
+            "target_url": f"{_BASE}/firewall-grundlagen",
+            "lever": "fact_density",
+            "pyramid_level": "substance",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "Eine Firewall filtert den Netzwerkverkehr anhand definierter Regeln. "
+                "Moderne Stateful-Firewalls bewerten Verbindungszustaende; laut BSI-Grundschutz "
+                "(Baustein NET.3.2) gehoeren Regelwerk-Reviews mindestens jaehrlich zum Standard."
+            ),
+            "rationale": (
+                "Template t2 (Faktendichte) verlangt belegte Zahlen/Normen statt Marketing-Prosa "
+                "— der Block ergaenzt konkrete BSI-Referenz und Pruefintervall."
+            ),
+            "confidence": 0.78,
+            "template_id": "t2",
+        },
+        {
+            "patch_id": "px-f2-add_schema",
+            "finding_id": "f2",
+            "target_url": f"{_BASE}/firewall-grundlagen",
+            "lever": "definition_blocks",
+            "pyramid_level": "extractability",
+            "change_type": "add_schema",
+            "proposed_content": (
+                '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":'
+                '[{"@type":"Question","name":"Was ist eine Firewall?","acceptedAnswer":'
+                '{"@type":"Answer","text":"Eine Firewall ist ein System, das Netzwerkverkehr '
+                'anhand von Regeln zulaesst oder blockiert."}}]}'
+            ),
+            "rationale": (
+                "Template t1 (Antwortblock + FAQ-Schema) verlangt maschinenlesbare Definitionen "
+                "— FAQPage-JSON-LD macht den Kernbegriff extrahierbar."
+            ),
+            "confidence": 0.74,
+            "template_id": "t1",
+        },
+        {
+            "patch_id": "px-f3-insert_block",
+            "finding_id": "f3",
+            "target_url": f"{_BASE}/passwort-manager-vergleich",
+            "lever": "machine_readable",
+            "pyramid_level": "extractability",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "| Passwort-Manager | Open Source | 2FA | Preis/Jahr |\n"
+                "|---|---|---|---|\n| Bitwarden | ja | ja | 0-10 EUR |\n"
+                "| KeePassXC | ja | ueber Plugin | 0 EUR |\n| 1Password | nein | ja | 36 EUR |"
+            ),
+            "rationale": (
+                "Template t1 verlangt extrahierbare Struktur — eine Vergleichstabelle ersetzt den "
+                "Fliesstext und bedient den Query-Fan-out (Preis, 2FA, Open Source)."
+            ),
+            "confidence": 0.80,
+            "template_id": "t1",
+        },
+        {
+            "patch_id": "px-f4-add_schema",
+            "finding_id": "f4",
+            "target_url": f"{_BASE}/passwort-manager-vergleich",
+            "lever": "entity_clarity",
+            "pyramid_level": "substance",
+            "change_type": "add_schema",
+            "proposed_content": (
+                '{"@context":"https://schema.org","@type":"Article","author":'
+                '{"@type":"Person","name":"Redaktion IT-Sicherheit"},'
+                '"dateModified":"2026-06-01"}'
+            ),
+            "rationale": (
+                "Template t2 (Autor-Entitaet) verlangt eine klare Quelle — Person-Schema plus "
+                "sichtbares dateModified erhoehen Vertrauen und Aktualitaetssignal."
+            ),
+            "confidence": 0.72,
+            "template_id": "t2",
+        },
+        {
+            "patch_id": "px-f5-insert_block",
+            "finding_id": "f5",
+            "target_url": f"{_BASE}/security-awareness-training",
+            "lever": "answer_blocks",
+            "pyramid_level": "extractability",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "Security-Awareness-Training schult Mitarbeitende darin, Phishing, Social "
+                "Engineering und unsichere Passwoerter zu erkennen. Wirksame Programme kombinieren "
+                "kurze Lerneinheiten mit simulierten Angriffen und messen die Klickrate ueber Zeit."
+            ),
+            "rationale": (
+                "Template t1 verlangt einen 40-60-Woerter-Antwortblock direkt unter der H1 — der "
+                "Block ist eigenstaendig zitierbar."
+            ),
+            "confidence": 0.77,
+            "template_id": "t1",
+        },
+        {
+            "patch_id": "px-f6-insert_block",
+            "finding_id": "f6",
+            "target_url": f"{_BASE}/security-awareness-training",
+            "lever": "query_coverage",
+            "pyramid_level": "citation",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "FAQ: Was kostet ein Security-Awareness-Training? Wie oft sollte es stattfinden? "
+                "Welche Tools eignen sich? — jede Teilfrage als eigener H3-Abschnitt mit "
+                "praegnanter Antwort."
+            ),
+            "rationale": (
+                "Template t3 (Frage-Deckung) verlangt explizite Teilfragen des Query-Fan-out — "
+                "die FAQ deckt Kosten, Haeufigkeit und Tools ab."
+            ),
+            "confidence": 0.69,
+            "template_id": "t3",
+        },
+    ]
+}
+
 _PAYLOADS: dict[str, dict[str, object]] = {
     "pattern_miner": _PATTERN_TEMPLATES,
     "geo_auditor": _AUDIT_FINDINGS,
+    "fix_agent": _FIX_PROPOSALS,
 }
 
 

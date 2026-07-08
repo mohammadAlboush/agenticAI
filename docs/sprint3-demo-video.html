@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>geo-audit-loop · Sprint 3 — Live-Demo</title>
+<style>
+  :root{
+    --bg:#1b1a16; --term:#211f1a; --ink:#eceae2; --mut:#9a9684; --green:#b6dd7e;
+    --gold:#e3c08a; --blue:#8ec7e0; --coral:#e0a08a; --acc:#71b127; --red:#e07a6a;
+    --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1280px;height:720px;overflow:hidden;background:var(--bg);font-family:var(--mono)}
+  .frame{position:absolute;inset:0;display:flex;flex-direction:column;padding:22px 26px 18px}
+  .titlebar{display:flex;align-items:center;gap:12px;padding:0 4px 12px;border-bottom:1px solid #34322a}
+  .dotrow{display:flex;gap:7px}
+  .dotrow i{width:12px;height:12px;border-radius:50%;display:block}
+  .dotrow .r{background:#e0625a}.dotrow .y{background:#e0b54f}.dotrow .g{background:#73c049}
+  .tt{color:#cfccbf;font-size:14px;font-weight:600;letter-spacing:.01em}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--green);font-size:13px;font-weight:700}
+  .live .pulse{width:9px;height:9px;border-radius:50%;background:#73c049;box-shadow:0 0 0 0 rgba(115,192,73,.7);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(115,192,73,.6)}70%{box-shadow:0 0 0 9px rgba(115,192,73,0)}100%{box-shadow:0 0 0 0 rgba(115,192,73,0)}}
+  .term{flex:1;min-height:0;overflow:hidden;padding:16px 6px 0;font-size:15.5px;line-height:1.62;color:var(--ink)}
+  .scroll{display:flex;flex-direction:column}
+  .ln{opacity:0;transform:translateY(4px);transition:opacity .25s ease,transform .25s ease;white-space:pre-wrap}
+  .ln.show{opacity:1;transform:none}
+  .cmd .p{color:var(--green)}.cmd .flag{color:var(--green);font-weight:600}
+  .ok{color:var(--green);font-weight:700}
+  .muted{color:var(--mut)}
+  .patchtxt{color:#cdcabc}
+  .fixrow{margin-top:2px}
+  .sec{color:var(--acc);font-weight:700;letter-spacing:.04em;margin-top:10px}
+  .sec.gold{color:var(--gold)}
+  .gold{color:var(--gold)}.blue{color:var(--blue)}.coral{color:var(--coral)}.green{color:var(--green)}
+  .bold{color:#fff;font-weight:700}
+  .bar{display:inline-block;height:11px;border-radius:6px;background:#6fa028;vertical-align:middle;margin:0 8px}
+  .bar.flop{background:#807c6e}
+  .badge{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:8px}
+  .b-chg{background:#3a3220;color:var(--gold)}
+  .b-ok{background:#27331f;color:var(--green)}
+  .panel{border:1px solid #3a382f;border-radius:10px;padding:12px 16px;margin-top:10px;background:#26241d}
+  .cur{display:inline-block;width:9px;height:17px;background:var(--green);vertical-align:text-bottom;margin-left:2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .foot{display:flex;justify-content:space-between;align-items:center;padding:10px 4px 0;border-top:1px solid #34322a;color:var(--mut);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="titlebar">
+    <div class="dotrow"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+    <div class="tt">geo-audit-loop — Sprint 3 · Fix &amp; Deploy</div>
+    <div class="live"><span class="pulse"></span>LIVE-Lauf</div>
+  </div>
+  <div class="term" id="term"><div class="scroll" id="scroll"></div></div>
+  <div class="foot"><span id="footL">Gemini-Zitate + GPT-4o-Reasoning</span><span id="footR"></span></div>
+</div>
+<script>
+const DATA = {
+  "domain": "it-sicherheit.de",
+  "run_id": "live-video-220426",
+  "n_probes": 48,
+  "n_ips": 1,
+  "steps": [
+    {
+      "label": "Probe-Matrix sampeln (Gemini live)",
+      "secs": 229.5
+    },
+    {
+      "label": "Inventar crawlen + Top/Flop",
+      "secs": 0.0
+    },
+    {
+      "label": "Pattern-Miner (GPT-4o)",
+      "secs": 7.4
+    },
+    {
+      "label": "GEO-Auditor (GPT-4o)",
+      "secs": 10.9
+    },
+    {
+      "label": "Fix-Agent (GPT-4o)",
+      "secs": 22.6
+    },
+    {
+      "label": "Human-in-the-Loop-Freigabe",
+      "secs": 0.0
+    },
+    {
+      "label": "Deploy (Dry-Run)",
+      "secs": 0.0
+    }
+  ],
+  "top": [
+    {
+      "url": "/phishing-erkennen",
+      "count": 10,
+      "rate": 0.278
+    },
+    {
+      "url": "/nis2-richtlinie",
+      "count": 7,
+      "rate": 0.194
+    },
+    {
+      "url": "/zero-trust-architektur",
+      "count": 7,
+      "rate": 0.194
+    },
+    {
+      "url": "/dsgvo-checkliste",
+      "count": 4,
+      "rate": 0.111
+    },
+    {
+      "url": "/firewall-grundlagen",
+      "count": 3,
+      "rate": 0.083
+    },
+    {
+      "url": "/ransomware-schutz",
+      "count": 3,
+      "rate": 0.083
+    },
+    {
+      "url": "/passwort-manager-vergleich",
+      "count": 1,
+      "rate": 0.028
+    },
+    {
+      "url": "/security-awareness-training",
+      "count": 0,
+      "rate": 0.0
+    }
+  ],
+  "flop": [
+    {
+      "url": "/security-awareness-training",
+      "count": 0,
+      "rate": 0.0
+    },
+    {
+      "url": "/passwort-manager-vergleich",
+      "count": 1,
+      "rate": 0.028
+    },
+    {
+      "url": "/firewall-grundlagen",
+      "count": 3,
+      "rate": 0.083
+    },
+    {
+      "url": "/ransomware-schutz",
+      "count": 3,
+      "rate": 0.083
+    },
+    {
+      "url": "/dsgvo-checkliste",
+      "count": 4,
+      "rate": 0.111
+    },
+    {
+      "url": "/nis2-richtlinie",
+      "count": 7,
+      "rate": 0.194
+    },
+    {
+      "url": "/zero-trust-architektur",
+      "count": 7,
+      "rate": 0.194
+    },
+    {
+      "url": "/phishing-erkennen",
+      "count": 10,
+      "rate": 0.278
+    }
+  ],
+  "templates": [
+    {
+      "id": "t1",
+      "title": "Integration von FAQ- und HowTo-Schemata",
+      "confidence": 0.9,
+      "levers": [
+        "machine_readable",
+        "answer_blocks"
+      ],
+      "pyramid": "extractability",
+      "summary": "Seiten, die sowohl FAQ- als auch HowTo-Schemata verwenden, bieten strukturierte und leicht zugängliche Informationen, die sowohl für Menschen als auch für Maschinen gut lesbar sind."
+    },
+    {
+      "id": "t2",
+      "title": "Hohe Faktendichte und klare Struktur",
+      "confidence": 0.85,
+      "levers": [
+        "fact_density",
+        "heading_hierarchy"
+      ],
+      "pyramid": "substance",
+      "summary": "Seiten mit hoher Faktendichte und klarer Struktur bieten umfassende Informationen, die schnell erfasst werden können, was sie für Zitate attraktiv macht."
+    },
+    {
+      "id": "t3",
+      "title": "Aktualität und Relevanz der Informationen",
+      "confidence": 0.9,
+      "levers": [
+        "freshness",
+        "query_coverage"
+      ],
+      "pyramid": "citation",
+      "summary": "Seiten, die aktuelle und relevante Informationen zu wichtigen Themen bieten, werden häufiger zitiert, da sie den Informationsbedarf der Nutzer direkt adressieren."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "high",
+      "url": "/security-awareness-training",
+      "lever": "machine_readable",
+      "pyramid": "extractability",
+      "recommendation": "Integrieren Sie FAQ- und HowTo-Schemata, um die maschinelle Lesbarkeit zu verbessern.",
+      "evidence": "JSON-LD-Typen: ['Article']"
+    },
+    {
+      "severity": "medium",
+      "url": "/firewall-grundlagen",
+      "lever": "heading_hierarchy",
+      "pyramid": "extractability",
+      "recommendation": "Verwenden Sie eine klare Überschriftenhierarchie, um den Inhalt besser zu strukturieren.",
+      "evidence": "Lack of clear heading hierarchy in content."
+    },
+    {
+      "severity": "low",
+      "url": "/dsgvo-checkliste",
+      "lever": "answer_blocks",
+      "pyramid": "extractability",
+      "recommendation": "Ergänzen Sie die Seite um ein FAQ-Schema, um häufig gestellte Fragen strukturiert zu beantworten.",
+      "evidence": "Has HowTo but lacks FAQ schema."
+    },
+    {
+      "severity": "medium",
+      "url": "/passwort-manager-vergleich",
+      "lever": "fact_density",
+      "pyramid": "substance",
+      "recommendation": "Erhöhen Sie die Faktendichte durch detaillierte Vergleiche und spezifische Funktionsbeschreibungen.",
+      "evidence": "Content excerpt lacks detailed comparisons and specific features."
+    },
+    {
+      "severity": "medium",
+      "url": "/phishing-erkennen",
+      "lever": "entity_clarity",
+      "pyramid": "substance",
+      "recommendation": "Definieren Sie klar die beteiligten Entitäten und Begriffe, um die Verständlichkeit zu erhöhen.",
+      "evidence": "Lack of clear entity definitions in content."
+    },
+    {
+      "severity": "medium",
+      "url": "/zero-trust-architektur",
+      "lever": "query_coverage",
+      "pyramid": "substance",
+      "recommendation": "Erweitern Sie die Abdeckung relevanter Suchanfragen, um umfassendere Informationen zu bieten.",
+      "evidence": "Content does not cover all relevant queries about Zero Trust."
+    },
+    {
+      "severity": "low",
+      "url": "/nis2-richtlinie",
+      "lever": "freshness",
+      "pyramid": "substance",
+      "recommendation": "Stellen Sie sicher, dass die Informationen regelmäßig aktualisiert werden, um die Relevanz zu erhalten.",
+      "evidence": "Content is up-to-date but lacks ongoing updates."
+    },
+    {
+      "severity": "medium",
+      "url": "/ransomware-schutz",
+      "lever": "external_corroboration",
+      "pyramid": "corroboration",
+      "recommendation": "Fügen Sie externe Quellen oder Referenzen hinzu, um die Glaubwürdigkeit zu erhöhen.",
+      "evidence": "Content lacks external references or corroboration."
+    }
+  ],
+  "patches": [
+    {
+      "change_type": "add_schema",
+      "url": "/security-awareness-training",
+      "lever": "machine_readable",
+      "confidence": 0.85,
+      "proposed_content": "{\"@context\": \"https://schema.org\", \"@type\": \"FAQPage\", \"mainEntity\": [{\"@type\": \"Question\", \"name\": \"Was ist ein Security-Awareness-Training?\", \"acceptedAnswer\": {\"@type\": \"Answer\", \"text\": \"Security-Awareness-Trainings sensibilisieren Mitarbeitende fuer Gefahren. Sie sind ein wichtiger Baustein der Sicherheit und sollten regelmaessig stattfinden.\"}}]}",
+      "rationale": "Durch die Integration eines FAQ-Schemas wird die maschinelle Lesbarkeit verbessert, was den Kriterien des Templates t1 entspricht."
+    },
+    {
+      "change_type": "add_schema",
+      "url": "/dsgvo-checkliste",
+      "lever": "answer_blocks",
+      "confidence": 0.82,
+      "proposed_content": "{\"@context\": \"https://schema.org\", \"@type\": \"FAQPage\", \"mainEntity\": [{\"@type\": \"Question\", \"name\": \"Was ist die DSGVO?\", \"acceptedAnswer\": {\"@type\": \"Answer\", \"text\": \"Die DSGVO ist eine Verordnung der EU zur Regelung des Datenschutzes.\"}}]}",
+      "rationale": "Das Hinzufügen eines FAQ-Schemas verbessert die Strukturierung der Antworten und entspricht den Kriterien des Templates t1."
+    },
+    {
+      "change_type": "add_heading",
+      "url": "/firewall-grundlagen",
+      "lever": "heading_hierarchy",
+      "confidence": 0.8,
+      "proposed_content": "<h1>Firewall-Grundlagen verständlich erklärt</h1><h2>Was ist eine Firewall?</h2><p>Eine Firewall schützt das Netzwerk...</p><h2>Warum ist eine Firewall wichtig?</h2><p>Sie filtert den Datenverkehr...</p>",
+      "rationale": "Eine klare Überschriftenhierarchie strukturiert den Inhalt besser und verbessert die Extrahierbarkeit, was den Kriterien des Templates t2 entspricht."
+    },
+    {
+      "change_type": "rewrite_block",
+      "url": "/passwort-manager-vergleich",
+      "lever": "fact_density",
+      "confidence": 0.9,
+      "proposed_content": "Passwort-Manager speichern Zugangsdaten verschlüsselt und bieten Funktionen wie Passwort-Generierung, Zwei-Faktor-Authentifizierung und automatische Formularausfüllung. Zu den führenden Lösungen gehören LastPass, Dashlane und 1Password, die sich in Preis, Benutzerfreundlichkeit und Sicherheitsfunktionen unterscheiden. Ein Vergleich der Funktionen hilft, den passenden Manager zu wählen.",
+      "rationale": "Durch die Erhöhung der Faktendichte mit detaillierten Vergleichen und spezifischen Funktionsbeschreibungen wird die Substanz des Inhalts verbessert, was den Kriterien des Templates t2 entspricht."
+    },
+    {
+      "change_type": "insert_block",
+      "url": "/zero-trust-architektur",
+      "lever": "query_coverage",
+      "confidence": 0.8,
+      "proposed_content": "<h2>Häufige Fragen zur Zero Trust Architektur</h2><p><strong>Wie implementiert man Zero Trust?</strong> Die Implementierung erfolgt schrittweise durch Erfassung des Schutzbedarfs, Stärkung von Identitäten und Geräten sowie Mikrosegmentierung.</p><p><strong>Welche Vorteile bietet Zero Trust?</strong> Zero Trust erhöht die Sicherheit durch kontinuierliche Überprüfung und reduziert das Risiko von Datenlecks.</p>",
+      "rationale": "Durch die Erweiterung der Abdeckung relevanter Suchanfragen wird die Substanz des Inhalts verbessert, was den Kriterien des Templates t3 entspricht."
+    },
+    {
+      "change_type": "insert_block",
+      "url": "/phishing-erkennen",
+      "lever": "entity_clarity",
+      "confidence": 0.75,
+      "proposed_content": "<h2>Wichtige Begriffe im Zusammenhang mit Phishing</h2><p><strong>Phishing:</strong> Eine Methode, um sensible Informationen wie Passwörter durch Täuschung zu erlangen.</p><p><strong>Absenderdomain:</strong> Die Domain, von der eine E-Mail gesendet wird, die oft gefälscht wird, um vertrauenswürdig zu erscheinen.</p>",
+      "rationale": "Das Einfügen klarer Definitionen für wichtige Begriffe erhöht die Verständlichkeit und entspricht den Anforderungen an die Substanz."
+    },
+    {
+      "change_type": "meta_update",
+      "url": "/nis2-richtlinie",
+      "lever": "freshness",
+      "confidence": 0.7,
+      "proposed_content": "{\"dateModified\": \"2023-10-01\"}",
+      "rationale": "Durch das regelmäßige Aktualisieren des dateModified-Metadatenfeldes wird die Aktualität der Seite signalisiert, was den Kriterien des Templates t3 entspricht."
+    },
+    {
+      "change_type": "insert_block",
+      "url": "/ransomware-schutz",
+      "lever": "external_corroboration",
+      "confidence": 0.77,
+      "proposed_content": "<h2>Externe Quellen und Referenzen</h2><p>Für weiterführende Informationen zu Ransomware-Schutzmaßnahmen empfehlen wir die Leitfäden des Bundesamts für Sicherheit in der Informationstechnik (BSI) und die Berichte von Cybersecurity-Unternehmen wie Kaspersky und Symantec.</p>",
+      "rationale": "Das Hinzufügen externer Referenzen erhöht die Glaubwürdigkeit und entspricht den Anforderungen an die Korroboration."
+    }
+  ],
+  "deploy": {
+    "publisher": "mock",
+    "dry_run": true,
+    "applied": [
+      "px-f1-add_schema",
+      "px-f5-add_schema",
+      "px-f3-add_heading",
+      "px-f2-rewrite_block",
+      "px-f7-insert_block",
+      "px-f8-insert_block",
+      "px-f6-meta_update",
+      "px-f4-insert_block"
+    ],
+    "skipped": [],
+    "status": "dry_run"
+  },
+  "approved": 8,
+  "n_decisions": 8,
+  "cost": {
+    "probes": 48,
+    "tokens": 16713,
+    "usd": 0.111
+  },
+  "fingerprint": "b6ed70488487",
+  "model_reasoning": "gpt-4o"
+};
+const scroll = document.getElementById('scroll');
+const term = document.getElementById('term');
+
+// ---- Timeline aus den ECHTEN Daten bauen ----
+const CMD = '$ uv run python -m geo_audit_loop --domain it-sicherheit.de --live --explain --fix --apply --approve-all';
+const items = [];          // {at, html} ; Kommando separat (Tipp-Effekt)
+let t = 2600;              // nach dem Tippen des Kommandos
+const add = (html, gap=520) => { items.push({at:t, html}); t += gap; };
+const blank = (gap=260) => { items.push({at:t, html:'&nbsp;'}); t += gap; };
+
+blank(200);
+(DATA.steps||[]).forEach(s => add(`<span class="ok">✓</span> ${s.label}  <span class="muted">${s.secs} s</span>`, 460));
+blank();
+
+// WAS
+add('<span class="sec">WAS — GEO-Sichtbarkeit (Gemini · Google-Search-Grounding)</span>', 360);
+const all = [...(DATA.top||[]).map(e=>({...e,top:true})), ...(DATA.flop||[]).map(e=>({...e,top:false}))];
+const maxc = Math.max(1, ...all.map(e=>e.count));
+all.slice(0,6).forEach(e => add(
+  `<span class="${e.top?'green':'muted'}">${e.top?'▲':'▼'}</span> ${pad(e.url,30)} `+
+  `<span class="bar ${e.top?'':'flop'}" style="width:${Math.max(6,Math.round(150*e.count/maxc))}px"></span> `+
+  `<span class="${e.top?'green':'muted'}">${e.count}×</span>`, 300));
+blank();
+
+// WARUM
+add('<span class="sec gold">WARUM — Muster der Top-Seiten (Pattern-Miner · GPT-4o)</span>', 360);
+(DATA.templates||[]).slice(0,3).forEach(tp => add(
+  `<span class="b-chg badge">${tp.id}</span><span class="bold">${esc(tp.title)}</span> <span class="muted">· Konfidenz ${tp.confidence}</span>`, 340));
+blank();
+
+// WAS TUN
+add('<span class="sec">WAS TUN — Priorisierte Findings (GEO-Auditor · GPT-4o)</span>', 360);
+(DATA.findings||[]).slice(0,3).forEach(f => add(
+  `<span class="badge ${sevCls(f.severity)}">${f.severity.toUpperCase()}</span>${pad(f.url,28)} <span class="muted">${clip(f.recommendation,46)}</span>`, 320));
+blank();
+
+// FIX — der Kern von Sprint 3: konkrete Patches prominent zeigen
+add('<span class="sec gold">FIX — Konkrete Patches je Finding (Fix-Agent · GPT-4o)</span>', 480);
+(DATA.patches||[]).slice(0,4).forEach(p => add(
+  `<span class="b-chg badge">${chg(p.change_type)}</span> <span class="bold">${esc(p.url)}</span> `+
+  `<span class="muted">· ${p.lever} · Konf. ${p.confidence}</span><br>`+
+  `<span class="fixrow"><span class="green">   → </span><span class="patchtxt">${clip(p.proposed_content,150)}</span></span>`, 820));
+blank();
+
+// FREIGABE
+add(`<span class="sec">FREIGABE — Human-in-the-Loop</span>`, 320);
+add(`<span class="b-ok badge">✓ ${DATA.approved}/${DATA.n_decisions} freigegeben</span> <span class="muted">cli:--approve-all · Kein Deploy ohne Freigabe (§6)</span>`, 460);
+blank();
+
+// DEPLOY
+add('<span class="sec gold">DEPLOY — Anwenden (Dry-Run)</span>', 320);
+const dp = DATA.deploy||{};
+add(`<div class="panel">Publisher <span class="bold">${dp.publisher}</span> · `+
+    `<span class="b-ok badge" style="margin-left:4px">${dp.dry_run?'DRY-RUN · KEINE EXTERNEN WRITES':'LIVE'}</span><br>`+
+    `Patches <span class="bold">${(dp.applied||[]).length} angewandt · ${(dp.skipped||[]).length} übersprungen</span> · Status ${dp.status}</div>`, 700);
+blank();
+
+// SUMMARY
+const c = DATA.cost||{};
+add(`<span class="muted">Kosten/Lauf</span>  <span class="bold">${c.probes} Probes · ${c.tokens} Tokens · $${(c.usd||0).toFixed(4)}</span>`, 380);
+add(`<span class="muted">Report-Fingerprint</span>  <span class="gold bold">${DATA.fingerprint}</span> <span class="muted">(Live-Lauf — nicht bit-reproduzierbar)</span>`, 380);
+add(`<span class="green bold">✓ Live-Lauf · Gemini-Citation-Messung + GPT-4o-Reasoning (${DATA.model_reasoning||'gpt-4o'})</span>`, 200);
+
+const END = t + 3000;
+document.getElementById('footR').textContent = 'Domain ' + DATA.domain + ' · Modell ' + (DATA.model_reasoning||'gpt-4o');
+
+// ---- Helpers ----
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function pad(s,n){s=esc(s);return s.length>=n?s:s+'&nbsp;'.repeat(n-s.length);}
+function clip(s,n){s=String(s||'').replace(/\s+/g,' ').trim();return esc(s.length>n?s.slice(0,n-1)+'…':s);}
+function sevCls(s){return ({critical:'b-chg',high:'b-chg',medium:'b-chg',low:'b-ok'})[s]||'b-chg';}
+function chg(s){return ({insert_block:'Block +',add_schema:'Schema +',rewrite_block:'Umschreiben',add_heading:'Heading +',meta_update:'Meta'})[s]||s;}
+
+// ---- Render (Echtzeit ODER ?t=ms eingefroren) ----
+const params = new URLSearchParams(location.search);
+const frozen = params.has('t') ? parseInt(params.get('t'),10) : null;
+let start = null;
+const cmdEl = document.createElement('div'); cmdEl.className='ln cmd show';
+scroll.appendChild(cmdEl);
+const lineEls = items.map(()=>{const d=document.createElement('div');d.className='ln';scroll.appendChild(d);return d;});
+
+function renderAt(ms){
+  // Kommando tippen (0..2400ms)
+  const typed = Math.max(0, Math.min(CMD.length, Math.round(CMD.length * ms/2400)));
+  cmdEl.innerHTML = colorCmd(CMD.slice(0,typed)) + (ms<END-200?'<span class="cur"></span>':'');
+  let lastShown = cmdEl;
+  items.forEach((it,i)=>{
+    const el=lineEls[i];
+    if(ms>=it.at){ if(!el.classList.contains('show')){el.innerHTML=it.html;el.classList.add('show');} lastShown=el; }
+  });
+  term.scrollTop = term.scrollHeight; // Auto-Scroll wie ein echtes Terminal
+}
+function colorCmd(s){
+  return esc(s)
+    .replace(/^\$\s/, '<span class="p">$ </span>')
+    .replace(/(--[a-z-]+)/g,'<span class="flag">$1</span>');
+}
+
+if(frozen!==null){
+  renderAt(frozen);
+  window.__frameReady = true;
+}else{
+  function loop(ts){ if(start===null)start=ts; const ms=ts-start; renderAt(ms);
+    if(ms>=END){ window.__done = true; document.title='DONE'; return; }
+    requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+}
+window.__END = END;
+</script>
+</body>
+</html>

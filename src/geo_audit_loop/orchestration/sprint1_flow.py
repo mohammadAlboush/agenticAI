@@ -19,6 +19,7 @@ from pydantic import BaseModel, PrivateAttr
 
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
 from geo_audit_loop.agents.sampler import SamplerService
+from geo_audit_loop.domain.entity import EntityGraphReport, build_entity_graph
 from geo_audit_loop.domain.errors import BudgetExceeded
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions
@@ -65,6 +66,7 @@ class Sprint1Pipeline:
         self._clock = clock if clock is not None else _utc_now
         self._aggregates: list[ProbeAggregate] = []
         self._report: TopFlopReport | None = None
+        self._entity_graph: EntityGraphReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -76,6 +78,11 @@ class Sprint1Pipeline:
         """Der erzeugte Top/Flop-Report (nach ``run``); ``None`` bei Abbruch."""
         return self._report
 
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report (nach ``crawl_and_report``); ``None`` bei Abbruch."""
+        return self._entity_graph
+
     def sample(self) -> None:
         """Schritt 1: Run anlegen und die Probe-Matrix ausfuehren (budget-bewacht)."""
         self._storage.save_run(self._record(RunStatus.RUNNING, finished=False))
@@ -86,14 +93,49 @@ class Sprint1Pipeline:
             self._finalize(RunStatus.ABORTED, str(exc))
             raise
 
-    def crawl_and_report(self) -> TopFlopReport:
-        """Schritt 2: Inventar crawlen, Top/Flop bauen, Run abschliessen."""
+    def crawl_and_report(self, *, finalize: bool = True) -> TopFlopReport:
+        """Schritt 2: Inventar crawlen, Top/Flop bauen, Run abschliessen.
+
+        ``finalize=False`` schiebt den COMPLETED-Abschluss auf (Sprint 2 finalisiert erst
+        nach den Lern-Schritten, damit die persistierten Kosten das Reasoning enthalten).
+        """
         report = self._crawler.run(
             self._run_context, self._options, aggregates=self._aggregates, top_n=self._top_n
         )
         self._report = report
-        self._finalize(RunStatus.COMPLETED, None)
+        self._entity_graph = self._compute_entity_graph()
+        if finalize:
+            self._finalize(RunStatus.COMPLETED, None)
         return report
+
+    def _compute_entity_graph(self) -> EntityGraphReport:
+        """Baut den Entity-/Knowledge-Graph aus dem gecrawlten Seiten-Inventar (deterministisch).
+
+        Rein aus vorhandenen Struktur-Signalen (JSON-LD, OpenGraph, Autor, Canonical) — kein
+        LLM, kein zusaetzlicher Netz-Aufruf; daher hier (nicht im Lern-Pfad) und immer erzeugt.
+        """
+        pages = self._storage.load_pages(self._run_context.run_id)
+        graph = build_entity_graph(
+            self._run_context.target_domain,
+            pages,
+            run_id=self._run_context.run_id,
+            generated_at=self._clock(),
+        )
+        self._storage.save_entity_graph(graph)
+        log_event(
+            self._log,
+            "entity_graph.done",
+            run_id=self.run_id,
+            agent=_AGENT,
+            n_pages=graph.n_pages,
+            mean_clarity=graph.mean_clarity,
+            weakest=len(graph.weakest_pages),
+        )
+        return graph
+
+    def finalize_completed(self) -> None:
+        """Schliesst den Run als COMPLETED ab (fuer aufgeschobenes Finalisieren in Sprint 2)."""
+        self._finalize(RunStatus.COMPLETED, None)
 
     def run(self) -> TopFlopReport:
         """Fuehrt beide Schritte aus (framework-freier Komplettlauf)."""

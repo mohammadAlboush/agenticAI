@@ -42,4 +42,5 @@ def page_features(inv: PageInventory) -> dict[str, Any]:
         "has_author": schema.has_author,
         "has_breadcrumb": schema.has_breadcrumb,
         "has_howto": "HowTo" in schema.jsonld_types,
+        "content_excerpt": " ".join(page.content.split()[:80]),  # echter Inhalt fuer den Audit
     }
