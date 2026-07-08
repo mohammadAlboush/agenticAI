@@ -29,6 +29,7 @@ class CrawledPage(FrozenModel):
     word_count: int = Field(default=0, ge=0)
     canonical: str | None = None
     lang: str | None = None
+    content: str = ""  # getrimmter Fliesstext-Auszug (Grundlage inhaltlicher Audits, Sprint 2.1)
 
 
 class SchemaInventory(FrozenModel):

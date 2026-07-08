@@ -40,6 +40,19 @@ class ProbeStatus(StrEnum):
     ERROR = "error"
 
 
+class ProbePhase(StrEnum):
+    """Phase einer Probe im geschlossenen Loop (Sprint 4).
+
+    ``BASELINE`` ist die Erst-Messung; ``REPROBE`` misst denselben Matrix-Schnitt
+    erneut NACH dem (Dry-Run-)Deploy, um den Effekt der Fixes zu erfassen. Die Phase
+    ist Teil des Idempotenz-Schluessels, damit Baseline- und Re-Probe-Zellen unter
+    derselben ``run_id`` kollisionsfrei koexistieren (Projektregeln §6).
+    """
+
+    BASELINE = "baseline"
+    REPROBE = "reprobe"
+
+
 class Citation(FrozenModel):
     """Eine normalisierte Quellenangabe, vereinheitlicht ueber alle Engines.
 
@@ -94,6 +107,7 @@ class ProbeRequest(FrozenModel):
     max_tokens: int = Field(gt=0)
     temperature: float = Field(ge=0.0, le=2.0)
     search_mode: SearchMode | None = None
+    phase: ProbePhase = ProbePhase.BASELINE  # Baseline-Messung vs. Effekt-Re-Probe (Sprint 4)
 
 
 class ProbeUsage(FrozenModel):
@@ -124,3 +138,4 @@ class ProbeResult(FrozenModel):
     error: str | None = None
     probed_at: datetime
     latency_ms: int = Field(default=0, ge=0)
+    phase: ProbePhase = ProbePhase.BASELINE  # Baseline-Messung vs. Effekt-Re-Probe (Sprint 4)

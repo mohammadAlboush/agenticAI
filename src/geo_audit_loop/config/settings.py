@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -30,6 +30,18 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     google_api_key: str | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
+    saia_api_key: str | None = Field(default=None, validation_alias="SAIA_API_KEY")
+
+    # --- SAIA / KISSKI (Hochschul-LLM-Dienst, OpenAI-kompatibel; kostenloses Reasoning) ---
+    saia_base_url: str = Field(
+        default="https://chat-ai.academiccloud.de/v1", validation_alias="GEO_SAIA_BASE_URL"
+    )
+    saia_model: str = Field(default="openai-gpt-oss-120b", validation_alias="GEO_SAIA_MODEL")
+    # Welcher Adapter den ReasoningPort bedient (Pattern-Miner/GEO-Auditor):
+    # mock (Default, deterministisch) | saia (Hochschule, kostenlos) | claude (Anthropic, paid).
+    reasoning_provider: Literal["mock", "saia", "claude"] = Field(
+        default="mock", validation_alias="GEO_REASONING_PROVIDER"
+    )
 
     # --- Proxies ---
     proxy_file: Path = Field(
@@ -58,6 +70,23 @@ class Settings(BaseSettings):
 
     # --- Pfade ---
     db_path: Path = Field(default=Path("runs/geo_audit.db"), validation_alias="GEO_DB_PATH")
+    runs_dir: Path = Field(default=Path("runs"), validation_alias="GEO_RUNS_DIR")
+
+    # --- Sprint 3: Deploy-Ziel (sicher; wordpress/github bewusst NICHT waehlbar) ---
+    # mock (Default, Dry-Run, kein Write) | filesystem (Patch-Artefakte nach runs/<id>/patches/).
+    publisher: Literal["mock", "filesystem"] = Field(
+        default="mock", validation_alias="GEO_PUBLISHER"
+    )
+
+    # --- Sprint 4: Gedaechtnis-Backend (Lern-Loop) ---
+    # mock (Default, deterministisch, SQLite) | chroma (bge-m3, opt-in Extra 'memory', nicht det.).
+    memory_provider: Literal["mock", "chroma"] = Field(
+        default="mock", validation_alias="GEO_MEMORY_PROVIDER"
+    )
+    chroma_path: Path = Field(default=Path("runs/chroma"), validation_alias="GEO_CHROMA_PATH")
+    embedding_model: str = Field(
+        default=c.DEFAULT_EMBEDDING_MODEL, validation_alias="GEO_EMBEDDING_MODEL"
+    )
 
     @field_validator("live_engines", mode="before")
     @classmethod
@@ -72,7 +101,7 @@ class Settings(BaseSettings):
         return engine_id in self.live_engines
 
     def api_key_for(self, engine_id: EngineId) -> str | None:
-        """Liefert den API-Key der Engine gemaess Registry (oder ``None``)."""
+        """Liefert den (ersten) API-Key der Engine gemaess Registry (oder ``None``)."""
         env_name = ENGINE_REGISTRY[engine_id].api_key_env
         mapping = {
             "PERPLEXITY_API_KEY": self.perplexity_api_key,
@@ -80,7 +109,16 @@ class Settings(BaseSettings):
             "OPENAI_API_KEY": self.openai_api_key,
             "GOOGLE_API_KEY": self.google_api_key,
         }
-        return mapping.get(env_name)
+        raw = mapping.get(env_name)
+        return raw.split(",")[0].strip() if raw else None
+
+    def api_keys_for(self, engine_id: EngineId) -> list[str]:
+        """Alle konfigurierten Keys der Engine (Komma-Liste = mehrere Projekte/Kontingente)."""
+        env_name = ENGINE_REGISTRY[engine_id].api_key_env
+        if env_name == "GOOGLE_API_KEY" and self.google_api_key:
+            return [k.strip() for k in self.google_api_key.split(",") if k.strip()]
+        single = self.api_key_for(engine_id)
+        return [single] if single else []
 
     def run_fingerprint(self) -> str:
         """Stabiler Hash der reproduzierbarkeits-relevanten Konfiguration (Projektregeln §7)."""
@@ -92,6 +130,9 @@ class Settings(BaseSettings):
             "max_tokens": self.max_tokens,
             "prompt_set_version": self.prompt_set_version,
             "live_engines": sorted(e.value for e in self.live_engines),
+            # Sprint 4: Mock (deterministisch) vs. Chroma (semantisch) sind unterschiedliche
+            # Reproduzierbarkeits-Klassen; chroma_path/embedding_model bleiben irrelevant.
+            "memory_provider": self.memory_provider,
             "models": {
                 eid.value: cfg.model
                 for eid, cfg in sorted(ENGINE_REGISTRY.items(), key=lambda kv: kv[0].value)

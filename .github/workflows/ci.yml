@@ -1,0 +1,44 @@
+name: CI
+
+# Qualitaets-Gate (CLAUDE.md §5): ruff + ruff-format + mypy --strict + pytest (Ports gemockt,
+# kein Netz). Das schwere optionale Extra 'memory' (chromadb + bge-m3/torch) wird BEWUSST NICHT
+# installiert — der deterministische Mock-Pfad braucht es nie, und '-m "not live"' ruft keine
+# externen Dienste. So bleibt CI schnell und reproduzierbar.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      CREWAI_DISABLE_TELEMETRY: "true"
+      OTEL_SDK_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync dependencies (default + dev; no heavy 'memory' extra)
+        run: uv sync --frozen
+
+      - name: Ruff lint
+        run: uv run ruff check src tests
+
+      - name: Ruff format check
+        run: uv run ruff format --check src tests
+
+      - name: mypy (strict)
+        run: uv run mypy
+
+      - name: pytest (mocked ports, no live)
+        run: uv run pytest -m "not live"

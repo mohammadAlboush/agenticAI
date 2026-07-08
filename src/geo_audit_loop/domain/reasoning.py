@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import Field
 
@@ -41,6 +42,9 @@ class ReasoningRequest(FrozenModel):
     max_tokens: int = Field(gt=0)
     temperature: float = Field(ge=0.0, le=2.0)
     seed: int | None = None  # Determinismus-Anker fuer den Mock-Adapter
+    # Optionales JSON-Schema: erzwingt beim Live-Adapter strukturierte Ausgabe (Tool-Use).
+    # Der Mock ignoriert es. Nicht im Hash verwendet (frozen-Modell wird nirgends gehasht).
+    response_schema: dict[str, Any] | None = None
 
 
 class ReasoningResult(FrozenModel):
