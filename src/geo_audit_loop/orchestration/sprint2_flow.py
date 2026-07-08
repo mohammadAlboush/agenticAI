@@ -15,6 +15,7 @@ from pydantic import BaseModel, PrivateAttr
 
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
+from geo_audit_loop.agents.query_generator import QueryGeneratorService
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.errors import GeoAuditError
@@ -39,17 +40,20 @@ class Sprint2Pipeline:
         geo_auditor: GeoAuditorService,
         storage: StoragePort,
         run_context: RunContext,
+        query_generator: QueryGeneratorService | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._base = base
         self._pattern_miner = pattern_miner
         self._geo_auditor = geo_auditor
+        self._query_generator = query_generator
         self._storage = storage
         self._run_context = run_context
         self._log = logger if logger is not None else logging.getLogger(__name__)
         self._pages: tuple[PageInventory, ...] | None = None
         self._pattern_report: PatternReport | None = None
         self._audit_report: AuditReport | None = None
+        self._enriched_coverage: CoverageReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -63,7 +67,13 @@ class Sprint2Pipeline:
 
     @property
     def coverage(self) -> CoverageReport | None:
-        """Der Query-Intent-Coverage-Report aus Schritt 2 (Session 4, deterministisch)."""
+        """Der Query-Intent-Coverage-Report (deterministischer Kern; ggf. mit LLM-Luecken-Fragen).
+
+        Nach ``mine_patterns`` liefert die Property die um ``suggested_queries`` angereicherte
+        Fassung (Session 4, Query-Generator), sonst den deterministischen Basis-Report.
+        """
+        if self._enriched_coverage is not None:
+            return self._enriched_coverage
         return self._base.coverage
 
     @property
@@ -104,12 +114,34 @@ class Sprint2Pipeline:
         self._base.finalize_completed()
 
     def mine_patterns(self) -> PatternReport:
-        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren)."""
+        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren).
+
+        Danach (Session 4, LLM): fuellt die schwachen Coverage-Intents mit generierten
+        Luecken-Fragen — der erste Reasoning-Schritt, in dem das Gedaechtnis/LLM verfuegbar ist.
+        """
         self._pattern_report = self._pattern_miner.run(
             self._run_context, self._require_report(), self._load_pages()
         )
         self._storage.save_pattern_report(self._pattern_report)
+        self._generate_gap_queries()
         return self._pattern_report
+
+    def _generate_gap_queries(self) -> None:
+        """Reichert den Coverage-Report um LLM-generierte Luecken-Fragen an (+ re-persistiert).
+
+        No-Op ohne Query-Generator oder ohne Coverage; ohne schwache Intents macht der Generator
+        selbst keinen LLM-Aufruf. Die angereicherte Fassung ersetzt (Upsert) den deterministischen
+        Basis-Report und wird ueber ``coverage`` sichtbar (Offline mit Mock -> reproduzierbar).
+        """
+        coverage = self._base.coverage
+        if self._query_generator is None or coverage is None:
+            return
+        queries = self._query_generator.run(self._run_context, coverage)
+        if not queries:
+            return
+        enriched = coverage.model_copy(update={"suggested_queries": queries})
+        self._storage.save_coverage_report(enriched)
+        self._enriched_coverage = enriched
 
     def audit_flops(self) -> AuditReport:
         """Schritt 4: Flop-Seiten auditieren, Lern-Artefakte speichern, Run finalisieren."""

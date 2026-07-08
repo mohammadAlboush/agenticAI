@@ -185,8 +185,8 @@ def render_coverage(console: Console, report: CoverageReport) -> None:
     """Rendert die Query-Intent-Coverage (WOFUER zitiert?): Blind Spots je Fragetyp.
 
     Schwaechster Intent zuerst (wie ``compute_coverage`` sortiert). Ein Intent unter der
-    Blind-Spot-Schwelle (``weakest_intents``) wird rot markiert — er ist die Luecke, die
-    der (spaetere) Query-Generator mit neuen Fragen fuellen soll.
+    Blind-Spot-Schwelle (``weakest_intents``) wird rot markiert. Liegen ``suggested_queries``
+    vor (Query-Generator, LLM), werden die vorgeschlagenen Luecken-Fragen darunter gelistet.
     """
     console.print()
     console.rule(
@@ -227,6 +227,15 @@ def render_coverage(console: Console, report: CoverageReport) -> None:
             _bar(cov.coverage_rate, 16, bar_style),
         )
     console.print(table)
+    if report.suggested_queries:
+        console.print(
+            Text("Vorgeschlagene Luecken-Fragen (Query-Generator):", style=f"bold {ACCENT}")
+        )
+        for query in report.suggested_queries:
+            line = Text()
+            line.append(f"  + [{INTENT_LABELS[query.intent]}] ", style=ACCENT_DIM)
+            line.append(query.text, style="bold")
+            console.print(line)
 
 
 def render_patterns(console: Console, report: PatternReport) -> None:

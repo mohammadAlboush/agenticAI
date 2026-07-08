@@ -195,6 +195,9 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             "overall_citation_rate": (
                 coverage.overall_citation_rate if coverage is not None else None
             ),
+            "n_suggested_queries": (
+                len(coverage.suggested_queries) if coverage is not None else None
+            ),
             "has_report": report is not None,
             "fingerprint": fingerprint,
             "dashboard_alive": manager.is_alive(run.run_id),
