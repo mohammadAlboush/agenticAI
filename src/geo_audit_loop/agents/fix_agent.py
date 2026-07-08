@@ -21,9 +21,11 @@ from pydantic import ValidationError
 from geo_audit_loop.agents._parsing import extract_json_object, page_features
 from geo_audit_loop.config import constants as c
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.effect import EffectHypothesis
 from geo_audit_loop.domain.errors import ReasoningError
 from geo_audit_loop.domain.fix import FixPlan, FixProposal, prioritize_proposals
 from geo_audit_loop.domain.inventory import PageInventory
+from geo_audit_loop.domain.memory import apply_memory_prior
 from geo_audit_loop.domain.probe import ProbeUsage
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult, ReasoningStatus
 from geo_audit_loop.domain.run import RunContext
@@ -113,25 +115,34 @@ class FixAgentService:
         audit: AuditReport,
         patterns: PatternReport,
         pages: Seq[PageInventory],
+        memory_hypotheses: Seq[EffectHypothesis] = (),
     ) -> FixPlan:
-        """Baut aus Findings + Templates + Inventar den priorisierten Fix-Plan."""
+        """Baut aus Findings + Templates + Inventar den priorisierten Fix-Plan.
+
+        ``memory_hypotheses`` (Sprint 4) sind aus dem Gedaechtnis abgerufene, erwiesene
+        Effekte: sie fliessen EXPLIZIT in den Prompt (Live-LLM) UND deterministisch ueber
+        ``apply_memory_prior`` in die Confidence/Priorisierung (offline nachweisbar, §8).
+        Leer => bit-genau das Sprint-3-Verhalten.
+        """
         by_url = {inv.page.url: inv for inv in pages}
-        prompt = self._build_prompt(audit, patterns, by_url)
+        prompt = self._build_prompt(audit, patterns, by_url, memory_hypotheses)
         proposals = self._propose(run_context, prompt)
+        learned = apply_memory_prior(proposals, memory_hypotheses)
         log_event(
             self._log,
             "fix.done",
             run_id=run_context.run_id,
             agent=_AGENT,
             prompt_version=self._prompt_version,
-            n_proposals=len(proposals),
+            n_proposals=len(learned),
+            n_memory=len(memory_hypotheses),
         )
         return FixPlan(
             run_id=run_context.run_id,
             target_domain=run_context.target_domain,
             generated_at=self._clock(),
             prompt_version=self._prompt_version,
-            proposals=prioritize_proposals(proposals),
+            proposals=prioritize_proposals(learned),
         )
 
     def _build_prompt(
@@ -139,6 +150,7 @@ class FixAgentService:
         audit: AuditReport,
         patterns: PatternReport,
         pages_by_url: dict[str, PageInventory],
+        memory_hypotheses: Seq[EffectHypothesis] = (),
     ) -> str:
         findings_brief = [f.model_dump(mode="json") for f in audit.findings]
         templates_brief = [
@@ -152,6 +164,7 @@ class FixAgentService:
         ]
         cited_urls = {f.target_url for f in audit.findings}
         page_brief = [page_features(pages_by_url[u]) for u in cited_urls if u in pages_by_url]
+        memory_block = self._render_memory(memory_hypotheses)
         return (
             "Priorisierte Findings des GEO-Auditors:\n"
             f"{json.dumps(findings_brief, ensure_ascii=False, indent=2)}\n\n"
@@ -159,7 +172,29 @@ class FixAgentService:
             f"{json.dumps(templates_brief, ensure_ascii=False, indent=2)}\n\n"
             "On-Page-Inventar der betroffenen Flop-Seiten:\n"
             f"{json.dumps(page_brief, ensure_ascii=False, indent=2)}\n\n"
+            f"{memory_block}"
             "Mache aus jedem Finding genau einen konkreten Patch. Gib NUR das JSON-Objekt zurueck."
+        )
+
+    @staticmethod
+    def _render_memory(memory_hypotheses: Seq[EffectHypothesis]) -> str:
+        """Rendert erwiesene Effekt-Hypothesen als expliziten Prompt-Block (§8; leer => "")."""
+        if not memory_hypotheses:
+            return ""
+        learned = [
+            {
+                "lever": h.lever.value,
+                "change_type": h.change_type.value,
+                "delta_citation_rate": h.delta,
+                "confidence": h.confidence,
+                "direction": h.direction.value,
+            }
+            for h in memory_hypotheses
+        ]
+        return (
+            "Fruehere Effekt-Hypothesen aus dem Gedaechtnis (Vorher/Nachher gemessen). "
+            "Bevorzuge Aenderungsarten/Hebel mit erwiesen positivem delta_citation_rate:\n"
+            f"{json.dumps(learned, ensure_ascii=False, indent=2)}\n\n"
         )
 
     def _propose(self, run_context: RunContext, prompt: str) -> tuple[FixProposal, ...]:

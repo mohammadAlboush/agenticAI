@@ -15,9 +15,11 @@ from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
 from geo_audit_loop.config.pricing import PRICE_TABLE
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.effect import EffectDirection, EffectHypothesis
 from geo_audit_loop.domain.errors import ReasoningError
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
-from geo_audit_loop.domain.geo import pyramid_rank
+from geo_audit_loop.domain.fix import ChangeType
+from geo_audit_loop.domain.geo import Lever, PyramidLevel, pyramid_rank
 from geo_audit_loop.domain.inventory import PageInventory
 from geo_audit_loop.domain.reasoning import (
     ReasoningRequest,
@@ -224,3 +226,60 @@ def test_fix_agent_raises_when_no_valid_proposals() -> None:
     audit, patterns = _audit(pages), _patterns(pages)
     with pytest.raises(ReasoningError):
         _service(_EmptyReasoning()).run(_ctx(), audit, patterns, pages)
+
+
+def _hyp(
+    lever: Lever, change_type: ChangeType, *, delta: float = 0.9, confidence: float = 1.0
+) -> EffectHypothesis:
+    return EffectHypothesis(
+        hypothesis_id=f"eh-r0-px-{lever.value}",
+        run_id="r0",
+        target_domain="it-sicherheit.de",
+        target_url="https://www.it-sicherheit.de/firewall-grundlagen",
+        patch_id=f"px-{lever.value}",
+        finding_id="f1",
+        lever=lever,
+        pyramid_level=PyramidLevel.SUBSTANCE,
+        change_type=change_type,
+        before_citation_rate=0.0,
+        after_citation_rate=round(delta, 6),
+        before_n=240,
+        after_n=240,
+        delta=round(delta, 6),
+        direction=EffectDirection.IMPROVED,
+        confidence=confidence,
+        suspected_cause="x",
+        observed_at=FIXED,
+    )
+
+
+def test_fix_agent_empty_memory_is_backward_compatible() -> None:
+    # Ohne Gedaechtnis ist der Plan bit-genau der Sprint-3-Plan (Rueckwaertskompatibilitaet).
+    pages = build_sample_inventory()
+    audit, patterns = _audit(pages), _patterns(pages)
+    svc = _service(MockReasoningAdapter(clock=lambda: FIXED))
+    base = svc.run(_ctx(), audit, patterns, pages)
+    with_empty = svc.run(_ctx(), audit, patterns, pages, memory_hypotheses=())
+    assert base == with_empty
+
+
+def test_fix_agent_memory_boosts_matching_confidence() -> None:
+    pages = build_sample_inventory()
+    audit, patterns = _audit(pages), _patterns(pages)
+    svc = _service(MockReasoningAdapter(clock=lambda: FIXED))
+    base = {p.patch_id: p.confidence for p in svc.run(_ctx(), audit, patterns, pages).proposals}
+    # Erwiesener positiver Effekt fuer (fact_density, insert_block) -> px-f1-insert_block steigt.
+    hyp = _hyp(Lever.FACT_DENSITY, ChangeType.INSERT_BLOCK)
+    learned_plan = svc.run(_ctx(), audit, patterns, pages, memory_hypotheses=[hyp])
+    learned = {p.patch_id: p.confidence for p in learned_plan.proposals}
+    assert learned["px-f1-insert_block"] > base["px-f1-insert_block"]
+    # Nicht betroffene Patches bleiben unveraendert.
+    assert learned["px-f2-add_schema"] == base["px-f2-add_schema"]
+
+
+def test_fix_agent_v2_prompt_renders_memory_block() -> None:
+    block = FixAgentService._render_memory([_hyp(Lever.FACT_DENSITY, ChangeType.INSERT_BLOCK)])
+    assert "fact_density" in block
+    assert "insert_block" in block
+    assert "delta_citation_rate" in block
+    assert FixAgentService._render_memory(()) == ""
