@@ -19,6 +19,7 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
@@ -95,6 +96,10 @@ CREATE TABLE IF NOT EXISTS share_of_voice (
     payload TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS coverage_reports (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS entity_graphs (
     run_id  TEXT PRIMARY KEY,
     payload TEXT NOT NULL
 );
@@ -251,6 +256,7 @@ class SqliteStorage:
             "effect_reports",
             "share_of_voice",
             "coverage_reports",
+            "entity_graphs",
         )
         conn = self._connection()
         try:
@@ -481,3 +487,16 @@ class SqliteStorage:
         """Laedt den CoverageReport eines Runs oder ``None``."""
         row = self._fetchone("SELECT payload FROM coverage_reports WHERE run_id = ?", (run_id,))
         return CoverageReport.model_validate_json(row["payload"]) if row is not None else None
+
+    # --- Session-8-Entity-/Knowledge-Graph-Artefakt ------------------------
+    def save_entity_graph(self, report: EntityGraphReport) -> None:
+        """Persistiert den Entity-/Knowledge-Graph-Report eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO entity_graphs (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_entity_graph(self, run_id: str) -> EntityGraphReport | None:
+        """Laedt den EntityGraphReport eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM entity_graphs WHERE run_id = ?", (run_id,))
+        return EntityGraphReport.model_validate_json(row["payload"]) if row is not None else None

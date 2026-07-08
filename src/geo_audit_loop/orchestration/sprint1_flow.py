@@ -20,6 +20,7 @@ from pydantic import BaseModel, PrivateAttr
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
 from geo_audit_loop.agents.sampler import SamplerService
 from geo_audit_loop.domain.coverage import CoverageReport, compute_coverage
+from geo_audit_loop.domain.entity import EntityGraphReport, build_entity_graph
 from geo_audit_loop.domain.errors import BudgetExceeded
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions
@@ -67,6 +68,7 @@ class Sprint1Pipeline:
         self._aggregates: list[ProbeAggregate] = []
         self._report: TopFlopReport | None = None
         self._coverage: CoverageReport | None = None
+        self._entity_graph: EntityGraphReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -82,6 +84,11 @@ class Sprint1Pipeline:
     def coverage(self) -> CoverageReport | None:
         """Der Query-Intent-Coverage-Report (nach ``crawl_and_report``); ``None`` bei Abbruch."""
         return self._coverage
+
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report (nach ``crawl_and_report``); ``None`` bei Abbruch."""
+        return self._entity_graph
 
     def sample(self) -> None:
         """Schritt 1: Run anlegen und die Probe-Matrix ausfuehren (budget-bewacht)."""
@@ -104,9 +111,35 @@ class Sprint1Pipeline:
         )
         self._report = report
         self._coverage = self._compute_coverage()
+        self._entity_graph = self._compute_entity_graph()
         if finalize:
             self._finalize(RunStatus.COMPLETED, None)
         return report
+
+    def _compute_entity_graph(self) -> EntityGraphReport:
+        """Baut den Entity-/Knowledge-Graph aus dem gecrawlten Seiten-Inventar (deterministisch).
+
+        Rein aus vorhandenen Struktur-Signalen (JSON-LD, OpenGraph, Autor, Canonical) — kein
+        LLM, kein zusaetzlicher Netz-Aufruf; daher hier (nicht im Lern-Pfad) und immer erzeugt.
+        """
+        pages = self._storage.load_pages(self._run_context.run_id)
+        graph = build_entity_graph(
+            self._run_context.target_domain,
+            pages,
+            run_id=self._run_context.run_id,
+            generated_at=self._clock(),
+        )
+        self._storage.save_entity_graph(graph)
+        log_event(
+            self._log,
+            "entity_graph.done",
+            run_id=self.run_id,
+            agent=_AGENT,
+            n_pages=graph.n_pages,
+            mean_clarity=graph.mean_clarity,
+            weakest=len(graph.weakest_pages),
+        )
+        return graph
 
     def _compute_coverage(self) -> CoverageReport:
         """Baut den Query-Intent-Coverage-Report aus den Baseline-Probes + intent-Prompts.

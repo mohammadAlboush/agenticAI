@@ -21,6 +21,7 @@ from geo_audit_loop.cli.render import (
     render_coverage,
     render_deploy,
     render_effect,
+    render_entity_graph,
     render_error,
     render_findings,
     render_fixplan,
@@ -224,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
 
     report = assembly.pipeline.report
     coverage = assembly.pipeline.coverage
+    entity_graph = assembly.pipeline.entity_graph
     patterns = None
     audit = None
     fix_plan = None
@@ -238,6 +240,9 @@ def main(argv: list[str] | None = None) -> int:
         if coverage is not None:
             _pace()
             render_coverage(console, coverage)
+        if entity_graph is not None:
+            _pace()
+            render_entity_graph(console, entity_graph)
     if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline):
         patterns = assembly.pipeline.pattern_report
         audit = assembly.pipeline.audit_report
@@ -271,7 +276,7 @@ def main(argv: list[str] | None = None) -> int:
             console,
             snapshot=assembly.cost_tracker.snapshot(),
             fingerprint=report_fingerprint(
-                report, patterns, audit, fix_plan, effect, coverage, share=share
+                report, patterns, audit, fix_plan, effect, coverage, entity_graph, share=share
             ),
             seed=settings.run_seed,
             duration_s=duration,

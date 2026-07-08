@@ -23,6 +23,7 @@ from geo_audit_loop.config import constants as c
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan, FixProposal
 from geo_audit_loop.domain.memory import MemoryQuery
@@ -78,6 +79,11 @@ class Sprint4Pipeline:
     def coverage(self) -> CoverageReport | None:
         """Der Query-Intent-Coverage-Report (Session 4, deterministisch)."""
         return self._base.coverage
+
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report (Session 8, deterministisch)."""
+        return self._base.entity_graph
 
     @property
     def pattern_report(self) -> PatternReport | None:

@@ -170,15 +170,18 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         effect = storage.load_effect_report(run.run_id)
         share = storage.load_sov_report(run.run_id)
         coverage = storage.load_coverage_report(run.run_id)
+        entity_graph = storage.load_entity_graph(run.run_id)
         # Nur die Baseline-Probes zaehlen als Fortschritt gegen die erwartete Matrix (Sprint 4:
         # die Re-Probe-Phase verdoppelt sonst die Zahl und laesst den Balken ueberlaufen).
         baseline_probes = [p for p in probes if p.phase.value == "baseline"]
         n_ips = len({probe.proxy_label or "" for probe in baseline_probes}) or cfg.n_proxy_ips
         expected = len(EngineId) * len(prompts) * n_ips
-        # ``share``/``coverage`` MUESSEN mit gehasht werden, damit der Dashboard-Fingerprint
-        # identisch zur CLI ist (sonst zwei verschiedene Hashes fuer denselben Lauf, §7).
+        # ``share``/``coverage``/``entity_graph`` MUESSEN mit gehasht werden, damit der
+        # Dashboard-Fingerprint identisch zur CLI ist (sonst zwei Hashes fuer denselben Lauf, §7).
         fingerprint = (
-            report_fingerprint(report, patterns, audit, fix_plan, effect, coverage, share=share)
+            report_fingerprint(
+                report, patterns, audit, fix_plan, effect, coverage, entity_graph, share=share
+            )
             if report is not None
             else None
         )
@@ -204,6 +207,11 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             ),
             "n_suggested_queries": (
                 len(coverage.suggested_queries) if coverage is not None else None
+            ),
+            "n_entities": len(entity_graph.entities) if entity_graph is not None else None,
+            "mean_clarity": entity_graph.mean_clarity if entity_graph is not None else None,
+            "n_entity_gaps": (
+                len(entity_graph.weakest_pages) if entity_graph is not None else None
             ),
             "has_report": report is not None,
             "fingerprint": fingerprint,
@@ -297,6 +305,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                     "effect": None,
                     "share_of_voice": None,
                     "coverage": None,
+                    "entity_graph": None,
                 }
             )
         report = storage.load_report(run.run_id)
@@ -307,6 +316,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         effect = storage.load_effect_report(run.run_id)
         share = storage.load_sov_report(run.run_id)
         coverage = storage.load_coverage_report(run.run_id)
+        entity_graph = storage.load_entity_graph(run.run_id)
         return JSONResponse(
             {
                 "report": report.model_dump(mode="json") if report is not None else None,
@@ -317,6 +327,9 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                 "effect": effect.model_dump(mode="json") if effect is not None else None,
                 "share_of_voice": share.model_dump(mode="json") if share is not None else None,
                 "coverage": coverage.model_dump(mode="json") if coverage is not None else None,
+                "entity_graph": (
+                    entity_graph.model_dump(mode="json") if entity_graph is not None else None
+                ),
             }
         )
 

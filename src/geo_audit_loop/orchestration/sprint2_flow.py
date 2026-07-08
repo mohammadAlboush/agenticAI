@@ -18,6 +18,7 @@ from geo_audit_loop.agents.pattern_miner import PatternMinerService
 from geo_audit_loop.agents.query_generator import QueryGeneratorService
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.coverage import CoverageReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.errors import GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
@@ -75,6 +76,11 @@ class Sprint2Pipeline:
         if self._enriched_coverage is not None:
             return self._enriched_coverage
         return self._base.coverage
+
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report aus Schritt 2 (Session 8, deterministisch)."""
+        return self._base.entity_graph
 
     @property
     def pattern_report(self) -> PatternReport | None:

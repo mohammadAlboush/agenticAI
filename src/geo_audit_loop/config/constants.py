@@ -66,6 +66,22 @@ COVERAGE_WEAK_THRESHOLD: Final = 0.5
 QUERY_GENERATOR_TASK: Final = "query_generator"
 QUERY_GENERATOR_MAX_PER_INTENT: Final = 3
 
+# --- Entitaeten-Klarheit / Knowledge-Graph (Session 8) ---
+# Gewichtete Rubrik der Entitaeten-Klarheit je Seite (Summe der Gewichte = 1.0).
+ENTITY_CLARITY_WEIGHTS: Final[dict[str, float]] = {
+    "organization": 0.35,  # Organization/WebSite in JSON-LD deklariert (staerkstes Signal)
+    "opengraph": 0.20,  # OpenGraph gibt Entitaets-Name/-Typ/-URL
+    "author": 0.20,  # Autor als Person-Entitaet (E-E-A-T)
+    "canonical": 0.15,  # stabile Kanonical-URL als @id-Anker
+    "lang": 0.10,  # Sprach-Attribut (Entitaets-Disambiguierung)
+}
+# schema.org-Typen, die die Domain als Organisations-Entitaet ausweisen.
+ORGANIZATION_SCHEMA_TYPES: Final = frozenset(
+    {"Organization", "Corporation", "LocalBusiness", "NewsMediaOrganization", "WebSite"}
+)
+# Klarheits-Score, unter dem eine Seite als Entitaeten-Luecke gilt.
+ENTITY_CLARITY_WEAK_THRESHOLD: Final = 0.5
+
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
 

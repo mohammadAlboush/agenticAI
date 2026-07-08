@@ -9,6 +9,7 @@ from rich.console import Console
 from geo_audit_loop.cli.render import (
     render_coverage,
     render_deploy,
+    render_entity_graph,
     render_error,
     render_findings,
     render_fixplan,
@@ -20,6 +21,7 @@ from geo_audit_loop.cli.render import (
 )
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
 from geo_audit_loop.domain.coverage import CoverageReport, IntentCoverage
+from geo_audit_loop.domain.entity import build_entity_graph
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -30,6 +32,7 @@ from geo_audit_loop.domain.fix import (
     FixProposal,
 )
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
+from geo_audit_loop.domain.inventory import CrawledPage, PageInventory, SchemaInventory
 from geo_audit_loop.domain.probe import QueryIntent
 from geo_audit_loop.domain.templates import PatternReport, Template
 from geo_audit_loop.observability.cost import CostSnapshot
@@ -176,6 +179,41 @@ def test_coverage_marks_blind_spots() -> None:
     assert "0.50" in text  # Gesamt-Zitationsrate
 
 
+def _entity_pages() -> list[PageInventory]:
+    return [
+        PageInventory(
+            page=CrawledPage(
+                url="https://it-sicherheit.de/nis2",
+                status_code=200,
+                canonical="https://it-sicherheit.de/nis2",
+                lang="de",
+            ),
+            schema_inventory=SchemaInventory(
+                url="https://it-sicherheit.de/nis2",
+                jsonld_types=("Organization",),
+                has_opengraph=True,
+            ),
+        ),
+        PageInventory(
+            page=CrawledPage(url="https://it-sicherheit.de/firewall", status_code=200),
+            schema_inventory=SchemaInventory(url="https://it-sicherheit.de/firewall"),
+        ),
+    ]
+
+
+def test_entity_graph_shows_brand_gap_and_jsonld() -> None:
+    console = _console()
+    report = build_entity_graph(
+        "it-sicherheit.de", _entity_pages(), run_id="r1", generated_at=FIXED
+    )
+    render_entity_graph(console, report)
+    text = console.export_text()
+    assert "it-sicherheit" in text  # Marken-Name
+    assert "Organization" in text  # schema.org-Typ / JSON-LD
+    assert "Luecken" in text  # schwache Seite markiert
+    assert "@id" in text  # empfohlener JSON-LD-Block
+
+
 def test_summary_shows_cost_and_fingerprint() -> None:
     console = _console()
     render_summary(
@@ -278,9 +316,11 @@ def test_empty_reports_do_not_crash() -> None:
     empty_coverage = CoverageReport(
         run_id="r1", target_domain="it-sicherheit.de", generated_at=FIXED, n_probes=0
     )
+    empty_entity = build_entity_graph("it-sicherheit.de", [], run_id="r1", generated_at=FIXED)
     render_topflop(console, empty_topflop)
     render_patterns(console, empty_patterns)
     render_findings(console, empty_audit)
     render_coverage(console, empty_coverage)
+    render_entity_graph(console, empty_entity)
     render_error(console, title="Run fehlgeschlagen", message="Testfehler")
     assert console.export_text()

@@ -13,6 +13,7 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import PageInventory
@@ -160,4 +161,13 @@ class StoragePort(Protocol):
 
     def load_coverage_report(self, run_id: str) -> CoverageReport | None:
         """Laedt den CoverageReport eines Runs oder ``None``."""
+        ...
+
+    # --- Session-8-Entity-/Knowledge-Graph-Artefakt ---
+    def save_entity_graph(self, report: EntityGraphReport) -> None:
+        """Persistiert den Entity-/Knowledge-Graph-Report eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_entity_graph(self, run_id: str) -> EntityGraphReport | None:
+        """Laedt den EntityGraphReport eines Runs oder ``None``."""
         ...

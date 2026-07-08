@@ -13,6 +13,7 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
@@ -147,6 +148,11 @@ class _StubStorage:
     def save_coverage_report(self, report: CoverageReport) -> None: ...
 
     def load_coverage_report(self, run_id: str) -> CoverageReport | None:
+        return None
+
+    def save_entity_graph(self, report: EntityGraphReport) -> None: ...
+
+    def load_entity_graph(self, run_id: str) -> EntityGraphReport | None:
         return None
 
 

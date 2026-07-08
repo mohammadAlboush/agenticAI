@@ -16,6 +16,7 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import FixPlan
 from geo_audit_loop.domain.templates import PatternReport
@@ -42,6 +43,7 @@ def report_fingerprint(
     fix_plan: FixPlan | None = None,
     effect: EffectReport | None = None,
     coverage: CoverageReport | None = None,
+    entity_graph: EntityGraphReport | None = None,
     *,
     share: ShareOfVoiceReport | None = None,
 ) -> str:
@@ -59,6 +61,9 @@ def report_fingerprint(
         coverage: Optional der Query-Intent-Coverage-Report (Session 4). Rein deterministisch
             (kein LLM/RNG) und damit fingerprint-faehig. Der ``coverage``-Schluessel wird nur
             eingehaengt, wenn ein Report vorliegt -> aeltere Fingerprints bleiben bit-identisch.
+        entity_graph: Optional der Entity-/Knowledge-Graph-Report (Session 8). Rein
+            deterministisch (kein LLM/RNG) und damit fingerprint-faehig; der Schluessel wird
+            nur bei vorhandenem Report ergaenzt -> aeltere Fingerprints bleiben bit-identisch.
         share: Optional der Share-of-Voice-Report (Session 3). Deterministische
             Wettbewerbs-Anteile — fingerprint-faehig; der Schluessel wird nur bei
             vorhandenem Report ergaenzt, damit alte Fingerprints unveraendert bleiben.
@@ -91,5 +96,7 @@ def report_fingerprint(
     # Gated: nur einhaengen, wenn vorhanden -> Sprint-1..4-Fingerprints bleiben unveraendert.
     if coverage is not None:
         payload["coverage"] = coverage.model_dump(mode="json", exclude=_VOLATILE_FIELDS)
+    if entity_graph is not None:
+        payload["entity_graph"] = entity_graph.model_dump(mode="json", exclude=_VOLATILE_FIELDS)
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]

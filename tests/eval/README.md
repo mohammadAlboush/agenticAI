@@ -51,3 +51,12 @@ nicht-deterministisch; `test_eval_query_generator_golden.py` prueft daher **tole
 gegen `golden/query_generator_seed42.json`: fuer die vorgegebenen schwachen Intents genug
 valide Luecken-Fragen, jede Frage traegt einen der angeforderten Intents, Kappung je Intent
 eingehalten, keine Dubletten. Offline laeuft er gegen den deterministischen Mock.
+
+## Session 8 (Entity-/Knowledge-Graph, deterministisch)
+
+Der Entity-Graph ist eine reine, seed-stabile Domaenenfunktion aus dem Seiten-Inventar
+(kein LLM/RNG). `test_eval_entity_graph_golden.py` pinnt seine Offline-Ausgabe bei Seed 42
+**bit-genau** gegen `golden/entity_graph_it_sicherheit_seed42.json`: Entity-Knoten (Marke +
+deklarierte schema.org-Typen mit Deckung), Klarheit je Seite, Blind-Spot-Liste und den
+empfohlenen kanonischen Organization-JSON-LD-Block. Exakte Gleichheit ist die Erwartung; eine
+bewusste Aenderung aktualisiert das Golden im selben Commit.
