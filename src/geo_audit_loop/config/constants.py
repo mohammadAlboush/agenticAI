@@ -25,6 +25,15 @@ CONTENT_EXCERPT_WORDS: Final = 300
 # --- Perplexity (Live-Engine seit Sprint 1) ---
 PERPLEXITY_ENDPOINT: Final = "https://api.perplexity.ai/chat/completions"
 
+# --- Claude (Anthropic Messages API mit Web-Search-Server-Tool; Live-Engine, S1) ---
+ANTHROPIC_ENDPOINT: Final = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_VERSION: Final = "2023-06-01"
+# Basis-Variante des Web-Search-Tools: modell-agnostisch (auch Haiku/Sonnet), liefert Quellen-URLs.
+ANTHROPIC_WEB_SEARCH_TOOL_TYPE: Final = "web_search_20250305"
+
+# --- ChatGPT (OpenAI Responses API mit web_search-Tool; Live-Engine, S1) ---
+OPENAI_RESPONSES_ENDPOINT: Final = "https://api.openai.com/v1/responses"
+
 # --- Gemini (Live-Engine mit Google-Search-Grounding; Free Tier 500 Anfragen/Tag) ---
 GEMINI_ENDPOINT_TEMPLATE: Final = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
