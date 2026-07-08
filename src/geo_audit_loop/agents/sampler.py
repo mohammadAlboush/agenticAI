@@ -16,6 +16,7 @@ from geo_audit_loop.domain.metrics import ProbeAggregate, aggregate_probes
 from geo_audit_loop.domain.probe import (
     EngineId,
     EngineProbeSpec,
+    ProbePhase,
     ProbePrompt,
     ProbeRequest,
 )
@@ -41,6 +42,7 @@ class SamplerService:
         storage: StoragePort,
         cost_tracker: CostTracker,
         n_proxy_ips: int,
+        phase: ProbePhase = ProbePhase.BASELINE,
         logger: logging.Logger | None = None,
     ) -> None:
         self._engines = dict(engines)
@@ -49,6 +51,9 @@ class SamplerService:
         self._storage = storage
         self._cost = cost_tracker
         self._n_proxy_ips = n_proxy_ips
+        # Sprint 4: dieselbe Matrix, aber phasengetrennt (baseline vs. reprobe) — die Phase
+        # ist Teil des Checkpoint-Schluessels und der Aggregations-Auswahl (kollisionsfrei).
+        self._phase = phase
         self._log = logger if logger is not None else logging.getLogger(__name__)
 
     def _engine_order(self) -> list[EngineId]:
@@ -59,7 +64,7 @@ class SamplerService:
         for prompt in prompts:
             for engine_id in self._engine_order():
                 self._probe_cell(run_context, prompt, engine_id)
-        return aggregate_probes(self._storage.load_probes(run_context.run_id))
+        return aggregate_probes(self._storage.load_probes(run_context.run_id, self._phase))
 
     def _probe_cell(
         self, run_context: RunContext, prompt: ProbePrompt, engine_id: EngineId
@@ -69,7 +74,7 @@ class SamplerService:
         for ip_index in range(self._n_proxy_ips):
             proxy_label = self._proxy.label_for(ip_index)
             if self._storage.has_probe(
-                run_context.run_id, prompt.prompt_id, engine_id, proxy_label
+                run_context.run_id, prompt.prompt_id, engine_id, proxy_label, self._phase
             ):
                 continue
             self._cost.ensure_can_probe()
@@ -86,9 +91,11 @@ class SamplerService:
                 max_tokens=spec.max_tokens,
                 temperature=spec.temperature,
                 search_mode=spec.search_mode,
+                phase=self._phase,
             )
             started = time.perf_counter()
-            result = engine.probe(request)
+            # Phase am Ergebnis erzwingen (Engines kopieren sie nicht) -> korrekter Checkpoint-Key.
+            result = engine.probe(request).model_copy(update={"phase": self._phase})
             self._storage.save_probe(result)
             self._cost.record(result.model, result.usage)
             log_event(

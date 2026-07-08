@@ -31,6 +31,10 @@ class StorageError(GeoAuditError):
     """Fehler bei der Persistenz (SQLite)."""
 
 
+class DeployBlocked(GeoAuditError):
+    """Deploy ohne Human-in-the-Loop-Freigabe versucht (Projektregeln §6: HITL-Gate hart)."""
+
+
 class BudgetExceeded(GeoAuditError):
     """Hartes Run-Limit ueberschritten (Projektregeln §6: sauber abbrechen, nicht weiterlaufen)."""
 

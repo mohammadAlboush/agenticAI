@@ -11,6 +11,7 @@ import json
 from collections.abc import Iterable
 from typing import Any
 
+from geo_audit_loop.config.constants import CONTENT_EXCERPT_WORDS
 from geo_audit_loop.domain.inventory import CrawledPage, PageInventory, SchemaInventory
 
 _MULTI = "@@"
@@ -76,6 +77,12 @@ def _has_opengraph(row: dict[str, Any]) -> bool:
     return any(key.lower().startswith(("og:", "og_")) for key in row)
 
 
+def _excerpt(body: Any) -> str:
+    """Getrimmter Fliesstext-Auszug (auf ``CONTENT_EXCERPT_WORDS`` begrenzt)."""
+    words = str(body or "").split()
+    return " ".join(words[:CONTENT_EXCERPT_WORDS])
+
+
 def row_to_inventory(row: dict[str, Any]) -> PageInventory | None:
     """Bildet eine advertools-Zeile auf ein ``PageInventory`` ab (oder ``None`` ohne URL)."""
     url = _first(row.get("url"))
@@ -92,6 +99,7 @@ def row_to_inventory(row: dict[str, Any]) -> PageInventory | None:
         word_count=len(str(body).split()),
         canonical=_first(row.get("canonical")),
         lang=_first(row.get("html_lang")) or _first(row.get("lang")),
+        content=_excerpt(body),
     )
     types = _detect_types(row)
     schema_inventory = SchemaInventory(
