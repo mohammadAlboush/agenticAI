@@ -1,0 +1,56 @@
+{
+  "seed": 42,
+  "domain": "it-sicherheit.de",
+  "prompt_set_version": "v1",
+  "coverage": {
+    "target_domain": "it-sicherheit.de",
+    "n_probes": 240,
+    "overall_citation_rate": 0.833333,
+    "intents": [
+      {
+        "intent": "troubleshooting",
+        "n_prompts": 1,
+        "n_covered": 1,
+        "coverage_rate": 1.0,
+        "mean_citation_rate": 0.75
+      },
+      {
+        "intent": "checklist",
+        "n_prompts": 2,
+        "n_covered": 2,
+        "coverage_rate": 1.0,
+        "mean_citation_rate": 0.775
+      },
+      {
+        "intent": "howto",
+        "n_prompts": 4,
+        "n_covered": 4,
+        "coverage_rate": 1.0,
+        "mean_citation_rate": 0.8125
+      },
+      {
+        "intent": "informational",
+        "n_prompts": 2,
+        "n_covered": 2,
+        "coverage_rate": 1.0,
+        "mean_citation_rate": 0.85
+      },
+      {
+        "intent": "comparison",
+        "n_prompts": 1,
+        "n_covered": 1,
+        "coverage_rate": 1.0,
+        "mean_citation_rate": 0.9
+      },
+      {
+        "intent": "definition",
+        "n_prompts": 2,
+        "n_covered": 2,
+        "coverage_rate": 1.0,
+        "mean_citation_rate": 0.925
+      }
+    ],
+    "weakest_intents": [],
+    "suggested_queries": []
+  }
+}

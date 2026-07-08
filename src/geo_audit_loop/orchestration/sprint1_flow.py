@@ -19,11 +19,12 @@ from pydantic import BaseModel, PrivateAttr
 
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
 from geo_audit_loop.agents.sampler import SamplerService
+from geo_audit_loop.domain.coverage import CoverageReport, compute_coverage
 from geo_audit_loop.domain.errors import BudgetExceeded
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions
 from geo_audit_loop.domain.metrics import ProbeAggregate
-from geo_audit_loop.domain.probe import ProbePrompt
+from geo_audit_loop.domain.probe import ProbePhase, ProbePrompt
 from geo_audit_loop.domain.run import RunContext, RunRecord, RunStatus
 from geo_audit_loop.observability.cost import CostTracker
 from geo_audit_loop.observability.logging import log_event
@@ -65,6 +66,7 @@ class Sprint1Pipeline:
         self._clock = clock if clock is not None else _utc_now
         self._aggregates: list[ProbeAggregate] = []
         self._report: TopFlopReport | None = None
+        self._coverage: CoverageReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -75,6 +77,11 @@ class Sprint1Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der erzeugte Top/Flop-Report (nach ``run``); ``None`` bei Abbruch."""
         return self._report
+
+    @property
+    def coverage(self) -> CoverageReport | None:
+        """Der Query-Intent-Coverage-Report (nach ``crawl_and_report``); ``None`` bei Abbruch."""
+        return self._coverage
 
     def sample(self) -> None:
         """Schritt 1: Run anlegen und die Probe-Matrix ausfuehren (budget-bewacht)."""
@@ -96,9 +103,36 @@ class Sprint1Pipeline:
             self._run_context, self._options, aggregates=self._aggregates, top_n=self._top_n
         )
         self._report = report
+        self._coverage = self._compute_coverage()
         if finalize:
             self._finalize(RunStatus.COMPLETED, None)
         return report
+
+    def _compute_coverage(self) -> CoverageReport:
+        """Baut den Query-Intent-Coverage-Report aus den Baseline-Probes + intent-Prompts.
+
+        Nur die Baseline-Phase zaehlt (analog zum Top/Flop): geboostete REPROBE-Probes eines
+        --learn-Laufs wuerden die Sichtbarkeit sonst verfaelschen. Rein deterministisch,
+        daher hier (nicht im nicht-deterministischen Lern-Pfad) und immer erzeugt.
+        """
+        probes = self._storage.load_probes(self._run_context.run_id, ProbePhase.BASELINE)
+        coverage = compute_coverage(
+            self._prompts,
+            probes,
+            self._run_context.target_domain,
+            run_id=self._run_context.run_id,
+            generated_at=self._clock(),
+        )
+        self._storage.save_coverage_report(coverage)
+        log_event(
+            self._log,
+            "coverage.done",
+            run_id=self.run_id,
+            agent=_AGENT,
+            n_probes=coverage.n_probes,
+            weakest=len(coverage.weakest_intents),
+        )
+        return coverage
 
     def finalize_completed(self) -> None:
         """Schliesst den Run als COMPLETED ab (fuer aufgeschobenes Finalisieren in Sprint 2)."""

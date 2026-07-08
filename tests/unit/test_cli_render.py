@@ -7,6 +7,7 @@ from datetime import datetime
 from rich.console import Console
 
 from geo_audit_loop.cli.render import (
+    render_coverage,
     render_deploy,
     render_error,
     render_findings,
@@ -18,6 +19,7 @@ from geo_audit_loop.cli.render import (
     render_topflop,
 )
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
+from geo_audit_loop.domain.coverage import CoverageReport, IntentCoverage
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -28,6 +30,7 @@ from geo_audit_loop.domain.fix import (
     FixProposal,
 )
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
+from geo_audit_loop.domain.probe import QueryIntent
 from geo_audit_loop.domain.templates import PatternReport, Template
 from geo_audit_loop.observability.cost import CostSnapshot
 
@@ -139,6 +142,40 @@ def test_findings_show_severity_and_fix() -> None:
     assert "Beleg:" in text
 
 
+def test_coverage_marks_blind_spots() -> None:
+    console = _console()
+    report = CoverageReport(
+        run_id="r1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        n_probes=48,
+        overall_citation_rate=0.5,
+        intents=(
+            IntentCoverage(
+                intent=QueryIntent.TROUBLESHOOTING,
+                n_prompts=2,
+                n_covered=0,
+                coverage_rate=0.0,
+                mean_citation_rate=0.0,
+            ),
+            IntentCoverage(
+                intent=QueryIntent.DEFINITION,
+                n_prompts=2,
+                n_covered=2,
+                coverage_rate=1.0,
+                mean_citation_rate=0.875,
+            ),
+        ),
+        weakest_intents=(QueryIntent.TROUBLESHOOTING,),
+    )
+    render_coverage(console, report)
+    text = console.export_text()
+    assert "Fehlererkennung" in text  # INTENT_LABELS[TROUBLESHOOTING]
+    assert "LUECKE" in text  # Blind-Spot-Marker
+    assert "1 Blind Spot" in text
+    assert "0.50" in text  # Gesamt-Zitationsrate
+
+
 def test_summary_shows_cost_and_fingerprint() -> None:
     console = _console()
     render_summary(
@@ -238,8 +275,12 @@ def test_empty_reports_do_not_crash() -> None:
         run_id="r1", target_domain="it-sicherheit.de", generated_at=FIXED
     )
     empty_audit = AuditReport(run_id="r1", target_domain="it-sicherheit.de", generated_at=FIXED)
+    empty_coverage = CoverageReport(
+        run_id="r1", target_domain="it-sicherheit.de", generated_at=FIXED, n_probes=0
+    )
     render_topflop(console, empty_topflop)
     render_patterns(console, empty_patterns)
     render_findings(console, empty_audit)
+    render_coverage(console, empty_coverage)
     render_error(console, title="Run fehlgeschlagen", message="Testfehler")
     assert console.export_text()

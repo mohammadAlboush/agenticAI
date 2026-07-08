@@ -21,6 +21,7 @@ from geo_audit_loop.agents.effect_analyst import EffectAnalystService
 from geo_audit_loop.agents.sampler import SamplerService
 from geo_audit_loop.config import constants as c
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan, FixProposal
@@ -72,6 +73,11 @@ class Sprint4Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der Top/Flop-Report (Sprint-1-Messung)."""
         return self._base.report
+
+    @property
+    def coverage(self) -> CoverageReport | None:
+        """Der Query-Intent-Coverage-Report (Session 4, deterministisch)."""
+        return self._base.coverage
 
     @property
     def pattern_report(self) -> PatternReport | None:

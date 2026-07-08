@@ -10,6 +10,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
@@ -135,6 +136,11 @@ class _StubStorage:
     def save_effect_report(self, report: EffectReport) -> None: ...
 
     def load_effect_report(self, run_id: str) -> EffectReport | None:
+        return None
+
+    def save_coverage_report(self, report: CoverageReport) -> None: ...
+
+    def load_coverage_report(self, run_id: str) -> CoverageReport | None:
         return None
 
 

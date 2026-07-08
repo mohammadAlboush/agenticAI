@@ -7,6 +7,7 @@ from pathlib import Path
 
 from geo_audit_loop.adapters.sample_data import build_sample_inventory
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+from geo_audit_loop.domain.coverage import CoverageReport, IntentCoverage
 from geo_audit_loop.domain.effect import (
     EffectDirection,
     EffectHypothesis,
@@ -30,6 +31,7 @@ from geo_audit_loop.domain.probe import (
     ProbeResult,
     ProbeStatus,
     ProbeUsage,
+    QueryIntent,
 )
 from geo_audit_loop.domain.run import RunRecord, RunStatus
 
@@ -333,3 +335,33 @@ def test_delete_run_removes_fix_artifacts(tmp_path: Path) -> None:
     assert storage.load_fix_plan("run-1") is None
     assert storage.load_approvals("run-1") == []
     assert storage.load_deploy_result("run-1") is None
+
+
+def _coverage_report() -> CoverageReport:
+    return CoverageReport(
+        run_id="run-1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        n_probes=240,
+        overall_citation_rate=0.5,
+        intents=(
+            IntentCoverage(
+                intent=QueryIntent.HOWTO,
+                n_prompts=2,
+                n_covered=1,
+                coverage_rate=0.5,
+                mean_citation_rate=0.25,
+            ),
+        ),
+        weakest_intents=(QueryIntent.TROUBLESHOOTING,),
+    )
+
+
+def test_coverage_report_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    report = _coverage_report()
+    storage.save_coverage_report(report)
+    assert storage.load_coverage_report("run-1") == report
+    assert storage.load_coverage_report("unknown") is None
+    storage.delete_run("run-1")
+    assert storage.load_coverage_report("run-1") is None

@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
@@ -141,4 +142,13 @@ class StoragePort(Protocol):
 
     def load_effect_report(self, run_id: str) -> EffectReport | None:
         """Laedt den EffectReport eines Runs oder ``None``."""
+        ...
+
+    # --- Session-4-Query-Intent-Coverage-Artefakt ---
+    def save_coverage_report(self, report: CoverageReport) -> None:
+        """Persistiert den Query-Intent-Coverage-Report eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_coverage_report(self, run_id: str) -> CoverageReport | None:
+        """Laedt den CoverageReport eines Runs oder ``None``."""
         ...

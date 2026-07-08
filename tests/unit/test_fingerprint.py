@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
+from geo_audit_loop.domain.coverage import CoverageReport, IntentCoverage
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fingerprint import report_fingerprint
 from geo_audit_loop.domain.fix import ChangeType, FixPlan, FixProposal
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
+from geo_audit_loop.domain.probe import QueryIntent
 from geo_audit_loop.domain.templates import PatternReport, Template
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -136,4 +138,51 @@ def test_fixplan_stable_across_volatile_fields() -> None:
 def test_fixplan_content_change_changes_fingerprint() -> None:
     a = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block A"))
     b = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block B"))
+    assert a != b
+
+
+def _coverage(
+    run_id: str = "a", generated_at: datetime = FIXED, rate: float = 0.25
+) -> CoverageReport:
+    return CoverageReport(
+        run_id=run_id,
+        target_domain="it-sicherheit.de",
+        generated_at=generated_at,
+        n_probes=240,
+        overall_citation_rate=0.5,
+        intents=(
+            IntentCoverage(
+                intent=QueryIntent.HOWTO,
+                n_prompts=4,
+                n_covered=2,
+                coverage_rate=0.5,
+                mean_citation_rate=rate,
+            ),
+        ),
+        weakest_intents=(QueryIntent.DEFINITION,),
+    )
+
+
+def test_coverage_gated_out_when_absent() -> None:
+    """Ohne Coverage-Argument bleibt der Fingerprint bit-identisch (Sprint-1..4 unveraendert)."""
+    without = report_fingerprint(_topflop(), _patterns(), _audit())
+    with_none = report_fingerprint(_topflop(), _patterns(), _audit(), coverage=None)
+    assert without == with_none
+
+
+def test_coverage_folded_into_fingerprint() -> None:
+    without = report_fingerprint(_topflop(), _patterns(), _audit())
+    with_cov = report_fingerprint(_topflop(), _patterns(), _audit(), coverage=_coverage())
+    assert without != with_cov  # Session 4 aendert den Fingerprint, sobald Coverage vorliegt
+
+
+def test_coverage_stable_across_volatile_fields() -> None:
+    a = report_fingerprint(_topflop("a", FIXED), coverage=_coverage("a", FIXED))
+    b = report_fingerprint(_topflop("b", OTHER), coverage=_coverage("b", OTHER))
+    assert a == b
+
+
+def test_coverage_content_change_changes_fingerprint() -> None:
+    a = report_fingerprint(_topflop(), coverage=_coverage(rate=0.25))
+    b = report_fingerprint(_topflop(), coverage=_coverage(rate=0.30))
     assert a != b

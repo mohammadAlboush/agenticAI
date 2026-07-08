@@ -70,11 +70,29 @@ class Citation(FrozenModel):
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
+class QueryIntent(StrEnum):
+    """Fragetyp einer Nutzer-Query (Session 4, geschlossenes Vokabular).
+
+    Hier (nicht in ``coverage``) definiert, weil ``ProbePrompt`` ihn traegt — ein
+    separates Coverage-Modul als Heimat ergaebe einen Zirkular-Import.
+    """
+
+    INFORMATIONAL = "informational"  # "Was schreibt X vor / warum wichtig / Ueberblick"
+    HOWTO = "howto"  # "Wie macht/baut/schuetzt man ..."
+    COMPARISON = "comparison"  # "Welche/r ... ist empfehlenswert / Vergleich"
+    DEFINITION = "definition"  # "Was ist X / wie funktioniert X"
+    CHECKLIST = "checklist"  # "Welche Schritte / was gehoert in ..."
+    TROUBLESHOOTING = "troubleshooting"  # "Woran erkennt man / bei einem Problem ..."
+
+
 class ProbePrompt(FrozenModel):
     """Eine Zielfrage des versionierten Probe-Sets."""
 
     prompt_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
+    # Deterministischer Intent-Tag (Session 4). Optional (aeltere Probe-Sets ohne Tag laden weiter);
+    # geht NICHT in ProbeRequest/ProbeResult ein -> Probe-Text/Checkpoint/Fingerprint unveraendert.
+    intent: QueryIntent | None = None
 
 
 class EngineProbeSpec(FrozenModel):

@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from rich.console import Console
 
 from geo_audit_loop.cli.render import (
+    render_coverage,
     render_deploy,
     render_effect,
     render_error,
@@ -221,6 +222,7 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(args.pace)
 
     report = assembly.pipeline.report
+    coverage = assembly.pipeline.coverage
     patterns = None
     audit = None
     fix_plan = None
@@ -228,6 +230,9 @@ def main(argv: list[str] | None = None) -> int:
     if report is not None:
         _pace()
         render_topflop(console, report)
+    if coverage is not None:
+        _pace()
+        render_coverage(console, coverage)
     if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline):
         patterns = assembly.pipeline.pattern_report
         audit = assembly.pipeline.audit_report
@@ -260,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         render_summary(
             console,
             snapshot=assembly.cost_tracker.snapshot(),
-            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect),
+            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect, coverage),
             seed=settings.run_seed,
             duration_s=duration,
         )

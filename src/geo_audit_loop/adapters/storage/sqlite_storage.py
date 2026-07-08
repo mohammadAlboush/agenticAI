@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import cast
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.coverage import CoverageReport
 from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
@@ -85,6 +86,10 @@ CREATE TABLE IF NOT EXISTS deploy_results (
     payload TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS effect_reports (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS coverage_reports (
     run_id  TEXT PRIMARY KEY,
     payload TEXT NOT NULL
 );
@@ -239,6 +244,7 @@ class SqliteStorage:
             "approvals",
             "deploy_results",
             "effect_reports",
+            "coverage_reports",
         )
         conn = self._connection()
         try:
@@ -443,3 +449,16 @@ class SqliteStorage:
         """Laedt den EffectReport eines Runs oder ``None``."""
         row = self._fetchone("SELECT payload FROM effect_reports WHERE run_id = ?", (run_id,))
         return EffectReport.model_validate_json(row["payload"]) if row is not None else None
+
+    # --- Session-4-Query-Intent-Coverage-Artefakt --------------------------
+    def save_coverage_report(self, report: CoverageReport) -> None:
+        """Persistiert den Query-Intent-Coverage-Report eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO coverage_reports (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_coverage_report(self, run_id: str) -> CoverageReport | None:
+        """Laedt den CoverageReport eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM coverage_reports WHERE run_id = ?", (run_id,))
+        return CoverageReport.model_validate_json(row["payload"]) if row is not None else None

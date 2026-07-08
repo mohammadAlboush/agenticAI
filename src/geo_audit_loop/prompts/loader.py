@@ -6,12 +6,14 @@ import tomllib
 from importlib.resources import files
 
 from geo_audit_loop.domain.errors import ConfigError
-from geo_audit_loop.domain.probe import ProbePrompt
+from geo_audit_loop.domain.probe import ProbePrompt, QueryIntent
 
 
 def load_probe_set(version: str = "v1") -> tuple[str, list[ProbePrompt]]:
     """Laedt ``probe_set.<version>.toml`` und liefert (Version, Prompts).
 
+    Das optionale ``intent``-Feld (Session 4) wird — falls vorhanden — in ``QueryIntent``
+    validiert; ein unbekannter Wert bricht mit ``ConfigError`` ab (kein stiller Fallback).
     Wirft ``ConfigError``, wenn die Datei fehlt oder leer ist.
     """
     resource = files("geo_audit_loop.prompts").joinpath(f"probe_set.{version}.toml")
@@ -19,7 +21,17 @@ def load_probe_set(version: str = "v1") -> tuple[str, list[ProbePrompt]]:
         raise ConfigError(f"Probe-Set nicht gefunden: probe_set.{version}.toml")
     data = tomllib.loads(resource.read_text(encoding="utf-8"))
     raw_prompts = data.get("prompts") or []
-    prompts = [ProbePrompt(prompt_id=item["id"], text=item["text"]) for item in raw_prompts]
+    try:
+        prompts = [
+            ProbePrompt(
+                prompt_id=item["id"],
+                text=item["text"],
+                intent=QueryIntent(item["intent"]) if "intent" in item else None,
+            )
+            for item in raw_prompts
+        ]
+    except ValueError as exc:  # unbekannter Intent-Wert im TOML
+        raise ConfigError(f"Ungueltiger intent in probe_set.{version}.toml: {exc}") from exc
     if not prompts:
         raise ConfigError(f"Probe-Set probe_set.{version}.toml enthaelt keine Prompts")
     return str(data.get("version", version)), prompts

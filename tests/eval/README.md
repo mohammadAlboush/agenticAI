@@ -28,3 +28,14 @@ an einem tatsaechlich angewandten Patch verankert, nicht-negatives Delta (Offlin
 und Confidence in `[0,1]`. Dass das Gedaechtnis den **naechsten** Fix-Run messbar
 veraendert (das eigentliche „Lernen"), sichern zusaetzlich die Integrationstests
 `tests/integration/test_memory_influence.py`.
+
+## Session 4 (Query-Intent-Coverage, deterministisch)
+
+Die Coverage-Analyse (fuer WELCHE Fragetypen wird die Domain zitiert?) ist eine reine,
+seed-stabile Domaenenfunktion. `test_eval_coverage_golden.py` pinnt ihre Offline-Ausgabe
+bei Seed 42 **bit-genau** gegen `golden/coverage_it_sicherheit_seed42.json` (Intent-Breite,
+mittlere Zitationsrate je Intent, Blind-Spot-Liste, Gesamt-Rate). Anders als die LLM-Evals
+ist hier exakte Gleichheit die Erwartung; eine bewusste Aenderung aktualisiert das Golden
+im selben Commit. Der (spaetere, nicht-deterministische) LLM-Query-Generator, der die
+schwachen Intents mit neuen Fragen fuellt, bekommt bei seiner Einfuehrung einen eigenen,
+toleranzbasierten Eval-Eintrag.

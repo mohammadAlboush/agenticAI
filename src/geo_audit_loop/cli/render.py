@@ -16,6 +16,7 @@ from rich.table import Table
 from rich.text import Text
 
 from geo_audit_loop.domain.audit import AuditReport, Severity
+from geo_audit_loop.domain.coverage import INTENT_LABELS, CoverageReport
 from geo_audit_loop.domain.effect import EffectDirection, EffectReport
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
@@ -177,6 +178,54 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
         table.add_section()
     for entry in report.flop:
         _row(Text("▼ FLOP", style=f"bold {RED}"), entry, RED)
+    console.print(table)
+
+
+def render_coverage(console: Console, report: CoverageReport) -> None:
+    """Rendert die Query-Intent-Coverage (WOFUER zitiert?): Blind Spots je Fragetyp.
+
+    Schwaechster Intent zuerst (wie ``compute_coverage`` sortiert). Ein Intent unter der
+    Blind-Spot-Schwelle (``weakest_intents``) wird rot markiert — er ist die Luecke, die
+    der (spaetere) Query-Generator mit neuen Fragen fuellen soll.
+    """
+    console.print()
+    console.rule(
+        Text("WOFUER — Query-Intent-Coverage (Blind Spots)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    weak = set(report.weakest_intents)
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption=(
+            f"{report.n_probes} Probes · Gesamt-Zitationsrate {report.overall_citation_rate:.2f} · "
+            f"{len(weak)} Blind Spot(s)"
+        ),
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("", width=6)
+    table.add_column("Fragetyp", ratio=2)
+    table.add_column("Abdeckung", justify="right", width=10)
+    table.add_column("Rate", justify="right", width=6)
+    table.add_column("", width=16)
+    for cov in report.intents:
+        is_weak = cov.intent in weak
+        marker = (
+            Text("● LUECKE", style=f"bold {RED}")
+            if is_weak
+            else Text("● OK", style=f"bold {ACCENT}")
+        )
+        bar_style = RED if is_weak else ACCENT
+        table.add_row(
+            marker,
+            Text(INTENT_LABELS[cov.intent], style="bold"),
+            f"{cov.n_covered}/{cov.n_prompts}",
+            f"{cov.mean_citation_rate:.2f}",
+            _bar(cov.coverage_rate, 16, bar_style),
+        )
     console.print(table)
 
 

@@ -46,6 +46,10 @@ RETRY_MAX_DELAY_S: Final = 30.0
 # --- Report ---
 TOP_N: Final = 10
 
+# --- Query-Intent-Coverage (Session 4) ---
+# Coverage-Rate (Anteil zitierter Prompts je Intent), unter der ein Intent als Blind Spot gilt.
+COVERAGE_WEAK_THRESHOLD: Final = 0.5
+
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
 
