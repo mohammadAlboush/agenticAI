@@ -121,6 +121,29 @@ def aggregate_probes(results: Iterable[ProbeResult]) -> list[ProbeAggregate]:
     return aggregates
 
 
+def url_citation_rate(results: Iterable[ProbeResult], url: str) -> tuple[float, int]:
+    """Anteil der OK-Probes, in denen genau diese URL zitiert wurde, plus Nenner ``n``.
+
+    Grundlage der Vorher/Nachher-Metrik einer ``EffectHypothesis`` (Sprint 4): die
+    Rate ist rein deterministisch aus den persistierten Probes ableitbar (kein RNG).
+
+    Args:
+        results: Die zu betrachtenden Probe-Ergebnisse (z.B. eine Phase eines Runs).
+        url: Die konkrete Zielseite, deren Zitationsrate gemessen wird.
+
+    Returns:
+        ``(rate, n)`` mit ``rate`` = Treffer/OK-Probes und ``n`` = Anzahl OK-Probes;
+        ``(0.0, 0)``, wenn keine OK-Probe vorliegt.
+    """
+    ok = [r for r in results if r.status is ProbeStatus.OK]
+    n = len(ok)
+    if n == 0:
+        return 0.0, 0
+    key = normalize_url(url)
+    hits = sum(1 for r in ok if any(normalize_url(c.url) == key for c in r.citations))
+    return hits / n, n
+
+
 def count_target_url_citations(
     results: Iterable[ProbeResult], target_domain: str
 ) -> list[UrlCitationStat]:

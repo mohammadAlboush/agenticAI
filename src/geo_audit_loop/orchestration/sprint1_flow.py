@@ -86,14 +86,23 @@ class Sprint1Pipeline:
             self._finalize(RunStatus.ABORTED, str(exc))
             raise
 
-    def crawl_and_report(self) -> TopFlopReport:
-        """Schritt 2: Inventar crawlen, Top/Flop bauen, Run abschliessen."""
+    def crawl_and_report(self, *, finalize: bool = True) -> TopFlopReport:
+        """Schritt 2: Inventar crawlen, Top/Flop bauen, Run abschliessen.
+
+        ``finalize=False`` schiebt den COMPLETED-Abschluss auf (Sprint 2 finalisiert erst
+        nach den Lern-Schritten, damit die persistierten Kosten das Reasoning enthalten).
+        """
         report = self._crawler.run(
             self._run_context, self._options, aggregates=self._aggregates, top_n=self._top_n
         )
         self._report = report
-        self._finalize(RunStatus.COMPLETED, None)
+        if finalize:
+            self._finalize(RunStatus.COMPLETED, None)
         return report
+
+    def finalize_completed(self) -> None:
+        """Schliesst den Run als COMPLETED ab (fuer aufgeschobenes Finalisieren in Sprint 2)."""
+        self._finalize(RunStatus.COMPLETED, None)
 
     def run(self) -> TopFlopReport:
         """Fuehrt beide Schritte aus (framework-freier Komplettlauf)."""
