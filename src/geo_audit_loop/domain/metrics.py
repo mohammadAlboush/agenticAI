@@ -121,6 +121,29 @@ def aggregate_probes(results: Iterable[ProbeResult]) -> list[ProbeAggregate]:
     return aggregates
 
 
+def url_citation_counts(results: Iterable[ProbeResult], url: str) -> tuple[int, int]:
+    """Roh-Zaehlung ``(hits, n)``: OK-Probes, die genau diese URL zitieren, und OK-Probes total.
+
+    Exakte Ganzzahlen sind die Grundlage der statistischen Effekt-Messung (Wilson/Newcombe,
+    Sprint 5) — sie brauchen die Treffer- und Stichprobenzahlen, nicht die gerundete Rate.
+
+    Args:
+        results: Die zu betrachtenden Probe-Ergebnisse (z.B. eine Phase eines Runs).
+        url: Die konkrete Zielseite, deren Zitationen gezaehlt werden.
+
+    Returns:
+        ``(hits, n)`` mit ``hits`` = zitierende OK-Probes und ``n`` = Anzahl OK-Probes;
+        ``(0, 0)``, wenn keine OK-Probe vorliegt.
+    """
+    ok = [r for r in results if r.status is ProbeStatus.OK]
+    n = len(ok)
+    if n == 0:
+        return 0, 0
+    key = normalize_url(url)
+    hits = sum(1 for r in ok if any(normalize_url(c.url) == key for c in r.citations))
+    return hits, n
+
+
 def url_citation_rate(results: Iterable[ProbeResult], url: str) -> tuple[float, int]:
     """Anteil der OK-Probes, in denen genau diese URL zitiert wurde, plus Nenner ``n``.
 
@@ -135,13 +158,8 @@ def url_citation_rate(results: Iterable[ProbeResult], url: str) -> tuple[float, 
         ``(rate, n)`` mit ``rate`` = Treffer/OK-Probes und ``n`` = Anzahl OK-Probes;
         ``(0.0, 0)``, wenn keine OK-Probe vorliegt.
     """
-    ok = [r for r in results if r.status is ProbeStatus.OK]
-    n = len(ok)
-    if n == 0:
-        return 0.0, 0
-    key = normalize_url(url)
-    hits = sum(1 for r in ok if any(normalize_url(c.url) == key for c in r.citations))
-    return hits / n, n
+    hits, n = url_citation_counts(results, url)
+    return (hits / n, n) if n else (0.0, 0)
 
 
 def count_target_url_citations(

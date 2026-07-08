@@ -30,13 +30,16 @@ Regeln:
 - `confidence` zwischen 0 und 1.
 - `patch_id` ist deterministisch: `px-<finding_id>-<change_type>`.
 
-**Lernen aus dem Gedaechtnis (Sprint 4):** Der Eingabeblock „Fruehere Effekt-Hypothesen" listet
-`(lever, change_type, delta_citation_rate, confidence, direction)` aus frueheren Laeufen **derselben
-Domain**. Bevorzuge Hebel/Aenderungsarten mit **erwiesen positivem** `delta_citation_rate` (hoehere
-`confidence`) und meide erwiesen wirkungslose/negative — begruende das ggf. in `rationale`. Das
-Gedaechtnis ist ein Prior, kein Zwang: passe es zum konkreten Finding an. (Zusaetzlich reweightet das
-System die `confidence` deterministisch anhand derselben Hypothesen — dein Prompt-Urteil und dieser
-Code-Pfad wirken in dieselbe Richtung.)
+**Lernen aus dem Gedaechtnis (Sprint 4/5):** Der Eingabeblock „Fruehere Effekt-Hypothesen" listet
+`(lever, change_type, delta_citation_rate, ci_95, significant, confidence, direction)` aus frueheren
+Laeufen **derselben Domain**. Jeder Effekt traegt ein **95%-Konfidenzintervall** (`ci_95`) und ein
+`significant`-Flag: ein Effekt ist nur dann belastbar, wenn sein KI die Null ausschliesst
+(`significant=true`). Bevorzuge Hebel/Aenderungsarten mit **erwiesen positivem** und **signifikantem**
+`delta_citation_rate` (hoehere `confidence`) und meide erwiesen negative; **behandle nicht-signifikante
+Effekte als Rauschen** und leite daraus nichts ab. Das Gedaechtnis ist ein Prior, kein Zwang: passe es
+zum konkreten Finding an. (Zusaetzlich reweightet das System die `confidence` deterministisch anhand
+**derselben signifikanten** Hypothesen — dein Prompt-Urteil und dieser Code-Pfad wirken in dieselbe
+Richtung.)
 
 Gib **ausschliesslich** ein JSON-Objekt zurueck, keine Prosa, kein Markdown-Codeblock:
 

@@ -23,8 +23,13 @@ from geo_audit_loop.config import constants as c
 from geo_audit_loop.domain._base import FrozenModel
 from geo_audit_loop.domain.fix import ChangeType, FixProposal
 from geo_audit_loop.domain.geo import LEVER_LABELS, PYRAMID_LABELS, Lever, PyramidLevel
-from geo_audit_loop.domain.metrics import url_citation_rate
+from geo_audit_loop.domain.metrics import url_citation_counts
 from geo_audit_loop.domain.probe import ProbeResult, ProbeStatus
+from geo_audit_loop.domain.statistics import (
+    conservative_effect,
+    is_significant,
+    proportion_diff_ci,
+)
 
 
 class EffectDirection(StrEnum):
@@ -40,8 +45,12 @@ class EffectHypothesis(FrozenModel):
 
     Traegt die Provenienz (``patch_id`` -> ``FixProposal`` -> ``finding_id``), die
     vermutete Ursache als ``(lever, change_type)``-Bezug, die Vorher/Nachher-Zitationsrate
-    samt Stichprobengroessen und eine deterministisch abgeleitete ``confidence``. Die
-    ``hypothesis_id`` ist deterministisch (kein Zufall) — reproduzierbar und upsert-faehig.
+    samt Stichprobengroessen, ein **statistisches 95%-Konfidenzintervall** des Deltas
+    (``ci_low``/``ci_high``, Newcombe/Wilson — Sprint 5) und eine daraus **deterministisch**
+    abgeleitete ``confidence`` (die statistisch abgesicherte Effektstaerke). Das abgeleitete
+    ``significant`` sagt, ob das KI die Null ausschliesst — nur dann ist der Effekt belastbar
+    und darf den naechsten Fix-Run beeinflussen. Die ``hypothesis_id`` ist deterministisch
+    (kein Zufall) — reproduzierbar und upsert-faehig.
     """
 
     hypothesis_id: str = Field(min_length=1)
@@ -59,8 +68,16 @@ class EffectHypothesis(FrozenModel):
     before_n: int = Field(ge=0)  # Anzahl OK-Probes der Baseline
     after_n: int = Field(ge=0)  # Anzahl OK-Probes der Re-Probe
     delta: float = Field(ge=-1.0, le=1.0)  # after - before
+    # 95%-Konfidenzintervall des Deltas (Newcombe Methode 10). ``None`` nur fuer
+    # hand-konstruierte Hypothesen ohne Messung; der Produzent setzt es stets.
+    ci_low: float | None = Field(default=None, ge=-1.0, le=1.0)
+    ci_high: float | None = Field(default=None, ge=-1.0, le=1.0)
+    # Ob das Delta-KI die Null ausschliesst -> statistisch belastbarer Effekt (§8). Regulaeres
+    # Feld (kein computed_field: das kollidierte mit ``extra='forbid'`` beim JSON-Roundtrip);
+    # der Produzent setzt es aus dem KI, ein Validator erzwingt Konsistenz mit dem KI.
+    significant: bool = False
     direction: EffectDirection
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=1.0)  # = conservative_effect(ci) beim Produzenten
     suspected_cause: str = Field(min_length=1)  # strukturiert aus (lever, change_type) abgeleitet
     observed_at: datetime
 
@@ -70,6 +87,19 @@ class EffectHypothesis(FrozenModel):
         expected = round(self.after_citation_rate - self.before_citation_rate, 6)
         if abs(self.delta - expected) > 1e-9:
             raise ValueError("delta != after_citation_rate - before_citation_rate")
+        return self
+
+    @model_validator(mode="after")
+    def _ci_consistent(self) -> Self:
+        """Falls ein KI vorliegt: geordnet, das Delta enthaltend, und ``significant`` konsistent."""
+        if self.ci_low is None or self.ci_high is None:
+            return self
+        if self.ci_low > self.ci_high + 1e-9:
+            raise ValueError("ci_low > ci_high")
+        if not (self.ci_low - 1e-6 <= self.delta <= self.ci_high + 1e-6):
+            raise ValueError("delta ausserhalb des Konfidenzintervalls")
+        if self.significant != is_significant(self.ci_low, self.ci_high):
+            raise ValueError("significant inkonsistent mit dem Konfidenzintervall")
         return self
 
 
@@ -95,22 +125,16 @@ def derive_hypothesis_id(run_id: str, patch_id: str) -> str:
     return f"eh-{run_id}-{patch_id}"
 
 
-def compute_confidence(delta: float, n: int) -> float:
-    """Deterministische Confidence aus Effektstaerke und Stichprobengroesse (kein RNG).
+def classify_direction(delta: float, *, significant: bool) -> EffectDirection:
+    """Ordnet ein Delta einer Richtung zu — nur bei statistischer Signifikanz.
 
-    ``min(1, |delta|) * n/(n + SHRINKAGE)``: monoton in Effektstaerke UND Stichprobe;
-    kleine Stichproben werden gedaempft (auch ein grosses Delta hat dann geringe Confidence).
-    Auf 6 Nachkommastellen gerundet fuer plattformstabile Bit-Reproduzierbarkeit.
+    Ein Effekt gilt erst dann als IMPROVED/REGRESSED, wenn er (a) **signifikant** ist (das
+    Delta-KI schliesst die Null aus) UND (b) die Effektstaerke-Untergrenze
+    ``EFFECT_DIRECTION_EPSILON`` ueberschreitet. Nicht-signifikante oder winzige Deltas sind
+    UNCHANGED -> der Lern-Loop verankert keine Hypothese in Rauschen (Projektregeln §1/§8).
     """
-    if n <= 0:
-        return 0.0
-    magnitude = min(1.0, abs(delta))
-    shrink = n / (n + c.EFFECT_CONFIDENCE_SHRINKAGE)
-    return round(magnitude * shrink, 6)
-
-
-def classify_direction(delta: float) -> EffectDirection:
-    """Ordnet ein Delta einer Richtung zu (Toleranzband ``EFFECT_DIRECTION_EPSILON``)."""
+    if not significant:
+        return EffectDirection.UNCHANGED
     if delta > c.EFFECT_DIRECTION_EPSILON:
         return EffectDirection.IMPROVED
     if delta < -c.EFFECT_DIRECTION_EPSILON:
@@ -163,15 +187,19 @@ def form_effect_report(
     """
     hypotheses: list[EffectHypothesis] = []
     for proposal in sorted(applied, key=lambda p: p.patch_id):
-        before_rate, before_n = url_citation_rate(before_probes, proposal.target_url)
-        after_rate, after_n = url_citation_rate(after_probes, proposal.target_url)
+        before_hits, before_n = url_citation_counts(before_probes, proposal.target_url)
+        after_hits, after_n = url_citation_counts(after_probes, proposal.target_url)
         # Delta aus den GERUNDETEN Raten ableiten (exakt die, die persistiert werden), damit der
         # _delta_consistent-Validator zustimmt. Sonst driften bei gebrochenen Raten (z.B. 1/3, 2/3)
         # unabhaengig gerundete Felder um ~1e-6 vom aus Rohwerten berechneten Delta ab -> Crash.
-        before_cr = round(before_rate, 6)
-        after_cr = round(after_rate, 6)
+        before_cr = round(before_hits / before_n, 6) if before_n else 0.0
+        after_cr = round(after_hits / after_n, 6) if after_n else 0.0
         delta = round(after_cr - before_cr, 6)
-        direction = classify_direction(delta)
+        # Statistik (Sprint 5): 95%-KI des Deltas aus den Roh-Counts (Newcombe/Wilson).
+        # Signifikanz + Confidence folgen ausschliesslich aus dem KI, nicht aus einer Heuristik.
+        ci_low, ci_high = proportion_diff_ci(before_hits, before_n, after_hits, after_n)
+        significant = is_significant(ci_low, ci_high)
+        direction = classify_direction(delta, significant=significant)
         hypotheses.append(
             EffectHypothesis(
                 hypothesis_id=derive_hypothesis_id(run_id, proposal.patch_id),
@@ -189,8 +217,11 @@ def form_effect_report(
                 before_n=before_n,
                 after_n=after_n,
                 delta=delta,
+                ci_low=ci_low,
+                ci_high=ci_high,
+                significant=significant,
                 direction=direction,
-                confidence=compute_confidence(delta, min(before_n, after_n)),
+                confidence=conservative_effect(ci_low, ci_high),
                 suspected_cause=_suspected_cause(proposal, direction),
                 observed_at=generated_at,
             )

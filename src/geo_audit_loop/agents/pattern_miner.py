@@ -103,7 +103,13 @@ class PatternMinerService:
     ) -> PatternReport:
         """Leitet aus den Top-Seiten des Reports die Templates ab und baut den PatternReport."""
         by_url = {inv.page.url: inv for inv in pages}
-        top_features = [page_features(by_url[e.url]) for e in report.top if e.url in by_url]
+        # Sprint 6: jede Top-Seite traegt ihr statistisches Sichtbarkeits-Band -> der Miner
+        # kann Muster bevorzugt aus belastbar ueberdurchschnittlichen Seiten ableiten.
+        top_features = [
+            {**page_features(by_url[e.url]), "visibility_band": e.band.value}
+            for e in report.top
+            if e.url in by_url
+        ]
         prompt = self._build_prompt(top_features)
         templates = self._mine(run_context, prompt)
         log_event(
@@ -125,10 +131,14 @@ class PatternMinerService:
     def _build_prompt(self, top_features: list[dict[str, object]]) -> str:
         payload = json.dumps(top_features, ensure_ascii=False, indent=2)
         return (
-            "Top-Seiten (in AI-Engines erfolgreich zitiert) mit On-Page-Inventar:\n"
+            "Top-Seiten (in AI-Engines erfolgreich zitiert) mit On-Page-Inventar. Das Feld "
+            "'visibility_band' gibt die statistische Absetzung an: 'above_field' = belastbar "
+            "ueberdurchschnittlich zitiert, 'typical' = statistisch nicht vom Domain-Schnitt "
+            "unterscheidbar (schwaecherer Beleg):\n"
             f"{payload}\n\n"
             "Leite 2-5 wiederverwendbare Templates ab, die erklaeren, warum diese Seiten "
-            "zitiert werden. Gib NUR das JSON-Objekt zurueck."
+            "zitiert werden; stuetze dich bevorzugt auf 'above_field'-Seiten. "
+            "Gib NUR das JSON-Objekt zurueck."
         )
 
     def _mine(self, run_context: RunContext, prompt: str) -> tuple[Template, ...]:

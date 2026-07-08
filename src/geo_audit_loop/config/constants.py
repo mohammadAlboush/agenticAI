@@ -66,14 +66,22 @@ PATCHES_SUBDIR: Final = "patches"  # Unterordner je Run fuer FilesystemPublisher
 EFFECT_ANALYST_TASK: Final = "effect_analyst"
 # Memory-aware Fix-Prompt: unter --learn genutzt (v1 bleibt fuer reines --fix, Sprint 3).
 FIX_AGENT_LEARN_VERSION: Final = "v2"
-# Deterministische Confidence-Formel: n/(n+SHRINKAGE) daempft kleine Stichproben (kein RNG).
-EFFECT_CONFIDENCE_SHRINKAGE: Final = 10
 # Schwelle, ab der ein Delta als Verbesserung/Verschlechterung gilt (sonst UNCHANGED).
+# Wirkt als Effektstaerke-Untergrenze ZUSAETZLICH zur statistischen Signifikanz (s.u.).
 EFFECT_DIRECTION_EPSILON: Final = 0.01
 # Memory-Retrieval: wie viele Hypothesen der naechste Fix-Run maximal einbezieht.
 MEMORY_TOP_K: Final = 5
 # Gewicht, mit dem eine erwiesene Hypothese die Patch-Confidence nudged (explizites Lern-Signal).
 MEMORY_PRIOR_WEIGHT: Final = 0.15
+
+# --- Sprint 5: Statistisch fundierte Effekt-Messung (Wilson/Newcombe) ---
+# Zweiseitiges 95%-Normalquantil (z) fuer Wilson-Score- und Newcombe-Difference-KI.
+# Ein gemessener Vorher/Nachher-Lift gilt nur dann als Effekt, wenn sein 95%-KI die Null
+# ausschliesst -> der Lern-Loop lernt nicht mehr aus statistischem Rauschen (Projektregeln §1/§7).
+EFFECT_CI_Z: Final = 1.959963984540054
+# Recency-Decay im Memory-Prior: je (Hebel, Aenderungsart)-Gruppe zaehlt jede aeltere
+# Hypothese geometrisch weniger (0.5 = halbes Gewicht je Rang). Deterministisch ueber den Satz.
+MEMORY_RECENCY_DECAY: Final = 0.5
 # bge-m3 (CLAUDE.md §2): Standard-Embedding-Modell des optionalen Chroma-Memory-Adapters.
 DEFAULT_EMBEDDING_MODEL: Final = "BAAI/bge-m3"
 

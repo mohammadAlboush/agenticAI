@@ -17,7 +17,7 @@ from rich.text import Text
 
 from geo_audit_loop.domain.audit import AuditReport, Severity
 from geo_audit_loop.domain.effect import EffectDirection, EffectReport
-from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
+from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport, VisibilityBand
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
     ChangeType,
@@ -140,11 +140,20 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
         style=ACCENT_DIM,
         align="left",
     )
+    n_distinct = sum(
+        1
+        for entry in (*report.top, *report.flop)
+        if entry.band is not VisibilityBand.TYPICAL
+    )
     table = Table(
         show_header=True,
         header_style=f"bold {GREY}",
         border_style="grey30",
-        caption=f"{report.n_probes} Probes · {report.n_pages} Seiten der Domain",
+        caption=(
+            f"{report.n_probes} Probes · {report.n_pages} Seiten · "
+            f"Domain-Schnitt {report.field_citation_rate:.2f} · "
+            f"{n_distinct} Seiten statistisch abgesetzt (95%-KI ohne Schnitt)"
+        ),
         caption_style=GREY,
         expand=True,
     )
@@ -153,7 +162,8 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
     table.add_column("URL", ratio=2, no_wrap=True)
     table.add_column("Zitationen", justify="right", width=10)
     table.add_column("Rate", justify="right", width=6)
-    table.add_column("", width=16)
+    table.add_column("95%-KI", justify="center", width=15)
+    table.add_column("", width=10)
 
     scale = max(
         (entry.citation_rate for entry in (*report.top, *report.flop)),
@@ -162,13 +172,16 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
 
     def _row(marker: Text, entry: TopFlopEntry, bar_style: str) -> None:
         fraction = entry.citation_rate / scale if scale > 0 else 0.0
+        # KI-Farbe zeigt die statistische Absetzung: abgesetzt = Akzent, im Rauschen = grau.
+        ci_style = GREY if entry.band is VisibilityBand.TYPICAL else bar_style
         table.add_row(
             marker,
             str(entry.position),
             Text(_short_url(entry.url), style="bold"),
             f"{entry.citation_count}x",
             f"{entry.citation_rate:.2f}",
-            _bar(fraction, 16, bar_style),
+            Text(f"[{entry.rate_ci_low:.2f}, {entry.rate_ci_high:.2f}]", style=ci_style),
+            _bar(fraction, 10, bar_style),
         )
 
     for entry in report.top:
@@ -383,23 +396,26 @@ def render_effect(console: Console, report: EffectReport) -> None:
             )
         )
         return
+    n_significant = sum(1 for h in report.hypotheses if h.significant)
     table = Table(
         show_header=True,
         header_style=f"bold {GREY}",
         border_style="grey30",
         caption=(
-            f"{report.n_improved}/{len(report.hypotheses)} verbessert · "
+            f"{report.n_improved}/{len(report.hypotheses)} signifikant verbessert · "
+            f"{n_significant} statistisch belastbar (95%-KI ohne Null) · "
             f"mittleres Δ {report.mean_delta:+.2f} · in das Gedaechtnis geschrieben"
         ),
         caption_style=GREY,
         expand=True,
     )
     table.add_column("Seite · Hebel", ratio=3)
-    table.add_column("Vorher", justify="right", width=7)
+    table.add_column("Vorher", justify="right", width=6)
     table.add_column("Nachher", justify="right", width=7)
-    table.add_column("Δ Rate", width=16)
+    table.add_column("Δ Rate", width=14)
+    table.add_column("95%-KI", justify="center", width=15)
     table.add_column("Richtung", width=13)
-    table.add_column("Konfidenz", width=16)
+    table.add_column("Konfidenz", width=13)
     for hyp in report.hypotheses:
         page = Text()
         page.append(_short_url(hyp.target_url), style="bold")
@@ -409,17 +425,23 @@ def render_effect(console: Console, report: EffectReport) -> None:
         )
         delta_bar = Text()
         delta_style = ACCENT if hyp.delta >= 0 else RED
-        delta_bar.append_text(_bar(abs(hyp.delta), 10, delta_style))
+        delta_bar.append_text(_bar(abs(hyp.delta), 8, delta_style))
         delta_bar.append(f" {hyp.delta:+.2f}", style="bold")
+        if hyp.ci_low is not None and hyp.ci_high is not None:
+            ci_style = ACCENT if hyp.significant else GREY
+            ci_cell = Text(f"[{hyp.ci_low:+.2f}, {hyp.ci_high:+.2f}]", style=ci_style)
+        else:
+            ci_cell = Text("—", style=GREY)
         label, style = _DIRECTION_BADGES[hyp.direction]
         confidence = Text()
-        confidence.append_text(_bar(hyp.confidence, 10, ACCENT))
+        confidence.append_text(_bar(hyp.confidence, 8, ACCENT))
         confidence.append(f" {hyp.confidence:.2f}", style="bold")
         table.add_row(
             page,
             f"{hyp.before_citation_rate:.2f}",
             f"{hyp.after_citation_rate:.2f}",
             delta_bar,
+            ci_cell,
             Text(f" {label} ", style=style),
             confidence,
         )

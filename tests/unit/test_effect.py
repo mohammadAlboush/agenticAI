@@ -11,7 +11,6 @@ from geo_audit_loop.domain.effect import (
     EffectDirection,
     EffectHypothesis,
     classify_direction,
-    compute_confidence,
     derive_hypothesis_id,
     form_effect_report,
 )
@@ -82,24 +81,32 @@ def test_url_citation_rate_empty_is_zero() -> None:
     assert url_citation_rate([], _URL) == (0.0, 0)
 
 
-def test_compute_confidence_is_monotone_and_bounded() -> None:
-    assert compute_confidence(0.0, 100) == 0.0
-    # groesseres Delta -> hoehere Confidence (gleiche Stichprobe)
-    assert compute_confidence(0.5, 100) < compute_confidence(0.9, 100)
-    # groessere Stichprobe -> hoehere Confidence (gleiches Delta)
-    assert compute_confidence(0.5, 5) < compute_confidence(0.5, 500)
-    assert 0.0 <= compute_confidence(1.0, 1_000_000) <= 1.0
+def test_classify_direction_requires_significance_and_epsilon() -> None:
+    # Signifikant + ueber EPSILON -> Richtung; sonst UNCHANGED.
+    assert classify_direction(0.5, significant=True) is EffectDirection.IMPROVED
+    assert classify_direction(-0.5, significant=True) is EffectDirection.REGRESSED
+    assert classify_direction(0.0, significant=True) is EffectDirection.UNCHANGED
+    assert classify_direction(0.001, significant=True) is EffectDirection.UNCHANGED  # unter EPSILON
+    # Nicht signifikant -> selbst ein grosses Delta bleibt UNCHANGED (kein Lernen aus Rauschen).
+    assert classify_direction(0.5, significant=False) is EffectDirection.UNCHANGED
 
 
-def test_compute_confidence_is_deterministic() -> None:
-    assert compute_confidence(0.33, 240) == compute_confidence(0.33, 240)
-
-
-def test_classify_direction_tolerance_band() -> None:
-    assert classify_direction(0.5) is EffectDirection.IMPROVED
-    assert classify_direction(-0.5) is EffectDirection.REGRESSED
-    assert classify_direction(0.0) is EffectDirection.UNCHANGED
-    assert classify_direction(0.001) is EffectDirection.UNCHANGED  # unter EPSILON
+def test_significant_flag_derived_from_ci() -> None:
+    before = [_probe(cites_url=None) for _ in range(50)]
+    after = [_probe(cites_url=_URL) for _ in range(50)]
+    hyp = form_effect_report(
+        run_id="r1",
+        target_domain="it-sicherheit.de",
+        before_probes=before,
+        after_probes=after,
+        applied=[_proposal()],
+        prompt_version="v2",
+        generated_at=FIXED,
+    ).hypotheses[0]
+    assert hyp.ci_low is not None and hyp.ci_high is not None
+    assert hyp.ci_low > 0.0  # ganzes KI ueber der Null
+    assert hyp.significant is True
+    assert hyp.confidence == hyp.ci_low  # Confidence = konservative Effektstaerke (untere KI-Kante)
 
 
 def test_hypothesis_rejects_inconsistent_delta() -> None:
@@ -127,7 +134,7 @@ def test_hypothesis_rejects_inconsistent_delta() -> None:
 
 
 def test_form_effect_report_measures_positive_delta() -> None:
-    n = 250  # grosse Stichprobe -> hohe Confidence (n/(n+SHRINKAGE))
+    n = 250  # grosse Stichprobe + grosser Lift -> enges KI weit ueber der Null -> hohe Confidence
     before = [_probe(cites_url=None) for _ in range(n)]  # Baseline: nie zitiert
     after = [_probe(cites_url=_URL) for _ in range(n)]  # Re-Probe: immer zitiert (Boost)
     report = form_effect_report(
@@ -145,8 +152,8 @@ def test_form_effect_report_measures_positive_delta() -> None:
     assert hyp.after_citation_rate == 1.0
     assert hyp.delta == 1.0
     assert hyp.direction is EffectDirection.IMPROVED
-    assert hyp.confidence == compute_confidence(1.0, n)
-    assert hyp.confidence > 0.95
+    assert hyp.significant is True  # grosser Lift bei grosser Stichprobe -> statistisch belastbar
+    assert hyp.confidence > 0.95  # konservative Effektstaerke (untere KI-Kante) nahe 1
     assert hyp.hypothesis_id == "eh-r1-px-f1-insert_block"
     assert report.n_improved == 1
     assert report.mean_delta == 1.0
@@ -201,7 +208,11 @@ def test_form_effect_report_survives_fractional_rates() -> None:
     assert hyp.after_citation_rate == round(2 / 3, 6)
     # Delta ist konsistent mit den gespeicherten (gerundeten) Raten:
     assert hyp.delta == round(hyp.after_citation_rate - hyp.before_citation_rate, 6)
-    assert hyp.direction is EffectDirection.IMPROVED
+    # Bei n=3 ist 1/3 -> 2/3 statistisch NICHT belastbar (KI umschliesst die Null) -> UNCHANGED,
+    # Confidence 0. Das ist das smartere Sprint-5-Verhalten: kein Lernen aus Rauschen.
+    assert hyp.significant is False
+    assert hyp.direction is EffectDirection.UNCHANGED
+    assert hyp.confidence == 0.0
 
 
 def test_form_effect_report_empty_applied() -> None:
