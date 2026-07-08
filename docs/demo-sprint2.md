@@ -18,6 +18,7 @@ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --
 - `--offline` → deterministische Mock-Engines **und** Mock-Reasoning (Seed 42).
 - `--explain` → hängt den Sprint-2-Lern-Loop an (Pattern-Miner + GEO-Auditor).
 - `--log-level WARNING` → unterdrückt die JSON-Logzeilen für eine saubere Demo-Ausgabe.
+- `--pace 3` (optional) → 3 s Lesepause zwischen den Report-Abschnitten (Live-Präsentation/Video).
 
 ## Was passiert (3 Akte)
 
@@ -27,39 +28,47 @@ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --
 3. **WAS TUN** — der **GEO-Auditor** prüft die Flop-Seiten gegen die Templates und liefert
    6 nach Pyramide **priorisierte** `AuditFinding`s.
 
-## Erwartete Ausgabe (gekürzt, Seed 42 → exakt reproduzierbar)
+## Erwartete Ausgabe (rich-Terminal-UI, gekürzt; Seed 42 → exakt reproduzierbar)
+
+Die CLI rendert eine strukturierte Terminal-UI (`cli/render.py`):
+
+- **Header-Panel** mit Domain, Modus-Badge (`OFFLINE · DETERMINISTISCH`), Seed, run-ID, Prompt-Version.
+- **Live-Schrittanzeige** der vier Flow-Schritte mit Häkchen, Kennzahl und Dauer:
 
 ```
-=== GEO-Sichtbarkeit: it-sicherheit.de ===
-TOP   1.  71x  /nis2-richtlinie   2.  42x  /ransomware-schutz   3.  39x  /zero-trust-architektur
-FLOP  1.   7x  /security-awareness-training   2.  17x  /passwort-manager-vergleich   3.  19x  /firewall-grundlagen
-
-=== WARUM ranken die Top-Seiten? 3 Muster (Pattern-Miner) ===
-  [t1] Extrahierbarer Antwortblock + FAQ-Schema   (Konfidenz 0.82)
-       Ebene: Extrahierbarkeit & Struktur | Hebel: Antwortbloecke, Maschinenlesbare Struktur
-  [t2] Autor-Entitaet + Faktendichte              (Konfidenz 0.76)
-  [t3] Schritt-fuer-Schritt-Struktur (HowTo)      (Konfidenz 0.71)
-
-=== WAS tun? 6 Findings (GEO-Auditor, priorisiert) ===
-  1. [HIGH]   /passwort-manager-vergleich   Extrahierbarkeit · Maschinenlesbare Struktur
-             Fix: Vergleichstabelle + Product/Review-Schema ergaenzen.
-  2. [MEDIUM] /firewall-grundlagen          Extrahierbarkeit · Definitionsbloecke
-  3. [MEDIUM] /security-awareness-training   Extrahierbarkeit · Antwortbloecke
-  4. [HIGH]   /firewall-grundlagen          Substanz · Faktendichte
-  5. [MEDIUM] /passwort-manager-vergleich   Substanz · Entitaeten-Klarheit
-  6. [LOW]    /security-awareness-training   Zitation · Frage-Deckung
+✓ Probe-Matrix sampeln (Engines x Prompts x IPs)  240 Probes · 2.0 s
+✓ Inventar crawlen + Top/Flop-Report              8 Seiten · 0.0 s
+✓ Pattern-Miner — Muster der Top-Seiten           3 Templates · 0.0 s
+✓ GEO-Auditor — Flop-Seiten pruefen               6 Findings · 0.0 s
 ```
+
+- **WAS** — Top/Flop-Tabelle mit Zitations-Balken:
+  TOP `/nis2-richtlinie` (71x · 0.30), `/ransomware-schutz` (42x), `/zero-trust-architektur` (39x);
+  FLOP `/security-awareness-training` (7x), `/passwort-manager-vergleich` (17x), `/firewall-grundlagen` (19x).
+- **WARUM** — 3 Muster mit Konfidenz-Balken: `t1` Extrahierbarer Antwortblock + FAQ-Schema (0.82),
+  `t2` Autor-Entität + Faktendichte (0.76), `t3` Schritt-für-Schritt-Struktur/HowTo (0.71).
+- **WAS TUN** — 6 priorisierte Findings mit farbigen Severity-Badges (HIGH/MEDIUM/LOW),
+  Hebel, Fix und Beleg (untere Pyramide-Ebene zuerst, dann Schweregrad).
+- **Abschluss-Panel**:
+
+```
+Kosten/Lauf          240 Probes · 39800 Tokens · $0.3115
+Report-Fingerprint   0ab26644ea8d   (Seed 42)
+```
+
+## Determinismus zeigen (Master-Kriterium)
+
+Den Befehl **zweimal** ausführen → der **Report-Fingerprint ist identisch** (`0ab26644ea8d`),
+obwohl die run-ID pro Lauf variiert. Der Fingerprint (`domain/fingerprint.py`) ist der
+SHA-256 über das kanonische JSON aller drei Reports **ohne** die laufvariablen Felder
+`run_id`/`generated_at` — der Lern-Loop ist trotz LLM-Schritten bit-genau reproduzierbar
+(Mock-Reasoning, Seed 42).
 
 ## Sprechzettel (3 Sätze)
 
 1. „Sprint 1 sagt mir, dass `/passwort-manager-vergleich` selten zitiert wird — aber nicht warum."
 2. „Der Pattern-Miner zeigt: Top-Seiten haben FAQ-Schema und einen extrahierbaren Antwortblock."
 3. „Der GEO-Auditor sagt mir priorisiert, was genau zu tun ist — und Sprint 3 setzt es um."
-
-## Determinismus zeigen
-
-Den Befehl **zweimal** ausführen → identische Zahlen und Reihenfolge. Das ist das
-Master-Kriterium: der Lern-Loop ist trotz LLM-Schritten reproduzierbar (Mock-Reasoning).
 
 ## Optional: echtes Claude-Reasoning (nicht für die Live-Demo nötig)
 
@@ -70,5 +79,7 @@ GEO_LIVE_ENGINES=claude uv run python -m geo_audit_loop --domain it-sicherheit.d
 
 ## Begleitend
 
-- Folien: `docs/sprint2-praesentation.html` (Tab „Live-Demo" spiegelt genau diese Ausgabe).
-- Tests/Evals: `uv run pytest` (toleranzbasierte Eval-Slots für beide Agenten).
+- Demo-Video: `docs/sprint2-demo.mp4` (Bildschirmaufnahme des echten Doppellaufs, 1080p).
+- Folien: `docs/sprint2-praesentation.html`.
+- Tests/Evals: `uv run pytest` (toleranzbasierte Eval-Slots für beide Agenten;
+  `tests/unit/test_cli_render.py` + `tests/unit/test_fingerprint.py` decken die neue CLI-Schicht ab).

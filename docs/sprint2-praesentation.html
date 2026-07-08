@@ -3,405 +3,562 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>geo-audit-loop · Sprint 2 — Learning</title>
+<title>geo-audit-loop · Sprint 2 — Learning · Technischer Projektbericht</title>
 <style>
 :root{
+  /* warmes Papier + leicht warmes Weiß für Figuren (Hybrid: Sprint-2-Wärme, Sprint-1-Struktur) */
   --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
-  --ink:#1c1d1a; --mut:#6c6f68; --faint:#9a9c94;
-  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9;
-  --amber:#9a6a16; --amber-soft:#f3e8d0; --red:#a8392c; --red-soft:#f1e0db;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --node:#c8c5b8;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --amber:#9a6a16; --amber-soft:#f3e8d0;
+  --red:#a8392c; --red-soft:#f1e0db; --crit:#8a241a;
   --ease:cubic-bezier(.16,1,.3,1);
-  /* Rueckwaerts-Kompatibilitaet fuer evtl. Inline-Referenzen */
-  --panel:var(--surface); --line:#e0ded5; --node:#c7c5b9;
   --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
   --sans:"Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
 }
-*{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em}
+code,.m,.mono{font-family:var(--mono)}
+
+/* ---------- Deck / Folien ---------- */
 .deck{position:fixed;inset:0;background:var(--bg);overflow:hidden}
-.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transform:translateY(20px) scale(.994);
-  transition:opacity .6s var(--ease),transform .6s var(--ease),visibility .6s;
-  display:flex;flex-direction:column;padding:clamp(34px,4.6vw,72px) clamp(40px,7vw,112px);z-index:1}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transform:translateY(16px) scale(.995);
+  transition:opacity .55s var(--ease),transform .55s var(--ease),visibility .55s;
+  display:flex;flex-direction:column;padding:clamp(30px,3.8vw,56px) clamp(40px,6vw,92px) clamp(20px,2.4vw,30px);z-index:1}
 .slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
-/* topbar */
-.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(16px,2.6vw,34px)}
-.runlogo{height:22px;width:auto;opacity:.9}
-.tag{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
-.tag b{color:var(--acc-deep);font-weight:600}
-/* headings */
-h1{font-size:clamp(32px,4.8vw,58px);line-height:1.03;margin:.1em 0 .3em;font-weight:660;letter-spacing:-.025em}
-h2{font-size:clamp(25px,3.4vw,42px);line-height:1.07;margin:0 0 .5em;font-weight:640;letter-spacing:-.02em}
-h2 .g,.g{color:var(--acc-deep)}
-.lead{font-size:clamp(15px,1.7vw,21px);color:var(--mut);max-width:31em;line-height:1.55}
+
+/* ---------- Kopf-/Fußzeile (Sprint-1-Struktur, warm getönt) ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:clamp(14px,2vw,26px)}
+.sec{font-family:var(--mono);font-size:13px;letter-spacing:.06em;color:var(--mut);text-transform:uppercase}
+.sec b{color:var(--acc-deep);font-weight:700}
+.runlogo{height:21px;width:auto;opacity:.9}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;
+  border-top:1px solid var(--line);padding-top:9px;font-size:12px;color:var(--faint)}
+.foot .m{font-family:var(--mono);font-size:11.5px}
+
+/* ---------- Körper ---------- */
 .body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
-.accent-rule{width:64px;height:3px;background:var(--acc);border-radius:3px;margin:8px 0 26px}
-/* steps */
-.step{opacity:0;transform:translateY(14px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
-.step.shown{opacity:1;transform:none}
-/* title slide */
-.title-wrap{flex:1;display:flex;flex-direction:column;justify-content:center}
-.title-logo{height:clamp(40px,4.6vw,58px);width:auto;margin-bottom:30px}
-.kicker{font-family:var(--mono);font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc-deep);margin-bottom:16px}
-.meta{margin-top:34px;display:grid;grid-template-columns:auto 1fr;gap:8px 26px;font-size:14px;max-width:660px}
-.meta dt{font-family:var(--mono);color:var(--faint);text-transform:uppercase;font-size:11px;letter-spacing:.08em;align-self:center}
-.meta dd{margin:0;color:var(--ink)}
-/* layout helpers — randlose Flaechen, nur Toenung */
-.cols{display:grid;gap:clamp(18px,2.2vw,34px)}
-.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}
-.card{background:var(--surface);border-radius:20px;padding:24px 26px}
-.card h3{margin:0 0 8px;font-size:16px;letter-spacing:-.01em}
-.card p{margin:0;color:var(--mut);font-size:14px;line-height:1.55}
-.rh{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:10px}
-ul.clean{list-style:none;margin:0;padding:0}
-ul.clean li{position:relative;padding:8px 0 8px 24px;color:var(--mut);font-size:15px;line-height:1.5}
-ul.clean li::before{content:"";position:absolute;left:0;top:15px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
-ul.clean li b{color:var(--ink);font-weight:620}
-code,.mono{font-family:var(--mono)}
-code{background:#e9e7df;color:#33352e;padding:2px 7px;border-radius:6px;font-size:.92em}
-.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:999px;background:var(--acc-soft);color:var(--acc-deep)}
-.big{font-size:clamp(34px,6vw,76px);font-weight:680;letter-spacing:-.035em;line-height:1.04}
-.big .q1{color:var(--mut)}.big .q2{color:var(--acc-deep)}
-/* loop diagram */
-.loop{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap}
-.lstage{flex:1;min-width:150px;background:var(--surface);border-radius:18px;padding:18px 20px;position:relative;transition:background .4s var(--ease)}
-.lstage .n{font-family:var(--mono);font-size:11px;color:var(--faint)}
-.lstage .t{font-weight:640;margin:5px 0 7px;font-size:17px}
-.lstage .d{font-size:13px;color:var(--mut);line-height:1.45}
-.lstage.done{background:#e8efdd}
-.lstage.now{background:#deecc7}
-.lstage.now .t{color:var(--acc-deep)}
-.lstage.done .t::after{content:" ✓";color:var(--acc-deep)}
-.slide.active .lstage.now{animation:nowpulse 2.8s var(--ease) infinite}
-@keyframes nowpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
-/* svg diagrams — Fuellung statt Stroke */
+h1{font-size:clamp(30px,4.4vw,52px);line-height:1.05;font-weight:680;letter-spacing:-.025em}
+h2{font-size:clamp(23px,3vw,38px);line-height:1.1;margin:0 0 .35em;font-weight:660;letter-spacing:-.02em}
+h2 .g,.g{color:var(--acc-deep)}
+.lead,.sub{font-size:clamp(15px,1.6vw,20px);color:var(--mut);line-height:1.55;max-width:64ch}
+.accent-rule{width:72px;height:3px;background:var(--acc);border-radius:3px;margin:14px 0 22px}
+.note{font-size:13px;color:var(--mut);background:var(--acc-soft);border-radius:13px;padding:13px 17px;margin-top:18px;line-height:1.5}
+.note b{color:var(--acc-deep2)}
+.note.amber{background:var(--amber-soft)}.note.amber b{color:var(--amber)}
+
+/* ---------- Titelfolie ---------- */
+.slide.title{padding-top:0}
+.title-top{display:flex;justify-content:space-between;align-items:flex-end;
+  padding:clamp(26px,3.6vw,46px) 0 15px;margin-bottom:clamp(18px,2.6vw,32px);border-bottom:2px solid var(--acc)}
+.title-logo{height:clamp(38px,4.4vw,54px);width:auto}
+.title-meta{font-family:var(--mono);font-size:13px;color:var(--mut);text-align:right;line-height:1.5}
+.content{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:16px}
+dl.meta{margin-top:clamp(22px,2.8vw,34px);max-width:74ch}
+dl.meta>div{display:grid;grid-template-columns:185px 1fr;gap:18px;align-items:baseline;padding:8px 2px;border-top:1px solid var(--line)}
+dl.meta>div:last-child{border-bottom:1px solid var(--line)}
+dl.meta dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+dl.meta dd{font-size:15.5px;color:var(--ink)}
+dl.meta dd.mono{font-family:var(--mono);font-size:13px;color:var(--mut)}
+
+/* ---------- Figuren / Abb.-Captions ---------- */
+.fig{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.fig.box{background:var(--surface-2);border:1px solid var(--line-2);border-radius:18px;padding:18px 22px}
 svg{display:block;width:100%;height:auto;overflow:visible}
+.fig svg{max-height:58vh}
+.cap{font-family:var(--mono);font-size:12.5px;color:var(--mut);margin-top:11px;text-align:center;line-height:1.5}
+.cap b{color:var(--acc-deep)}
+
+/* ---------- SVG-Primitive (warm, füllbasiert) ---------- */
 .nd{fill:var(--surface);stroke:none}
+.nd.line{fill:var(--surface-2);stroke:var(--node);stroke-width:1.4}
 .nd.core{fill:var(--acc-soft);stroke:none}
+.nd.coreln{fill:var(--acc-soft);stroke:var(--acc);stroke-width:1.6}
 .nd.new{fill:#deecc7;stroke:none}
-.lbl{font-family:var(--mono);font-size:13px;fill:var(--ink)}
-.lbls{font-family:var(--mono);font-size:11px;fill:var(--mut)}
-.ed{stroke:#c7c5b9;stroke-width:1.6;fill:none}
-.ed.a{stroke:var(--acc);stroke-width:2}
-/* pyramid */
-.pyr{display:flex;flex-direction:column-reverse;gap:7px;max-width:560px;margin:0 auto}
-.band{height:50px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 18px;color:#fff;font-weight:600;transform-origin:center;opacity:0;transform:scaleX(.55)}
-.slide.active .band{animation:band .8s var(--ease) forwards}
-.slide.active .band:nth-child(1){animation-delay:.06s}
-.slide.active .band:nth-child(2){animation-delay:.20s}
-.slide.active .band:nth-child(3){animation-delay:.34s}
-.slide.active .band:nth-child(4){animation-delay:.48s}
-.slide.active .band:nth-child(5){animation-delay:.62s}
+.nd.warn{fill:var(--red-soft);stroke:none}
+.lbl{font-family:var(--mono);font-size:15px;fill:var(--ink)}
+.lbl.b{font-weight:700}
+.lbls{font-family:var(--mono);font-size:12.5px;fill:var(--mut)}
+.lblxs{font-family:var(--mono);font-size:11.5px;fill:#83857b}
+.lbl.acc{fill:var(--acc-deep)}
+.ed{stroke:var(--node);stroke-width:1.6;fill:none;marker-end:url(#arr)}
+.ed.a{stroke:var(--acc);stroke-width:2;marker-end:url(#arrA)}
+.ed.dash{stroke-dasharray:5 4}
+.ed.real{stroke:var(--node);stroke-width:1.4;stroke-dasharray:4 4;fill:none;marker-end:url(#tri)}
+.ed.plain{marker-end:none}
+
+/* ---------- Karten / Listen ---------- */
+.cols{display:grid;gap:clamp(16px,2vw,30px)}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--surface);border-radius:16px;padding:20px 22px}
+.card.line{background:var(--surface-2);border:1px solid var(--line-2)}
+.card h3{margin:0 0 7px;font-size:15.5px;letter-spacing:-.01em}
+.card p{margin:0;color:var(--mut);font-size:13.5px;line-height:1.55}
+.rh{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:9px}
+ul.clean{list-style:none}
+ul.clean li{position:relative;padding:7px 0 7px 22px;color:var(--mut);font-size:14.5px;line-height:1.5}
+ul.clean li::before{content:"";position:absolute;left:0;top:14px;width:7px;height:7px;border-radius:2px;background:var(--acc)}
+ul.clean li b{color:var(--ink);font-weight:640}
+ul.clean.lg li{font-size:19px;line-height:1.6;padding:12px 0 12px 30px;color:#4a4d45}
+ul.clean.lg li::before{top:21px;width:9px;height:9px;border-radius:3px}
+code{background:#e9e7df;color:#33352e;padding:2px 7px;border-radius:6px;font-size:.9em}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:999px;background:var(--acc-soft);color:var(--acc-deep);font-weight:600}
+.big{font-size:clamp(28px,4.4vw,56px);font-weight:680;letter-spacing:-.03em;line-height:1.08}
+.big .q1{color:var(--mut)}.big .q2{color:var(--acc-deep)}
+
+/* ---------- Pyramide ---------- */
+.pyr{display:flex;flex-direction:column-reverse;gap:7px;max-width:560px;margin:0 auto;width:100%}
+.band{min-height:52px;border-radius:11px;display:flex;align-items:center;justify-content:space-between;
+  padding:7px 18px;color:#fff;font-weight:600;transform-origin:center;opacity:0;transform:scaleX(.6)}
+.slide.active .band{animation:band .7s var(--ease) forwards}
+.slide.active .band:nth-child(1){animation-delay:.05s}
+.slide.active .band:nth-child(2){animation-delay:.17s}
+.slide.active .band:nth-child(3){animation-delay:.29s}
+.slide.active .band:nth-child(4){animation-delay:.41s}
+.slide.active .band:nth-child(5){animation-delay:.53s}
 @keyframes band{to{opacity:1;transform:scaleX(1)}}
-.band .lv{font-family:var(--mono);font-size:11px;opacity:.85;font-weight:500}
-.b1{background:#46641a;width:100%}.b2{background:#5d871f;width:86%}.b3{background:#73a528;width:72%}
-.b4{background:#8cbb37;width:58%}.b5{background:#a7cf63;width:44%}
-/* bars (demo) */
-.bars{display:flex;flex-direction:column;gap:9px}
-.bar{display:grid;grid-template-columns:230px 1fr 46px;align-items:center;gap:14px;font-size:13px}
+.band .nm{font-size:14.5px}.band .lv{font-family:var(--mono);font-size:10.5px;opacity:.9;font-weight:500;white-space:nowrap;margin-left:14px}
+.band small{display:block;font-family:var(--mono);font-size:10px;font-weight:500;opacity:.9;letter-spacing:.01em;margin-top:1px}
+.b1{background:#3f6614;width:100%}.b2{background:#557f1c;width:88%}.b3{background:#6fa028;width:74%}
+.b4{background:#8bbb3d;width:60%}.b5{background:#a9cf6a;width:46%}
+
+/* ---------- Balken (Demo) ---------- */
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:210px 1fr 42px;align-items:center;gap:13px;font-size:12.5px}
 .bar .u{font-family:var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar .track{height:18px;background:#e6e4db;border-radius:9px;overflow:hidden}
-.bar .fill{height:100%;border-radius:9px;background:var(--acc);transform-origin:left;transform:scaleX(0);transition:transform .9s var(--ease)}
-.bar.flop .fill{background:#cfcdc2}
-.bar .v{font-family:var(--mono);color:var(--mut);text-align:right}
-.shown .bar .fill{transform:scaleX(1)}
-/* findings — randlos, Severity als weiches Label */
-.find{background:var(--surface);border-radius:14px;padding:14px 18px;margin-bottom:11px}
-.find .h{display:flex;gap:10px;align-items:center;font-size:13px;margin-bottom:6px;flex-wrap:wrap}
-.find .sev{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.05em}
-.sev.high{background:var(--red-soft);color:var(--red)}.sev.medium{background:var(--amber-soft);color:var(--amber)}.sev.low{background:#e6e4db;color:var(--mut)}
-.find .url{font-family:var(--mono);font-size:12px;color:var(--mut)}
-.find .lever{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--acc-deep)}
-.find .fix{font-size:13px;color:var(--ink);line-height:1.5}
-/* code */
-pre{background:#26251f;color:#eceae2;border-radius:16px;padding:20px 22px;font-family:var(--mono);
-  font-size:13px;line-height:1.55;overflow:auto;margin:0}
-pre .c{color:#9a9684}.k{color:#b6dd7e}.s{color:#e3c08a}.d{color:#8ec7e0}
-.codecard{background:var(--surface-2);border-radius:16px;padding:18px 20px;font-family:var(--mono);font-size:13px;line-height:1.6}
-.codecard .ky{color:var(--acc-deep)}.codecard .ty{color:#2f7d3f}.codecard .cm{color:var(--faint)}
-/* metrics */
-.kpis{display:flex;gap:18px;flex-wrap:wrap}
-.kpi{flex:1;min-width:120px;background:var(--surface);border-radius:18px;padding:20px 18px;text-align:center}
-.kpi .v{font-size:32px;font-weight:680;color:var(--acc-deep);letter-spacing:-.02em}
-.kpi .l{font-size:12px;color:var(--mut);margin-top:6px}
-/* note */
-.note{font-size:13px;color:var(--mut);background:var(--acc-soft);border-radius:14px;padding:14px 18px;margin-top:20px;line-height:1.5}
-.note b{color:var(--acc-deep)}
-/* nav chrome */
+.bar .track{height:18px;background:#e7e5dc;border-radius:9px;overflow:hidden}
+.bar .fill{display:block;height:100%;border-radius:9px;background:#6fa028}
+.bar.flop .fill{background:#bcb9ad}
+.bar .v{font-family:var(--mono);color:var(--acc-deep);font-weight:600;text-align:right}
+.bar.flop .v{color:var(--faint);font-weight:400}
+
+/* ---------- Findings ---------- */
+.find{background:var(--surface);border-radius:13px;padding:12px 16px;margin-bottom:10px}
+.find .h{display:flex;gap:9px;align-items:center;font-size:12.5px;margin-bottom:5px;flex-wrap:wrap}
+.find .sev{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+.sev.critical{background:var(--red-soft);color:var(--crit)}
+.sev.high{background:var(--red-soft);color:var(--red)}
+.sev.medium{background:var(--amber-soft);color:var(--amber)}
+.sev.low{background:#e6e4db;color:var(--mut)}
+.find .url{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+.find .lever{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--acc-deep)}
+.find .fix{font-size:12.5px;color:var(--ink);line-height:1.5}
+
+/* ---------- Code / Terminal ---------- */
+.codecard{background:var(--surface-2);border:1px solid var(--line-2);border-radius:14px;padding:15px 18px;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+.codecard .ky{color:var(--acc-deep)}.codecard .ty{color:#2f7d3f}.codecard .cm{color:var(--faint)}.codecard b{color:var(--ink)}
+pre{background:#26251f;color:#eceae2;border-radius:15px;padding:20px 24px;font-family:var(--mono);
+  font-size:13px;line-height:1.6;overflow:auto;margin:0}
+pre .c{color:#9a9684}.k{color:#b6dd7e}.s{color:#e3c08a}.d{color:#8ec7e0}.r{color:#e0a08a}
+
+/* ---------- KPIs ---------- */
+.kpis{display:flex;gap:16px;flex-wrap:wrap}
+.kpi{flex:1;min-width:120px;background:var(--surface);border-radius:16px;padding:18px 16px;text-align:center}
+.kpi .v{font-size:30px;font-weight:680;color:var(--acc-deep);letter-spacing:-.02em}
+.kpi .l{font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.4}
+
+/* ---------- Step-Reveal ---------- */
+.step{opacity:0;transform:translateY(12px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.step.shown{opacity:1;transform:none}
+
+/* ---------- Nav-Chrome ---------- */
 .progress{position:fixed;top:0;left:0;height:2px;background:var(--acc);width:0;z-index:50;transition:width .5s var(--ease)}
-.dots{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:50}
+.dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:50}
 .dot{width:7px;height:7px;border-radius:50%;border:0;background:#cbc9be;cursor:pointer;padding:0;transition:.35s var(--ease)}
-.dot.on{width:24px;border-radius:5px;background:var(--acc)}
+.dot.on{width:22px;border-radius:5px;background:var(--acc)}
 .nz{position:fixed;top:0;bottom:0;width:26%;z-index:40;cursor:pointer}
 .nz.l{left:0}.nz.r{right:0}
-.hint{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--faint);z-index:50;transition:opacity .6s ease}
-.foot{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:auto;padding-top:16px}
+.hint{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--faint);z-index:50;transition:opacity .6s ease}
+
+/* ---------- Sprecher-Skript / Teleprompter (Taste S öffnet zweites Fenster, URL-Anhang #script) ---------- */
+body.tp-mode{background:#1a1b17}
+body.tp-mode .deck,body.tp-mode .progress,body.tp-mode .dots,body.tp-mode .nz,body.tp-mode .hint{display:none!important}
+.tp{display:none}
+body.tp-mode .tp{position:fixed;inset:0;display:flex;flex-direction:column;background:#1a1b17;color:#ecebe2;z-index:100}
+.tp-top{display:flex;align-items:baseline;gap:16px;padding:14px 24px 12px;border-bottom:1px solid #33342c;flex:none}
+.tp-no{font-family:var(--mono);font-size:14px;font-weight:700;color:#a9cf6a;white-space:nowrap}
+.tp-title{flex:1;font-size:16px;font-weight:650;color:#ecebe2;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-timer{font-family:var(--mono);font-size:20px;color:#cfcdc0;cursor:pointer;user-select:none}
+.tp-kern{flex:none;margin:12px 24px 0;padding:9px 16px;border-radius:11px;background:#242921;color:#bcd98c;font-size:14.5px;font-weight:600}
+.tp-kern::before{content:"Kernbotschaft · ";font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#88a35c}
+.tp-body{flex:1;overflow-y:auto;padding:26px clamp(24px,6vw,80px) 40vh;scroll-behavior:smooth}
+.tp-seg{font-size:clamp(20px,2.5vw,31px);line-height:1.68;letter-spacing:-.008em;color:#62645a;max-width:34em;margin:0 0 24px;padding-left:18px;border-left:4px solid transparent;transition:color .35s,border-color .35s}
+.tp-seg.on{color:#f6f5ee;border-left-color:#71b127}
+.tp-seg.done{color:#45463e}
+.tp-seg b{color:#bcd98c;font-weight:650}
+.tp-wait{color:#8a8c80;font-size:18px;font-family:var(--mono);line-height:1.7}
+.tp-foot{flex:none;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:11px 24px;border-top:1px solid #33342c;font-family:var(--mono);font-size:12.5px;color:#8a8c80}
+.tp-foot .nx{color:#bcd98c;font-weight:700}
+
 @media (prefers-reduced-motion: reduce){
   *{animation:none!important;transition:opacity .2s ease!important}
   .slide,.step,.band,.bar .fill{transform:none!important}
 }
+
+/* ---------- Print / PDF: 16:9-Seiten, farbtreu ---------- */
 @media print{
-  html,body{height:auto;background:#fff}.deck{position:static}.nz,.dots,.hint,.progress{display:none}
-  .slide{position:relative;opacity:1!important;visibility:visible!important;transform:none!important;page-break-after:always;height:100vh}
-  .step{opacity:1!important;transform:none!important}.band{opacity:1!important;transform:none!important}
-  .bar .fill{transform:scaleX(1)!important}
   @page{size:13.333in 7.5in;margin:0}
+  html,body{overflow:visible!important;height:auto!important;background:#fff!important}
+  *,*::before,*::after{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .progress,.dots,.hint,.nz{display:none!important}
+  .deck{position:static!important;overflow:visible!important}
+  .slide{position:relative!important;inset:auto!important;opacity:1!important;visibility:visible!important;
+    transform:none!important;display:flex!important;width:100vw!important;height:100vh!important;
+    overflow:hidden;break-after:page;break-inside:avoid}
+  .slide:last-child{break-after:auto}
+  .step{opacity:1!important;transform:none!important}
+  .band{opacity:1!important;transform:none!important}
 }
 </style>
 </head>
 <body>
 <div class="progress" id="progress"></div>
+
+<!-- globale Marker -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c8c5b8"/></marker>
+  <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71b127"/></marker>
+  <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#fbfaf7" stroke="#c8c5b8" stroke-width="1.2"/></marker>
+</defs></svg>
+
 <div class="deck" id="deck">
 
-  <!-- 1 TITLE -->
-  <section class="slide active">
-    <div class="title-wrap">
+  <!-- ===== 1 · TITEL ===== -->
+  <section class="slide title active">
+    <div class="title-top">
       <img class="title-logo" src="assets/whs-logo.svg" alt="Westfälische Hochschule" />
-      <div class="kicker">Sprint 2 · Learning</div>
-      <h1>Vom Messen zum <span class="g">Verstehen</span>.<br>Der Loop lernt, warum Inhalte zitiert werden.</h1>
-      <p class="lead">geo-audit-loop — ein selbstlernendes, agentisches GEO/SEO-Audit-System.
-        Sprint&nbsp;1 misst neutral die Zitations-Sichtbarkeit. Sprint&nbsp;2 erklärt sie und leitet Fixes ab.</p>
+      <div class="title-meta">Master Informatik<br>Modulprojekt Agentic&nbsp;AI · 2026</div>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Technischer Projektbericht · Sprint 2</div>
+      <h1>Agentic AI für SEO/GEO-Auditing<br><span class="g">Sprint 2 — Learning</span></h1>
+      <div class="accent-rule"></div>
+      <p class="sub" style="max-width:70ch">Sprint 2 macht den Audit-Loop lernfähig: Die zwei neuen Agenten
+        <b style="color:var(--ink)">Pattern-Miner</b> und <b style="color:var(--ink)">GEO-Auditor</b> erklären,
+        <i>warum</i> Top-Seiten von KI-Suchmaschinen zitiert werden, und leiten daraus konkrete, belegte
+        Maßnahmen ab — jeder Lauf exakt reproduzierbar (Seed 42).</p>
       <dl class="meta">
-        <dt>Projekt</dt><dd>geo-audit-loop · Master-Modulprojekt „Agentic AI"</dd>
-        <dt>Autor</dt><dd>Mohammad Alboush · Master Informatik</dd>
-        <dt>Hochschule</dt><dd>Westfälische Hochschule</dd>
-        <dt>Stack</dt><dd>Python 3.12 · CrewAI · Claude Sonnet · Pydantic v2 · SQLite</dd>
-        <dt>Stand</dt><dd>Sprint 2 · Juni 2026</dd>
+        <div><dt>Verfasser</dt><dd>Mohammad Alboush</dd></div>
+        <div><dt>Matrikelnummer</dt><dd>201922227</dd></div>
+        <div><dt>Studiengang</dt><dd>Master Informatik · Modulprojekt Agentic&nbsp;AI</dd></div>
+        <div><dt>Technologien</dt><dd class="mono">Python 3.12 · CrewAI · Claude Sonnet 4.6 (Anthropic API) · Pydantic v2 · SQLite · mypy --strict</dd></div>
+        <div><dt>Stand</dt><dd>Sprint 2 · Juni 2026 — abgeschlossen</dd></div>
       </dl>
     </div>
-    <div class="foot">← → · Leertaste blättert · F = Vollbild</div>
+    <div class="foot"><span>Westfälische Hochschule · geo-audit-loop</span><span class="m">01 / 14</span></div>
   </section>
 
-  <!-- 2 AGENDA -->
+  <!-- ===== 2 · KONTEXT ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Agenda</b> · der rote Faden</span></div>
+    <div class="top"><div class="sec"><b>02</b> · Kontext &amp; Einordnung</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>F&uuml;nf Schritte durch Sprint 2.</h2>
-      <div class="accent-rule"></div>
-      <div class="cols c2">
-        <div class="card step"><div class="rh">01 · Kontext</div><h3>Wo stehen wir?</h3><p>Der geschlossene Loop und die L&uuml;cke, die Sprint 2 f&uuml;llt.</p></div>
-        <div class="card step"><div class="rh">02 · Architektur</div><h3>Der ReasoningPort</h3><p>Ein neuer Port, zwei neue Agenten — hexagonal sauber.</p></div>
-        <div class="card step"><div class="rh">03 · Agenten</div><h3>Pattern-Miner &amp; GEO-Auditor</h3><p>Warum ranken die Top-Seiten, was fehlt den Flops.</p></div>
-        <div class="card step"><div class="rh">04 · Qualit&auml;t &amp; Demo</div><h3>Reproduzierbar</h3><p>Toleranz-Evals und die offline-deterministische Live-Demo.</p></div>
-        <div class="card step"><div class="rh">05 · Ausblick</div><h3>Act &amp; Loop</h3><p>Der Weg zu Sprint 3 und 4.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 3 RECAP / LOOP -->
-  <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Einordnung</b> · der geschlossene Loop</span></div>
-    <div class="body">
-      <h2>Wo wir stehen — Sprint 2 macht den Loop <span class="g">lernfähig</span>.</h2>
-      <div class="accent-rule"></div>
-      <div class="loop">
-        <div class="lstage done step"><div class="n">Sprint 1</div><div class="t">Measure</div><div class="d">Citation-Sampler + Inventory-Crawler → Top/Flop-Sichtbarkeit</div></div>
-        <div class="lstage now step"><div class="n">Sprint 2 — jetzt</div><div class="t">Learn</div><div class="d">Pattern-Miner + GEO-Auditor: warum ranken sie, was fehlt den Flops?</div></div>
-        <div class="lstage step"><div class="n">Sprint 3</div><div class="t">Act</div><div class="d">Fix-Agent + Human-in-the-Loop + Deploy</div></div>
-        <div class="lstage step"><div class="n">Sprint 4</div><div class="t">Loop</div><div class="d">Re-Probe + Memory: Effekt messen, Hypothese lernen</div></div>
-      </div>
-      <div class="note step"><b>Fundament steht:</b> Sprint 1 lieferte die reproduzierbare Mess-Schicht (240 Probes/Run, 84 Tests grün, <code>mypy --strict</code>). Sprint 2 baut die Lern-Schicht <i>darauf</i> — gleiche Architektur, gleiche Disziplin.</div>
-    </div>
-  </section>
-
-  <!-- 3 THE QUESTION -->
-  <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Problem</b> · die Lücke</span></div>
-    <div class="body">
-      <div class="pill step">Sprint 1 beantwortet: WAS wird zitiert?</div>
-      <div class="big" style="margin:18px 0">
-        <span class="step">Messen zeigt <span class="q1">welche</span> Seite vorn liegt.</span><br>
-        <span class="step">Sprint 2 zeigt <span class="q2">warum</span> — und <span class="q2">was zu tun</span> ist.</span>
-      </div>
-      <p class="lead step">Audit-Tools sagen <i>dass</i> Inhalte nicht zitiert werden. Keines schließt den Kreis aus
-        Diagnose → Muster-Lernen → begründetem Fix. Genau diese Lücke füllt der Lern-Loop.</p>
-      <div class="note step"><b>Forschungsanspruch:</b> jede Aussage ist verankert — Beleg → Hebel → Pyramide-Ebene → Template. Kein „schreib besser".</div>
-    </div>
-  </section>
-
-  <!-- 4 ARCHITECTURE DELTA -->
-  <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Architektur</b> · das Delta</span></div>
-    <div class="body">
-      <h2>Hexagonal bleibt: ein <span class="g">neuer Port</span>, zwei neue Agenten.</h2>
-      <div class="accent-rule"></div>
-      <div class="cols c2" style="align-items:center">
-        <svg viewBox="0 0 460 300" role="img" aria-label="Hexagonale Architektur mit ReasoningPort">
-          <rect class="nd" x="150" y="120" width="160" height="60" rx="10"/>
-          <text class="lbl" x="230" y="146" text-anchor="middle">domain</text>
-          <text class="lbls" x="230" y="164" text-anchor="middle">+ Template, AuditFinding</text>
-          <rect class="nd" x="40" y="40" width="150" height="46" rx="9"/>
-          <text class="lbl" x="115" y="68" text-anchor="middle">EnginePort</text>
-          <g class="step">
-          <rect class="nd new" x="270" y="40" width="150" height="46" rx="9"/>
-          <text class="lbl" x="345" y="62" text-anchor="middle" fill="#5a8f1f">ReasoningPort</text>
-          <text class="lbls" x="345" y="78" text-anchor="middle">neu · Claude/Mock</text>
+      <h2>Einordnung: Sprint 2 ergänzt die <span class="g">Lern-Schicht</span> des Audit-Loops.</h2>
+      <p class="lead" style="max-width:82ch">Sprint 1 lieferte Messung und Inventar — Sprint 2 ergänzt die Bausteine
+        <b style="color:var(--ink)">03 Pattern-Miner</b> und <b style="color:var(--ink)">04 GEO-Auditor</b>.</p>
+      <div class="fig">
+        <svg viewBox="0 0 1000 250" role="img" aria-label="Sechs-Baustein-Loop, Sprint 2 markiert">
+          <!-- Klammer über Baustein 3+4 -->
+          <path class="ed a plain" d="M340,52 L340,44 L640,44 L640,52"/>
+          <text class="lbls acc" x="490" y="35" text-anchor="middle" style="font-weight:700">Sprint 2 (Learning) — jetzt</text>
+          <!-- 6 Boxen -->
+          <rect class="nd" x="20"  y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="180" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd core" x="340" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd core" x="500" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="660" y="64" width="140" height="76" rx="9"/>
+          <rect class="nd" x="820" y="64" width="140" height="76" rx="9"/>
+          <g text-anchor="middle" class="lbls" fill="var(--ink)">
+            <text x="90"  y="96"><tspan x="90" dy="0">01 SERP &amp;</tspan><tspan x="90" dy="14">Citation-Sampler</tspan></text>
+            <text x="250" y="96"><tspan x="250" dy="0">02 Inventory-</tspan><tspan x="250" dy="14">Crawler</tspan></text>
+            <text x="410" y="96" fill="var(--acc-deep2)" style="font-weight:700"><tspan x="410" dy="0">03 Pattern-</tspan><tspan x="410" dy="14">Miner</tspan></text>
+            <text x="570" y="96" fill="var(--acc-deep2)" style="font-weight:700"><tspan x="570" dy="0">04 GEO-</tspan><tspan x="570" dy="14">Auditor</tspan></text>
+            <text x="730" y="96"><tspan x="730" dy="0">05 Fix · HITL ·</tspan><tspan x="730" dy="14">Deploy</tspan></text>
+            <text x="890" y="96"><tspan x="890" dy="0">06 Re-Prober ·</tspan><tspan x="890" dy="14">Memory</tspan></text>
           </g>
-          <g class="step">
-          <rect class="nd core" x="40" y="214" width="180" height="50" rx="9"/>
-          <text class="lbl" x="130" y="243" text-anchor="middle">Pattern-Miner</text>
+          <text class="lblxs" x="90"  y="132" text-anchor="middle">Sprint 1 ✓</text>
+          <text class="lblxs" x="250" y="132" text-anchor="middle">Sprint 1 ✓</text>
+          <text class="lblxs" x="730" y="132" text-anchor="middle">Sprint 3</text>
+          <text class="lblxs" x="890" y="132" text-anchor="middle">Sprint 4</text>
+          <!-- Vorwärtspfeile -->
+          <g class="ed">
+            <line x1="160" y1="102" x2="180" y2="102"/><line x1="320" y1="102" x2="340" y2="102"/>
+            <line x1="480" y1="102" x2="500" y2="102"/><line x1="640" y1="102" x2="660" y2="102"/>
+            <line x1="800" y1="102" x2="820" y2="102"/>
           </g>
-          <g class="step">
-          <rect class="nd core" x="240" y="214" width="180" height="50" rx="9"/>
-          <text class="lbl" x="330" y="243" text-anchor="middle">GEO-Auditor</text>
-          </g>
-          <path class="ed" d="M115 86 L210 120"/>
-          <path class="ed a step" d="M345 86 L260 120"/>
-          <path class="ed a step" d="M130 214 L210 180"/>
-          <path class="ed a step" d="M330 214 L255 180"/>
+          <!-- Rückkopplung -->
+          <path class="ed" d="M890,140 L890,205 L90,205 L90,140"/>
+          <text class="lblxs" x="490" y="200" text-anchor="middle">Closed Loop · Re-Trigger nach 7 / 14 / 28 Tagen (Sprint 4)</text>
         </svg>
-        <div>
-          <ul class="clean">
-            <li class="step"><b>ReasoningPort</b> — LLM-Schließen sauber getrennt vom SERP-<code>EnginePort</code>. Adapter: Mock (offline, deterministisch) &amp; Claude (live, opt-in).</li>
-            <li class="step"><b>Pattern-Miner</b> — mint aus den Top-Seiten wiederverwendbare <code>Template</code>s.</li>
-            <li class="step"><b>GEO-Auditor</b> — prüft Flop-Seiten gegen Templates → priorisierte <code>AuditFinding</code>s.</li>
-            <li class="step"><b>Der Kern bleibt rein:</b> Agenten hängen nur an <code>domain</code> + <code>ports</code> — kein SDK im Agentencode.</li>
-          </ul>
-        </div>
+        <div class="cap">Abb. 1 — System-Kontext: sechs Bausteine. <b>Sprint 2 = Baustein 03 + 04</b> auf dem Sprint-1-Fundament.</div>
       </div>
+      <div class="note"><b>Ausgangslage:</b> Die Mess-Schicht aus Sprint 1 (240&nbsp;Mess-Abfragen, sog. „Probes“, pro Lauf) ist reproduzierbar und getestet —
+        Sprint 2 baut mit gleicher Architektur und Disziplin darauf auf.</div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">02 / 14</span></div>
   </section>
 
-  <!-- 5 REASONING LAYER -->
+  <!-- ===== 3 · FORSCHUNGSFRAGE ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Reasoning</b> · Determinismus als Forschungsgüte</span></div>
+    <div class="top"><div class="sec"><b>03</b> · Problemstellung</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Ein Port, zwei Adapter — <span class="g">reproduzierbar</span> per Default.</h2>
-      <div class="accent-rule"></div>
-      <div class="cols c2">
-        <div class="card step"><div class="rh">Offline · Default</div><h3>MockReasoningAdapter</h3>
-          <p>Deterministische, schema-valide Antworten. Gleicher Seed → gleicher PatternReport/AuditReport. Grundlage der toleranzbasierten Evals und der reproduzierbaren Demo — kein Netz, keine Kosten.</p></div>
-        <div class="card step"><div class="rh">Live · opt-in</div><h3>ClaudeReasoningAdapter</h3>
-          <p>Anthropic Messages-API hinter demselben Port. Retry/Backoff, Budget-Cap, normalisierte Usage. Wird nur über <code>GEO_LIVE_ENGINES=claude</code> aktiviert.</p></div>
-      </div>
-      <div class="note step"><b>Warum das zählt (Master-Kriterium):</b> Nicht-Determinismus ist im Forschungs-Setting ein Risiko. Der Mock macht die Lern-Pipeline <i>prüfbar</i>; der Live-Adapter ist austauschbar, ohne den Kern zu berühren.</div>
-    </div>
-  </section>
-
-  <!-- 6 PATTERN MINER -->
-  <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Agent 1</b> · Pattern-Miner</span></div>
-    <div class="body">
-      <h2>Was machen die <span class="g">Gewinner</span> richtig?</h2>
-      <div class="accent-rule"></div>
-      <div class="cols c3">
-        <div class="card step"><div class="rh">Input</div><h3>Top-Seiten + Inventar</h3><p>Schema (FAQ/HowTo/Author), Wortzahl, Struktur der erfolgreich zitierten Seiten.</p></div>
-        <div class="card step"><div class="rh">Reasoning</div><h3>Muster ableiten</h3><p>Verankert in den 10 Hebeln &amp; der Citation-Pyramide — konkret, abstrahiert, belegt.</p></div>
-        <div class="card step"><div class="rh">Output</div><h3>Template[]</h3><p>Wiederverwendbare Best-Practice-Muster mit Hebeln, Ebene, Kriterien, Konfidenz.</p></div>
-      </div>
-      <div class="codecard step" style="margin-top:18px">
-        <span class="cm"># gemintes Template (Beispiel)</span><br>
-        [t1] <b>Extrahierbarer Antwortblock + FAQ-Schema</b> · <span class="ky">Konfidenz 0.82</span><br>
-        <span class="cm">Ebene</span> Extrahierbarkeit · <span class="cm">Hebel</span> Antwortblöcke, Maschinenlesbare Struktur<br>
-        <span class="cm">Kriterien</span> Article+FAQPage JSON-LD · 40–60-Wörter-Antwort direkt nach der Überschrift
+      <h2>Problemstellung: Die Messung zeigt, <span class="g">welche</span> Seiten zitiert werden — nicht, <span class="g">warum</span>.</h2>
+      <div class="note step" style="margin:18px 0 8px;font-size:16px;line-height:1.6;padding:18px 22px"><b>Fragestellung Sprint 2:</b> Lassen sich aus den zitierten Seiten <i>überprüfbare</i> Muster gewinnen,
+        die erklären, was den nicht zitierten Seiten fehlt — und die konkrete, belegte Maßnahmen begründen?
+        Und zwar reproduzierbar, obwohl ein Sprachmodell (LLM) beteiligt ist.</div>
+      <div class="fig" style="flex:none;margin:14px 0 4px">
+        <svg viewBox="0 0 1000 150" role="img" aria-label="Drei Akte: WAS, WARUM, WAS TUN">
+          <rect class="nd" x="20" y="34" width="280" height="82" rx="11"/>
+          <rect class="nd core" x="360" y="34" width="280" height="82" rx="11"/>
+          <rect class="nd core" x="700" y="34" width="280" height="82" rx="11"/>
+          <g text-anchor="middle">
+            <text class="lbl b" x="160" y="68">WAS</text><text class="lbls" x="160" y="90">Messung →</text><text class="lbls" x="160" y="104">Top-/Flop-Sichtbarkeit</text>
+            <text class="lbl b acc" x="500" y="68">WARUM</text><text class="lbls" x="500" y="90">Pattern-Miner →</text><text class="lbls" x="500" y="104">Best-Practice-Templates</text>
+            <text class="lbl b acc" x="840" y="68">WAS TUN</text><text class="lbls" x="840" y="90">GEO-Auditor →</text><text class="lbls" x="840" y="104">priorisierte Findings</text>
+          </g>
+          <g class="ed a"><line x1="300" y1="75" x2="360" y2="75"/><line x1="640" y1="75" x2="700" y2="75"/></g>
+          <text class="lblxs" x="160" y="128">Sprint 1</text><text class="lblxs" x="500" y="128">Sprint 2</text><text class="lblxs" x="840" y="128">Sprint 2</text>
+        </svg>
+        <div class="cap">Abb. 2 — Untersuchungsdesign: vom Messwert zur begründeten Maßnahme in einem Lauf.</div>
       </div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">03 / 14</span></div>
   </section>
 
-  <!-- 7 PYRAMID -->
+  <!-- ===== 4 · ARCHITEKTUR-DELTA ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Wissensbasis</b> · Citation-Pyramide</span></div>
+    <div class="top"><div class="sec"><b>04</b> · Architektur</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>10 Hebel, 5 Ebenen — <span class="g">unten zuerst</span>.</h2>
-      <div class="accent-rule"></div>
-      <div class="cols c2" style="align-items:center">
+      <h2>Architektur: genau <span class="g">ein neuer Port</span>, zwei neue Agenten — sonst unverändert.</h2>
+      <div class="fig">
+        <svg viewBox="0 0 1000 446" role="img" aria-label="Hexagonale Schichten mit neuem ReasoningPort">
+          <!-- Ringe -->
+          <rect class="nd line" x="60"  y="36"  width="600" height="384" rx="16"/>
+          <rect class="nd"      x="116" y="92"  width="488" height="272" rx="14"/>
+          <rect class="nd line" x="180" y="146" width="360" height="164" rx="12"/>
+          <rect class="nd core" x="252" y="198" width="216" height="64"  rx="10"/>
+          <!-- Ring-Labels -->
+          <text class="lbls" x="80"  y="58" fill="var(--acc-deep)" style="font-weight:700">agents / orchestration</text>
+          <text class="lblxs" x="80" y="76">Pattern-Miner · GEO-Auditor · Flow</text>
+          <text class="lbls" x="136" y="114" fill="var(--acc-deep)" style="font-weight:700">adapters</text>
+          <text class="lblxs" x="136" y="132">MockReasoning · ClaudeReasoning · Storage · …</text>
+          <text class="lbls" x="200" y="168" fill="var(--acc-deep)" style="font-weight:700">ports (Protocols)</text>
+          <text class="lblxs" x="200" y="186"><tspan fill="#5a8f1f" style="font-weight:700">ReasoningPort (neu)</tspan> · Engine · Crawl · Storage</text>
+          <text class="lbl b" x="360" y="226" text-anchor="middle">domain</text>
+          <text class="lblxs" x="360" y="246" text-anchor="middle">Contracts (Pydantic) · kein I/O</text>
+          <!-- neu-Tag -->
+          <rect class="nd new" x="408" y="150" width="120" height="22" rx="11"/>
+          <text class="lblxs" x="468" y="165" text-anchor="middle" fill="#3f6614" style="font-weight:700">+ ReasoningPort</text>
+          <!-- Dependency Rule -->
+          <rect class="nd line" x="700" y="150" width="272" height="156" rx="12"/>
+          <text class="lbls acc" x="716" y="176" style="font-weight:700">Dependency Rule</text>
+          <text class="lbls" x="716" y="200"><tspan x="716" dy="0">Abhängigkeiten zeigen nur</tspan><tspan x="716" dy="17">nach innen. Der Kern kennt</tspan><tspan x="716" dy="17">keine Adapter, kein CrewAI,</tspan><tspan x="716" dy="17">kein anthropic-SDK.</tspan></text>
+          <path class="ed a" d="M698,224 L662,224"/>
+        </svg>
+        <div class="cap">Abb. 3 — Schichtenmodell: <b>der neue ReasoningPort</b> kommt hinzu — die Architektur bleibt unverändert.</div>
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">04 / 14</span></div>
+  </section>
+
+  <!-- ===== 5 · REASONINGPORT & ADAPTER ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>05</b> · Reasoning-Schicht</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>ReasoningPort: eine Schnittstelle, zwei Adapter — <span class="g">Mock</span> (simuliert) · <span class="g">Claude</span> (live).</h2>
+      <div class="fig">
+        <svg viewBox="0 0 1000 320" role="img" aria-label="ReasoningPort mit Mock- und Claude-Adapter">
+          <!-- Consumer -->
+          <text class="lblxs" x="120" y="22" text-anchor="middle">Consumer (agents/)</text>
+          <rect class="nd" x="20" y="44" width="200" height="46" rx="9"/><text class="lbls" x="120" y="72" text-anchor="middle" fill="var(--ink)">PatternMinerService</text>
+          <rect class="nd" x="20" y="120" width="200" height="46" rx="9"/><text class="lbls" x="120" y="148" text-anchor="middle" fill="var(--ink)">GeoAuditorService</text>
+          <!-- Port -->
+          <text class="lblxs" x="500" y="22" text-anchor="middle">ports/ · «Protocol»</text>
+          <rect class="nd coreln" x="365" y="44" width="270" height="122" rx="11"/>
+          <text class="lbl b" x="500" y="80" text-anchor="middle">ReasoningPort</text>
+          <line x1="365" y1="96" x2="635" y2="96" stroke="var(--acc)" stroke-width="1.2"/>
+          <text class="lbls" x="382" y="124" fill="var(--ink)">reason(Anfrage)</text>
+          <text class="lbls" x="382" y="146">&nbsp;&nbsp;→ strukturiertes Ergebnis</text>
+          <!-- Consumer→Port (depend) -->
+          <g class="ed a"><path d="M220,67 L365,80"/><path d="M220,143 L365,120"/></g>
+          <!-- Adapter -->
+          <text class="lblxs" x="820" y="22" text-anchor="middle">adapters/reasoning/</text>
+          <rect class="nd" x="700" y="44" width="280" height="78" rx="10"/>
+          <text class="lbl b" x="715" y="68">MockReasoningAdapter</text>
+          <text class="lblxs" x="715" y="88">offline · Default · deterministisch</text>
+          <text class="lblxs" x="715" y="104" fill="#5a8f1f">model = "mock-reasoner-v1"</text>
+          <rect class="nd" x="700" y="138" width="280" height="78" rx="10"/>
+          <text class="lbl b" x="715" y="162">ClaudeReasoningAdapter</text>
+          <text class="lblxs" x="715" y="182">live · opt-in · Retry + Budget-Cap</text>
+          <text class="lblxs" x="715" y="198">aktiv nur via GEO_LIVE_ENGINES=claude</text>
+          <!-- Adapter ..|> Port (realize) -->
+          <g class="ed real"><path d="M700,82 L635,98"/><path d="M700,176 L635,120"/></g>
+          <text class="lblxs" x="660" y="250">- - -▷  realisiert (implements)</text>
+        </svg>
+        <div class="cap">Abb. 4 — Beide Agenten hängen nur am <b>ReasoningPort</b>; der Adapter ist austauschbar, ohne den Kern zu berühren.</div>
+      </div>
+      <div class="note"><b>Methodische Begründung:</b> Der Mock simuliert das Sprachmodell deterministisch — gleicher Seed,
+        identischer Report, keine Kosten. So wird die Lern-Pipeline <i>prüfbar</i>; das echte LLM (Claude) lässt sich
+        jederzeit zuschalten, ohne den Kern zu berühren.</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">05 / 14</span></div>
+  </section>
+
+  <!-- ===== 6 · CONTRACTS ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>06</b> · Datenverträge</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Datenverträge: <span class="g">geprüfte Strukturen</span> statt Freitext.</h2>
+      <div class="fig">
+        <svg viewBox="0 0 1000 290" role="img" aria-label="Die zwei Kern-Contracts von Sprint 2">
+          <!-- Template -->
+          <rect class="nd line" x="60" y="30" width="360" height="190" rx="10"/>
+          <line x1="60" y1="62" x2="420" y2="62" stroke="var(--node)"/>
+          <text class="lbl b" x="76" y="52">Template</text><text class="lblxs" x="408" y="52" text-anchor="end">Pattern-Miner</text>
+          <text class="lbls" x="76" y="92">Titel + Kurzbeschreibung</text>
+          <text class="lbls" x="76" y="120">Hebel + Pyramiden-Ebene</text>
+          <text class="lbls" x="76" y="148">prüfbare Kriterien + Beleg-URLs</text>
+          <text class="lbls" x="76" y="176">Konfidenz <tspan fill="var(--faint)">(0 … 1)</tspan></text>
+          <!-- AuditFinding -->
+          <rect class="nd line" x="580" y="30" width="360" height="190" rx="10"/>
+          <line x1="580" y1="62" x2="940" y2="62" stroke="var(--node)"/>
+          <text class="lbl b" x="596" y="52">AuditFinding</text><text class="lblxs" x="928" y="52" text-anchor="end">GEO-Auditor</text>
+          <text class="lbls" x="596" y="92">betroffene Seite (URL)</text>
+          <text class="lbls" x="596" y="120">Hebel + Pyramiden-Ebene + Schweregrad</text>
+          <text class="lbls" x="596" y="148">Beleg + konkrete Empfehlung</text>
+          <text class="lbls" x="596" y="176">Bezug auf ein Template</text>
+          <!-- Verweis -->
+          <path class="ed dash" d="M578,176 C500,176 500,124 422,124"/>
+          <text class="lblxs" x="500" y="160" text-anchor="middle">orientiert sich an ⇢</text>
+          <text class="lbls" x="500" y="262" text-anchor="middle">Beide Modelle sind unveränderlich (frozen) — unbekannte Felder werden abgewiesen.</text>
+        </svg>
+        <div class="cap">Abb. 5 — Die zwei Kern-Contracts (Pydantic v2); <code>PatternReport</code>/<code>AuditReport</code> bündeln sie je Lauf.</div>
+      </div>
+      <div class="note"><b>Konvention:</b> Ändert sich ein Vertrag, werden Producer, Consumer und Tests im selben Commit angepasst.</div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">06 / 14</span></div>
+  </section>
+
+  <!-- ===== 7 · PYRAMIDE & HEBEL ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>07</b> · Wissensbasis</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>Wissensbasis: die Citation-Pyramide — 10 Hebel auf <span class="g">5 Ebenen</span>.</h2>
+      <div class="cols c2" style="align-items:center;flex:1;min-height:0">
         <div class="pyr">
-          <div class="band b1"><span>Zugang &amp; Indexierbarkeit</span><span class="lv">Hebel 1</span></div>
-          <div class="band b2"><span>Extrahierbarkeit &amp; Struktur</span><span class="lv">2 · 3 · 4 · 6</span></div>
-          <div class="band b3"><span>Substanz &amp; Vertrauen</span><span class="lv">5 · 7 · 8</span></div>
-          <div class="band b4"><span>Korroboration</span><span class="lv">Hebel 9</span></div>
-          <div class="band b5"><span>Zitation</span><span class="lv">Hebel 10</span></div>
+          <div class="band b1"><span class="nm">Zugang &amp; Indexierbarkeit<small>crawler_access</small></span><span class="lv">Ebene 1 · 1 Hebel</span></div>
+          <div class="band b2"><span class="nm">Extrahierbarkeit &amp; Struktur<small>answer_blocks · heading_hierarchy · definition_blocks · machine_readable</small></span><span class="lv">Ebene 2 · 4</span></div>
+          <div class="band b3"><span class="nm">Substanz &amp; Vertrauen<small>fact_density · entity_clarity · freshness</small></span><span class="lv">Ebene 3 · 3</span></div>
+          <div class="band b4"><span class="nm">Korroboration &amp; Autorität<small>external_corroboration</small></span><span class="lv">Ebene 4 · 1</span></div>
+          <div class="band b5"><span class="nm">Zitation<small>query_coverage</small></span><span class="lv">Ebene 5 · 1</span></div>
         </div>
         <div>
-          <ul class="clean">
+          <ul class="clean lg">
             <li class="step">Ein Defizit auf einer <b>unteren</b> Ebene entwertet alles darüber.</li>
-            <li class="step">Der GEO-Auditor priorisiert deshalb <b>von unten nach oben</b> — hohe Hebelwirkung vor Kosmetik.</li>
-            <li class="step">Jeder Hebel ist <b>prüfbar</b> (z.&nbsp;B. „40–60-Wörter-Antwortblock nach H2 vorhanden?").</li>
-            <li class="step">Die Pyramide ist als <code>PyramidLevel</code>-Enum im Code verankert — keine Magic Strings.</li>
+            <li class="step">Der GEO-Auditor priorisiert deshalb <b>von unten nach oben</b>.</li>
+            <li class="step">Jeder Hebel ist <b>prüfbar</b> formuliert (z.&nbsp;B. „Antwortblock nach H2 vorhanden?“).</li>
           </ul>
         </div>
       </div>
+      <div class="cap" style="margin-top:6px">Abb. 6 — Die Pyramide ist das <b>gemeinsame Vokabular</b> von Pattern-Miner und GEO-Auditor. (Korroboration&nbsp;= Bestätigung durch unabhängige externe Quellen.)</div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">07 / 14</span></div>
   </section>
 
-  <!-- 8 GEO AUDITOR -->
+  <!-- ===== 8 · PATTERN-MINER ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Agent 2</b> · GEO-Auditor</span></div>
+    <div class="top"><div class="sec"><b>08</b> · Agent 1 · Pattern-Miner</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Was fehlt den <span class="g">Verlierern</span> — priorisiert.</h2>
-      <div class="accent-rule"></div>
+      <h2>Pattern-Miner: lernt belegte Muster aus den <span class="g">Top-Seiten</span>.</h2>
+      <div class="fig" style="flex:none">
+        <svg viewBox="0 0 1000 168" role="img" aria-label="Datenfluss Pattern-Miner">
+          <rect class="nd" x="20" y="34" width="300" height="100" rx="11"/>
+          <text class="lbl b" x="170" y="72" text-anchor="middle">Merkmale der Top-Seiten</text>
+          <text class="lbls" x="170" y="100" text-anchor="middle">Struktur · Schema · Autor · Wortzahl</text>
+          <rect class="nd core" x="370" y="34" width="260" height="100" rx="11"/>
+          <text class="lbl b" x="500" y="72" text-anchor="middle">ReasoningPort</text>
+          <text class="lbls" x="500" y="100" text-anchor="middle">Seed · Temperatur 0.0</text>
+          <rect class="nd new" x="680" y="34" width="300" height="100" rx="11"/>
+          <text class="lbl b" x="830" y="72" text-anchor="middle">3 Templates</text>
+          <text class="lbls" x="830" y="100" text-anchor="middle">Hebel · Ebene · Kriterien · Konfidenz</text>
+          <g class="ed a"><line x1="320" y1="84" x2="370" y2="84"/><line x1="630" y1="84" x2="680" y2="84"/></g>
+        </svg>
+        <div class="cap">Abb. 7 — Der Pattern-Miner verdichtet die Top-Seiten zu wiederverwendbaren <code>Template</code>s — belegten Erfolgs-Mustern.</div>
+      </div>
+      <div class="codecard step" style="margin-top:14px;font-size:14px">
+        <span class="cm"># Beispiel-Template (Demo, Seed 42)</span><br>
+        [t1] <b>Extrahierbarer Antwortblock + FAQ-Schema</b> · <span class="ky">Konfidenz 0.82</span><br>
+        <span class="cm">Ebene</span> Extrahierbarkeit &nbsp;·&nbsp; <span class="cm">Hebel</span> Antwortblöcke, maschinenlesbare Struktur<br>
+        <span class="cm">Kriterium</span> 40–60-Wörter-Antwort direkt nach der Überschrift + FAQPage-Schema
+      </div>
+    </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">08 / 14</span></div>
+  </section>
+
+  <!-- ===== 9 · GEO-AUDITOR ===== -->
+  <section class="slide">
+    <div class="top"><div class="sec"><b>09</b> · Agent 2 · GEO-Auditor</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
+    <div class="body">
+      <h2>GEO-Auditor: prüft die <span class="g">Flop-Seiten</span> — Befunde mit Beleg und Priorität.</h2>
       <div class="cols c2">
         <div>
-          <ul class="clean">
-            <li class="step"><b>Input:</b> Flop-Seiten-Inventar + die geminten Templates.</li>
-            <li class="step"><b>Pro Finding:</b> Beleg · Hebel · Pyramide-Ebene · Schweregrad · Empfehlung · Template-Bezug.</li>
-            <li class="step"><b>Priorisierung</b> nach Pyramide → Sprint 3 weiß, was zuerst gefixt wird.</li>
+          <div class="fig" style="flex:none">
+            <svg viewBox="0 0 480 220" role="img" aria-label="Datenfluss GEO-Auditor">
+              <rect class="nd" x="10" y="14" width="460" height="46" rx="9"/>
+              <text class="lbls" x="240" y="42" text-anchor="middle" fill="var(--ink)">Merkmale der Flop-Seiten  +  3 Templates</text>
+              <rect class="nd core" x="90" y="86" width="300" height="44" rx="9"/>
+              <text class="lbls" x="240" y="113" text-anchor="middle" fill="var(--ink)" style="font-weight:700">ReasoningPort (Mock | Claude)</text>
+              <rect class="nd new" x="60" y="156" width="360" height="46" rx="9"/>
+              <text class="lbls" x="240" y="178" text-anchor="middle" fill="var(--ink)" style="font-weight:700">6 Findings, priorisiert</text>
+              <text class="lblxs" x="240" y="194" text-anchor="middle">erst Pyramiden-Ebene, dann Schweregrad</text>
+              <g class="ed a"><line x1="240" y1="60" x2="240" y2="86"/><line x1="240" y1="130" x2="240" y2="156"/></g>
+            </svg>
+            <div class="cap" style="text-align:left">Abb. 8 — Findings nach Pyramiden-Ebene, dann Schweregrad sortiert.</div>
+          </div>
+          <ul class="clean" style="margin-top:6px">
+            <li class="step"><b>Jedes Finding:</b> Beleg · Hebel · Ebene · Schweregrad · Empfehlung.</li>
           </ul>
         </div>
         <div>
-          <div class="find f3 step"><div class="h"><span class="sev high">HIGH</span><span class="url">/passwort-manager-vergleich</span><span class="lever">Maschinenlesbar</span></div><div class="fix">Vergleich nur Fließtext → Vergleichstabelle + Product/Review-Schema.</div></div>
-          <div class="find step"><div class="h"><span class="sev medium">MED</span><span class="url">/firewall-grundlagen</span><span class="lever">Definitionsblöcke</span></div><div class="fix">Keine FAQ/Definitionen → FAQPage-Schema + Definitionsabsätze.</div></div>
-          <div class="find f1 step"><div class="h"><span class="sev high">HIGH</span><span class="url">/firewall-grundlagen</span><span class="lever">Faktendichte</span></div><div class="fix">~600 Wörter, kein Autor → vertiefen + Autor-Schema.</div></div>
+          <div class="find step"><div class="h"><span class="sev high">HIGH</span><span class="url">/passwort-manager-vergleich</span><span class="lever">Extrahierbarkeit</span></div><div class="fix">Vergleich nur Fließtext → Vergleichstabelle + Product/Review-Schema.</div></div>
+          <div class="find step"><div class="h"><span class="sev high">HIGH</span><span class="url">/firewall-grundlagen</span><span class="lever">Substanz</span></div><div class="fix">~600 Wörter, kein Autor → Inhalt vertiefen + Autor-Schema.</div></div>
+          <div class="find step"><div class="h"><span class="sev low">LOW</span><span class="url">/security-awareness-training</span><span class="lever">Zitation</span></div><div class="fix">Häufige Teilfragen ergänzen — niedrigste Priorität.</div></div>
         </div>
       </div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">09 / 14</span></div>
   </section>
 
-  <!-- 9 CONTRACTS -->
+  <!-- ===== 10 · EVAL ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Disziplin</b> · Datenverträge</span></div>
+    <div class="top"><div class="sec"><b>10</b> · Qualität · Eval-Disziplin</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Agenten reichen <span class="g">Contracts</span>, nie Freitext.</h2>
-      <div class="accent-rule"></div>
+      <h2>Eval-Disziplin: jeder Agent erhält einen <span class="g">Eval-Slot</span>.</h2>
       <div class="cols c2">
-        <div class="codecard step">
-          <span class="cm"># domain/templates.py</span><br>
-          <span class="ky">class</span> <span class="ty">Template</span>(FrozenModel):<br>
-          &nbsp;&nbsp;template_id: str<br>
-          &nbsp;&nbsp;levers: tuple[<span class="ty">Lever</span>, ...]<br>
-          &nbsp;&nbsp;pyramid_level: <span class="ty">PyramidLevel</span><br>
-          &nbsp;&nbsp;criteria: tuple[str, ...]<br>
-          &nbsp;&nbsp;confidence: float
-        </div>
-        <div class="codecard step">
-          <span class="cm"># domain/audit.py</span><br>
-          <span class="ky">class</span> <span class="ty">AuditFinding</span>(FrozenModel):<br>
-          &nbsp;&nbsp;target_url: str<br>
-          &nbsp;&nbsp;lever: <span class="ty">Lever</span><br>
-          &nbsp;&nbsp;pyramid_level: <span class="ty">PyramidLevel</span><br>
-          &nbsp;&nbsp;severity: <span class="ty">Severity</span><br>
-          &nbsp;&nbsp;evidence: str · recommendation: str
-        </div>
+        <div class="card line step"><div class="rh">deterministisch · Sprint 1</div><h3>Golden-Regression</h3>
+          <p>Sampler/Crawler pinnen die <b>exakte</b> Top-/Flop-Rangfolge bei Seed 42 (Stringgleichheit).</p></div>
+        <div class="card line step"><div class="rh">toleranzbasiert · Sprint 2</div><h3>Struktur statt Wortlaut</h3>
+          <p>Pattern-Miner &amp; GEO-Auditor werden gegen <b>Struktur-Regeln</b> (Invarianten) geprüft, nicht gegen den exakten Wortlaut.</p></div>
       </div>
-      <div class="note step"><b>Regel:</b> frozen + <code>extra="forbid"</code>. Ändert sich ein Vertrag, ziehen Producer, Consumer &amp; Tests im selben Commit mit.</div>
+      <div class="note" style="margin-top:16px"><b>Warum toleranzbasiert?</b> LLM-Ausgaben variieren im Wortlaut, nicht in der Struktur. Geprüft werden deshalb
+        Eigenschaften, die immer gelten müssen: Anzahl im erwarteten Bereich, jeder Befund an Hebel und Ebene verankert, Priorität streng
+        absteigend — robust beim Arbeiten am Prompt, empfindlich für echte Fehler.</div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">10 / 14</span></div>
   </section>
 
-  <!-- 10 EVAL -->
+  <!-- ===== 11 · DEMO / ERGEBNIS ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Qualität</b> · Eval-Disziplin</span></div>
+    <div class="top"><div class="sec"><b>11</b> · Ergebnis · Live-Demo</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Kein Agent ohne <span class="g">Eval-Slot</span>.</h2>
-      <div class="accent-rule"></div>
-      <div class="cols c2">
-        <div class="card step"><div class="rh">deterministisch (S1)</div><h3>Golden-Regression</h3><p>Sampler/Crawler pinnen die exakte Top/Flop-Rangfolge bei Seed 42.</p></div>
-        <div class="card step"><div class="rh">nicht-deterministisch (S2)</div><h3>toleranzbasiert</h3><p>Pattern-Miner &amp; GEO-Auditor: Anzahl in [min,max], Hebel-/Pyramide-Verankerung, Severity, monotone Priorisierung — statt exakter Stringgleichheit.</p></div>
-      </div>
-      <div class="note step"><b>Warum toleranzbasiert?</b> LLM-Ausgaben variieren im Wortlaut, nicht in der Struktur. Geprüft wird die <i>Struktur</i> — robust gegen Prompt-Iteration, sensibel für echte Regression.</div>
-    </div>
-  </section>
-
-  <!-- 11 EMBEDDED DEMO -->
-  <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Live-Demo</b> · it-sicherheit.de · Seed 42</span></div>
-    <div class="body">
-      <h2>Ein Lauf, drei Antworten <span class="mono" style="font-size:.5em;color:var(--mut)">— blättern ▶</span></h2>
-      <div class="accent-rule"></div>
+      <h2>Ergebnis eines Laufs — <span class="g">it-sicherheit.de</span>, offline, Seed 42.</h2>
       <div class="cols c2">
         <div>
-          <div class="rh">1 · WAS — Top / Flop</div>
-          <div class="bars step">
+          <div class="rh">1 · WAS — Top / Flop (Citation-Häufigkeit)</div>
+          <div class="bars">
             <div class="bar"><span class="u">/nis2-richtlinie</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="v">71×</span></div>
             <div class="bar"><span class="u">/ransomware-schutz</span><span class="track"><span class="fill" style="width:59%"></span></span><span class="v">42×</span></div>
             <div class="bar"><span class="u">/zero-trust-architektur</span><span class="track"><span class="fill" style="width:55%"></span></span><span class="v">39×</span></div>
@@ -409,83 +566,119 @@ pre .c{color:#9a9684}.k{color:#b6dd7e}.s{color:#e3c08a}.d{color:#8ec7e0}
             <div class="bar flop"><span class="u">/passwort-manager-vergleich</span><span class="track"><span class="fill" style="width:24%"></span></span><span class="v">17×</span></div>
             <div class="bar flop"><span class="u">/security-awareness-training</span><span class="track"><span class="fill" style="width:10%"></span></span><span class="v">7×</span></div>
           </div>
+          <div class="cap" style="text-align:left;margin-top:10px">Abb. 9 — 240 Probes (4 Engines × 12 Prompts × 5 IPs), 8 Seiten.</div>
         </div>
         <div>
           <div class="step">
             <div class="rh">2 · WARUM — gemintes Muster</div>
             <div class="codecard"><b>[t1] Extrahierbarer Antwortblock + FAQ-Schema</b><br><span class="cm">Top-Seiten: Article+FAQPage, Antwortblock nach H2, Autor-Schema.</span></div>
           </div>
-          <div class="step" style="margin-top:16px">
+          <div class="step" style="margin-top:14px">
             <div class="rh">3 · WAS TUN — Top-Finding</div>
-            <div class="find f3"><div class="h"><span class="sev high">HIGH</span><span class="url">/passwort-manager-vergleich</span><span class="lever">Extrahierbarkeit</span></div><div class="fix">Vergleichstabelle + Product/Review-Schema ergänzen (→ Template t1).</div></div>
+            <div class="find"><div class="h"><span class="sev high">HIGH</span><span class="url">/passwort-manager-vergleich</span><span class="lever">Extrahierbarkeit</span></div><div class="fix">Vergleichstabelle + Product/Review-Schema ergänzen (→ Template&nbsp;t1).</div></div>
           </div>
         </div>
       </div>
-      <div class="note step"><b>Reproduzierbar:</b> derselbe Seed liefert exakt diese Zahlen — im Terminal wie hier. <code>uv run python -m geo_audit_loop --offline --explain</code></div>
+      <div class="note"><b>Reproduzierbarkeit:</b> Derselbe Seed liefert exakt diese Zahlen — im Terminal wie auf dieser Folie.
+        Befehl: <code>uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3</code></div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">11 / 14</span></div>
   </section>
 
-  <!-- 12 RESULT / CLI -->
+  <!-- ===== 12 · TERMINAL ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Ergebnis</b> · ein Befehl</span></div>
+    <div class="top"><div class="sec"><b>12</b> · Ergebnis · ein Befehl</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Von Messung zu Maßnahme — <span class="g">in einem Lauf</span>.</h2>
-      <div class="accent-rule"></div>
-      <pre class="step"><span class="c">$ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3</span>
+      <h2>Demo-Ausgabe: vollständiger Lauf mit <span class="g">einem Befehl</span>.</h2>
+      <pre><span class="c">$ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3</span>
 
-<span class="k">=== GEO-Sichtbarkeit: it-sicherheit.de ===</span>
-TOP   1.  71x  /nis2-richtlinie     2.  42x  /ransomware-schutz
-FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager-vergleich
+<span class="k">✓</span> Probe-Matrix sampeln   <span class="c">240 Probes · 2.2 s</span>     <span class="k">✓</span> Pattern-Miner   <span class="c">3 Templates</span>
+<span class="k">✓</span> Crawl + Top/Flop       <span class="c">8 Seiten</span>               <span class="k">✓</span> GEO-Auditor     <span class="c">6 Findings</span>
 
-<span class="k">=== WARUM ranken die Top-Seiten? 3 Muster (Pattern-Miner) ===</span>
-  [t1] Extrahierbarer Antwortblock + FAQ-Schema   (Konfidenz 0.82)
-       Ebene: Extrahierbarkeit | Hebel: Antwortbloecke, Maschinenlesbare Struktur
+<span class="k">WAS</span>      TOP   71x /nis2-richtlinie · 42x /ransomware-schutz · 39x /zero-trust-architektur
+         FLOP   7x /security-awareness-training · 17x /passwort-manager-vergleich · 19x /firewall-grundlagen
+<span class="k">WARUM</span>    [t1] Extrahierbarer Antwortblock + FAQ-Schema  <span class="c">(Konfidenz 0.82)</span>
+         [t2] Autor-Entitaet + Faktendichte <span class="c">(0.76)</span>   [t3] HowTo-Struktur <span class="c">(0.71)</span>
+<span class="k">WAS TUN</span>  1. <span class="r">[HIGH]</span> /passwort-manager-vergleich  <span class="c">extractability · machine_readable</span>
+            Fix: Vergleichstabelle + Product/Review-Schema ergaenzen  <span class="c">(… 6 Findings, priorisiert)</span>
 
-<span class="k">=== WAS tun? 6 Findings (GEO-Auditor, priorisiert) ===</span>
-  1. [HIGH] /passwort-manager-vergleich
-       Ebene: Extrahierbarkeit | Hebel: Maschinenlesbare Struktur
-       Fix:   Vergleichstabelle + Product/Review-Schema ergaenzen</pre>
+Kosten/Lauf         240 Probes · 39800 Tokens · $0.3115
+Report-Fingerprint  <span class="k">0ab26644ea8d</span>  <span class="c">(Seed 42 — zweiter Lauf: identischer Fingerprint)</span></pre>
+      <div class="note"><b>Determinismus-Nachweis:</b> Der Report-Fingerprint (SHA-256 über die Ergebnis-Inhalte, ohne laufvariable
+        Felder) ist bei wiederholter Ausführung identisch — dokumentiert als Bildschirmaufnahme in <code>docs/sprint2-demo.mp4</code>.
+        Die Kostenzeile ist eine <i>kalkulatorische Hochrechnung</i> (Token × Preismodell) — offline fallen keine echten API-Kosten an.</div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">12 / 14</span></div>
   </section>
 
-  <!-- 13 QUALITY / DoD -->
+  <!-- ===== 13 · DEFINITION OF DONE ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Definition of Done</b></span></div>
+    <div class="top"><div class="sec"><b>13</b> · Definition of Done</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Geliefert — und <span class="g">grün</span>.</h2>
-      <div class="accent-rule"></div>
-      <div class="kpis step">
+      <h2>Definition of Done: alle <span class="g">Prüfkriterien</span> erfüllt.</h2>
+      <div class="kpis">
         <div class="kpi"><div class="v">0</div><div class="l">mypy --strict Fehler</div></div>
         <div class="kpi"><div class="v">0</div><div class="l">ruff Findings</div></div>
-        <div class="kpi"><div class="v">2</div><div class="l">neue Agenten + Eval-Slots</div></div>
-        <div class="kpi"><div class="v">100%</div><div class="l">offline reproduzierbar</div></div>
+        <div class="kpi"><div class="v">116</div><div class="l">Tests grün (Unit · Integration · Eval)</div></div>
+        <div class="kpi"><div class="v">2</div><div class="l">neue Agenten, je mit Eval-Slot</div></div>
       </div>
       <div class="cols c2" style="margin-top:18px">
         <ul class="clean">
-          <li class="step"><b>Contracts → Ports → Adapter → Agenten → Eval → Orchestrierung</b> — Reihenfolge eingehalten.</li>
-          <li class="step"><b>Jeder LLM-Agent</b> hat einen toleranzbasierten Eval-Slot + versionierten Prompt.</li>
+          <li><b>Aufbau-Reihenfolge eingehalten:</b> Contracts → Ports → Adapter → Agenten → Eval → Orchestrierung.</li>
+          <li><b>Jeder LLM-Agent</b> hat einen toleranzbasierten Eval-Slot + versionierten Prompt (<code>*.v1.md</code>).</li>
         </ul>
         <ul class="clean">
-          <li class="step"><b>Keine neue Abhängigkeit</b> — <code>anthropic</code> war bereits gepinnt.</li>
-          <li class="step"><b>HITL/Deploy</b> bewusst <i>nicht</i> berührt — kommt in Sprint 3.</li>
+          <li><b>Abhängigkeiten:</b> <code>anthropic</code> war gepinnt; für die Terminal-Ausgabe wurde <code>rich</code> explizit ergänzt (zuvor bereits transitiv über CrewAI vorhanden).</li>
+          <li><b>HITL/Deploy</b> bewusst <i>nicht</i> berührt — Gegenstand von Sprint 3.</li>
         </ul>
       </div>
+      <div class="note"><b>Determinismus als Forschungsgüte:</b> Mock-Reasoning + Seed 42 liefern bitgenau identische Reports —
+        verifiziert im Integrationstest <code>test_sprint2_is_reproducible</code>.</div>
     </div>
+    <div class="foot"><span>M. Alboush · WH Master Informatik · 2026 · geo-audit-loop</span><span class="m">13 / 14</span></div>
   </section>
 
-  <!-- 14 OUTLOOK -->
+  <!-- ===== 14 · AUSBLICK ===== -->
   <section class="slide">
-    <div class="top"><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/><span class="tag"><b>Ausblick</b> · der Kreis schließt sich</span></div>
+    <div class="top"><div class="sec"><b>14</b> · Stand &amp; Ausblick</div><img class="runlogo" src="assets/whs-logo.svg" alt="WHS"/></div>
     <div class="body">
-      <h2>Lernen steht. Jetzt <span class="g">handeln</span> &amp; <span class="g">lernen aus Wirkung</span>.</h2>
-      <div class="accent-rule"></div>
+      <h2>Stand und Ausblick: <span class="g">Sprint 3 (Act)</span> und <span class="g">Sprint 4 (Loop)</span>.</h2>
+      <div class="fig" style="flex:none;margin:6px 0 4px">
+        <svg viewBox="0 0 1000 188" role="img" aria-label="Roadmap der vier Sprints">
+          <g text-anchor="middle">
+            <rect class="nd" x="20"  y="20" width="220" height="62" rx="9"/>
+            <rect class="nd core" x="280" y="20" width="220" height="62" rx="9"/>
+            <rect class="nd" x="540" y="20" width="220" height="62" rx="9"/>
+            <rect class="nd" x="780" y="20" width="200" height="62" rx="9"/>
+            <text class="lbl b" x="130" y="47">S1 · Foundation</text><text class="lblxs" x="130" y="68">Sampler · Crawler · Persistenz</text>
+            <text class="lbl b acc" x="390" y="47">S2 · Learning</text><text class="lblxs" x="390" y="68">Pattern-Miner · GEO-Auditor</text>
+            <text class="lbl b" x="650" y="47">S3 · Act</text><text class="lblxs" x="650" y="68">Fix · HITL · Deploy</text>
+            <text class="lbl b" x="880" y="47">S4 · Loop</text><text class="lblxs" x="880" y="68">Re-Prober · Memory</text>
+          </g>
+          <g class="ed plain" stroke="var(--node)" stroke-width="1.4">
+            <line x1="130" y1="82" x2="130" y2="112"/><line x1="390" y1="82" x2="390" y2="112"/>
+            <line x1="650" y1="82" x2="650" y2="112"/><line x1="880" y1="82" x2="880" y2="112"/>
+          </g>
+          <line x1="70" y1="124" x2="940" y2="124" stroke="var(--node)" stroke-width="2"/>
+          <line x1="70" y1="124" x2="390" y2="124" stroke="var(--acc)" stroke-width="3"/>
+          <circle cx="130" cy="124" r="11" fill="var(--acc)" stroke="#f6f5f1" stroke-width="2"/>
+          <circle cx="390" cy="124" r="12" fill="var(--acc)" stroke="#f6f5f1" stroke-width="2"/>
+          <circle cx="650" cy="124" r="11" fill="#fbfaf7" stroke="var(--node)" stroke-width="2"/>
+          <circle cx="880" cy="124" r="11" fill="#fbfaf7" stroke="var(--node)" stroke-width="2"/>
+          <g class="lblxs" text-anchor="middle">
+            <text x="130" y="152">Woche 1–2</text><text x="390" y="152">Woche 3–4</text>
+            <text x="650" y="152">Woche 5–6</text><text x="880" y="152">Woche 7–8</text>
+          </g>
+          <text class="lbls acc" x="390" y="178" text-anchor="middle" style="font-weight:700">▲ Sie sind hier</text>
+        </svg>
+        <div class="cap">Abb. 10 — Roadmap; Sprint 2 ist das Scharnier zwischen Messen und Handeln.</div>
+      </div>
       <div class="cols c2">
         <div class="card step"><div class="rh">Sprint 3 · Act</div><h3>Fix-Agent + HITL + Deploy</h3><p>Aus <code>AuditFinding</code> wird ein <code>Patch</code> (begründet via Template/Hebel) — Freigabe durch den Menschen, dann WordPress-/GitHub-Deploy.</p></div>
         <div class="card step"><div class="rh">Sprint 4 · Loop</div><h3>Re-Probe + Memory</h3><p>Nach 7/14/28 Tagen erneut messen → <code>EffectHypothesis</code> in Chroma — der Loop verfeinert künftige Fixes selbst.</p></div>
       </div>
-      <p class="lead step" style="margin-top:22px">Sprint 2 ist das Scharnier: Es macht aus einer Mess-Maschine ein <b>System, das versteht</b>.</p>
-      <div class="foot">geo-audit-loop · Sprint 2 — Learning · Westfälische Hochschule · Mohammad Alboush</div>
     </div>
+    <div class="foot"><span>Vielen Dank für Ihre Aufmerksamkeit — Fragen?&nbsp;&nbsp;·&nbsp;&nbsp;mohammad.alboush@w-hs.de</span><span class="m">14 / 14</span></div>
   </section>
 
 </div>
@@ -493,14 +686,199 @@ FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager-vergleich
 <div class="nz l" id="nzl"></div>
 <div class="nz r" id="nzr"></div>
 <div class="dots" id="dots"></div>
-<div class="hint" id="hint">← →&nbsp;·&nbsp;Leertaste&nbsp;·&nbsp;F = Vollbild</div>
+<div class="hint" id="hint">← →&nbsp;·&nbsp;Leertaste blättert&nbsp;·&nbsp;F = Vollbild&nbsp;·&nbsp;S = Sprecher-Skript (2. Bildschirm)</div>
+
+<!-- Sprecher-Skript (Teleprompter) — sichtbar nur im #script-Modus -->
+<div class="tp" id="tp" aria-hidden="true">
+  <div class="tp-top">
+    <span class="tp-no" id="tpNo">Sprecher-Skript</span>
+    <span class="tp-title" id="tpTitle">geo-audit-loop · Sprint 2</span>
+    <span class="tp-timer" id="tpTimer" title="Klick = Timer auf 00:00">00:00</span>
+  </div>
+  <div class="tp-kern" id="tpKern">—</div>
+  <div class="tp-body" id="tpBody">
+    <p class="tp-wait">Warte auf die Präsentation …<br>Im Präsentations-Fenster mit ← / → blättern — der Text hier folgt automatisch.</p>
+  </div>
+  <div class="tp-foot">
+    <span id="tpNext"></span>
+    <span>← / → blättern synchron&nbsp;·&nbsp;R = Timer auf 00:00</span>
+  </div>
+</div>
 
 <script>
 (function(){
+  /* ============================================================
+     Sprecher-Skript (Teleprompter) für die Video-Aufzeichnung
+     ------------------------------------------------------------
+     · Taste S im Deck öffnet das Skript-Fenster (→ 2. Bildschirm),
+       alternativ dieselbe Datei mit »#script« am Ende der URL öffnen.
+     · Jeder Pfeiltasten-Druck (auch Einblend-Schritte INNERHALB
+       einer Folie) schaltet den hervorgehobenen Sprechtext weiter.
+     · Sync über localStorage (Polling + storage-Event) UND
+       window.postMessage — funktioniert ohne Server über file://.
+     · SCRIPTS[n].seg[k] = wörtlicher Text zu Folie n+1, Schritt k.
+     ============================================================ */
+  var SCRIPTS = [
+    { t:'Titel', kern:'Sprint 2 macht den Audit-Loop lernfähig.', seg:[
+      'Ja, hallo zusammen. Ich bin Mohammad. In meinem Projekt geht es darum, wie oft eine Webseite von ChatGPT und anderen KI-Suchmaschinen als Quelle genannt wird. Das kann ich seit Sprint 1 messen. Das funktioniert auch gut. Aber ich sehe da eben nur, <b>welche</b> Seiten oft genannt werden und welche nicht. Ich sehe nicht, woran das liegt. Und genau darum geht es heute. Ich habe dafür zwei neue Agenten gebaut, und die zeige ich Ihnen jetzt.'
+    ]},
+    { t:'Einordnung — der Sechs-Baustein-Loop', kern:'Sprint 2 = Baustein 03 und 04 von sechs.', seg:[
+      'Hier sehen Sie das ganze System. Das sind sechs Bausteine, und die bilden einen Kreislauf. Die zwei links kennen Sie aus Sprint 1, das ist die Messung. Da werden Fragen an die KI-Suchmaschinen gestellt und die eigenen Seiten eingelesen. Heute geht es um die zwei grünen Bausteine in der Mitte. Der <b>Pattern-Miner</b> schaut sich die erfolgreichen Seiten an und lernt daraus. Und der <b>GEO-Auditor</b> nimmt sich dann die schwachen Seiten vor. Was rechts noch kommt, also Korrekturen einspielen und nachmessen, das mache ich in Sprint drei und vier.'
+    ]},
+    { t:'Problemstellung & Forschungsfrage', kern:'Messen allein erklärt nichts — daraus folgt die Forschungsfrage.', seg:[
+      'Ich mache das mal an einem Beispiel fest. Die Messung sagt mir, unser Passwort-Manager-Vergleich wird deutlich seltener zitiert als unsere besten Seiten. Das ist erstmal nur eine Zahl. Warum die Seite so schlecht abschneidet, sagt mir das System nicht. Die fertigen Tools am Markt sagen einem das übrigens auch nicht. Die hören alle an der gleichen Stelle auf. Das hat mich wirklich gestört.',
+      'Daraus ist dann die Frage für Sprint 2 geworden. Kann ich aus den guten Seiten Muster lernen, die mir erklären, was den schwachen Seiten fehlt? Und zwar so, dass jeder Lauf <b>wiederholbar</b> ist, obwohl ein Sprachmodell beteiligt ist. Wie das geht, zeige ich Ihnen jetzt Schritt für Schritt.'
+    ]},
+    { t:'Architektur', kern:'Genau EIN neuer Port — die Architektur bleibt stabil.', seg:[
+      'Zuerst kurz zur Architektur. Innen liegen die Datenmodelle. Drumherum liegen die <b>Ports</b>, das sind die Schnittstellen nach außen. Dann kommen die Adapter, die kann man austauschen. Und ganz außen laufen die Agenten. In Sprint 2 ist genau ein neuer Port dazugekommen, der <b>ReasoningPort</b>. Das ist die Verbindung zum Sprachmodell. Mehr musste ich an der Architektur nicht ändern. Der Kern weiß weiterhin nichts von CrewAI und nichts von der Anthropic-Bibliothek. Ich war ziemlich erleichtert, dass das so glatt ging. Für mich heißt das, der Aufbau aus Sprint 1 hat gepasst.'
+    ]},
+    { t:'ReasoningPort', kern:'Gleiche Schnittstelle, zwei Welten: simulierter Mock und echtes LLM.', seg:[
+      'So sieht der neue Port von innen aus. Die Agenten kennen genau eine Funktion, die heißt <b>reason</b>. Da geht eine Anfrage rein, und es kommt eine strukturierte Antwort zurück. Dahinter stecken zwei Varianten. Im Normalfall läuft eine Simulation, der <b>Mock</b>. Der liefert bei gleichem Seed immer das gleiche Ergebnis und kostet nichts. Wenn ich das echte Modell haben will, schalte ich den Claude-Adapter dazu. Der hat Wiederholversuche und einen Kostendeckel eingebaut. Am Kern selbst muss ich dafür nichts ändern.'
+    ]},
+    { t:'Datenverträge', kern:'Agenten übergeben geprüfte Strukturen, keinen Freitext.', seg:[
+      'Zwischen den Agenten fließt kein freier Text. Da wird immer eine feste Struktur übergeben. Davon gibt es zwei. Das <b>Template</b> ist ein gelerntes Erfolgsmuster. Da steht drin, um welchen Hebel es geht, auf welcher Ebene er liegt, woran man das prüfen kann und wie sicher das System dabei ist. Das <b>AuditFinding</b> ist ein Befund zu einer schwachen Seite. Also was beobachtet wurde, wie schlimm es ist und was man tun soll. Beide Modelle sind eingefroren. Wenn ein Agent etwas Schwammiges liefert, wird das bei der Validierung abgelehnt. Ich habe jetzt ein paarmal Hebel und Ebene gesagt. Das erkläre ich auf der nächsten Folie.'
+    ]},
+    { t:'Citation-Pyramide', kern:'Festes Bewertungs-Vokabular — Priorität von unten nach oben.', seg:[
+      'Das hier ist die <b>Citation-Pyramide</b>. Zehn Hebel auf fünf Ebenen. Mit diesem Raster arbeiten beide Agenten. Ganz unten steht die Frage, ob die Maschine überhaupt an die Seite rankommt. Darüber kommt die Struktur, dann der Inhalt, dann die Bestätigung von außen. Und ganz oben steht das eigentliche Ziel, nämlich zitiert zu werden.',
+      'Die Reihenfolge ist wichtig. Wenn unten in der Pyramide etwas fehlt, kann der Inhalt oben noch so gut sein, dann wird die Seite trotzdem nicht zitiert.',
+      'Deshalb arbeitet der Auditor auch immer von unten nach oben.',
+      'Und jeder Hebel ist als einfache Frage formuliert. Zum Beispiel, ob direkt nach der Überschrift eine kurze Antwort steht. Das kann man einfach nachprüfen, da muss keiner irgendwas schätzen.'
+    ]},
+    { t:'Agent 1 · Pattern-Miner', kern:'Aus den Gewinnern werden belegte, wiederverwendbare Muster.', seg:[
+      'So, das ist der erste Agent. Der <b>Pattern-Miner</b> bekommt die Merkmale der Top-Seiten, also den Aufbau, die Schema-Auszeichnung, den Autor und die Länge. Daraus macht er drei <b>Templates</b>. Das sind drei Muster, die beschreiben, was die erfolgreichen Seiten gemeinsam haben.',
+      'Unten sehen Sie eins davon aus der Demo, der Antwortblock mit FAQ-Schema. Das heißt, die guten Seiten haben direkt nach der Überschrift eine kurze Antwort mit vierzig bis sechzig Wörtern, die eine Maschine direkt übernehmen kann. Die Konfidenz liegt bei null Komma acht zwei. Und das Kriterium kann ich bei jeder anderen Seite einfach nachprüfen. So ein Block steht entweder drin oder eben nicht, das sieht man sofort.'
+    ]},
+    { t:'Agent 2 · GEO-Auditor', kern:'Befunde mit Beleg und Priorität — direkt umsetzbar.', seg:[
+      'Der zweite Agent ist der <b>GEO-Auditor</b>. Der hält die schwachen Seiten gegen diese drei Muster. Dabei kommen sechs Befunde raus, und die sind schon fertig sortiert, das Wichtigste steht oben.',
+      'Jeder Befund hat einen <b>Beleg</b> dabei, also das, was wirklich auf der Seite steht. Und dazu eine Empfehlung, was man konkret machen soll.',
+      'Ich gehe mal drei Beispiele durch. Der Passwort-Manager-Vergleich ist reiner Fließtext. Da soll eine Vergleichstabelle rein, mit Produkt-Schema. Das hat hohe Priorität.',
+      'Bei den Firewall-Grundlagen sind es nur rund sechshundert Wörter, und es steht kein Autor dabei. Da muss mehr Inhalt rein, und ein Autor muss noch dazu.',
+      'Und beim Awareness-Training fehlen ein paar Anschlussfragen. Das ist eher eine Kleinigkeit, deshalb steht es ganz unten. Und die Reihenfolge lege nicht ich fest, die ergibt sich automatisch aus der Pyramide.'
+    ]},
+    { t:'Eval-Disziplin', kern:'Deterministisches exakt prüfen, LLM-Ausgaben strukturell.', seg:[
+      'Dann die Frage, wie man so etwas testet. Ich habe das in zwei Teile aufgeteilt.',
+      'Alles, was berechenbar ist, läuft gegen ein <b>Golden-Dataset</b>. Das ist ein festes Soll-Ergebnis. Da muss jedes Zeichen stimmen.',
+      'Bei den Sprachmodell-Agenten geht das nicht, weil die jedes Mal etwas anders formulieren. Aber die <b>Struktur</b> bleibt gleich, und genau die teste ich. Ich prüfe zum Beispiel, ob die Anzahl stimmt, ob jeder Befund an einem Hebel und einer Ebene hängt und ob die Reihenfolge passt. So kann ich am Prompt arbeiten, ohne dass ständig Tests rot werden. Und wenn wirklich etwas kaputtgeht, merke ich das sofort.'
+    ]},
+    { t:'Ergebnis eines Laufs', kern:'WAS, WARUM, WAS TUN — auf einen Blick.', seg:[
+      'Hier ist das Ergebnis von einem kompletten Lauf für it-sicherheit.de, offline mit Seed 42. Links steht die Rangliste. Die NIS2-Seite wird <b>einundsiebzigmal</b> zitiert, das Awareness-Training nur <b>siebenmal</b>.',
+      'Rechts oben sehen Sie, woran das liegt. Die erfolgreichen Seiten haben alle diesen zitierbaren Antwortblock mit dem FAQ-Schema.',
+      'Und rechts unten kommt dann die wichtigste Empfehlung, die Vergleichstabelle. Damit ist die Frage vom Anfang beantwortet, und zwar komplett auf einer Folie. Mit demselben Seed bekomme ich bei jedem Lauf genau dieses Ergebnis. Und das Ganze kommt aus einem einzigen Befehl. Den schauen wir uns jetzt an.'
+    ]},
+    { t:'Demo-Ausgabe · ein Befehl', kern:'Ein Befehl, vier Schritte, drei Antworten — und ein beweisbarer Fingerprint.', seg:[
+      'Hier sieht man die Ausgabe von dem Lauf. Vier Schritte, und allein die 240 Messungen dauern nur gut zwei Sekunden. Die Kostenzeile können Sie ignorieren. Da steht nur, was ein echter Lauf kosten würde. Offline kostet das nichts. Wichtig ist die letzte Zeile, der <b>Fingerprint</b>. Das ist eine Prüfsumme über alle Ergebnisse. Wenn ich den Befehl noch mal laufen lasse, kommt da wieder genau dieselbe Prüfsumme raus. Ich hab das ehrlich gesagt doppelt kontrolliert, weil ich es selbst nicht geglaubt habe. Bei einem Sprachmodell passiert das normalerweise nie. Ein Video von diesem doppelten Lauf lege ich dem Bericht bei.'
+    ]},
+    { t:'Definition of Done', kern:'Fertig heißt: typgeprüft, getestet, reproduzierbar.', seg:[
+      'Noch kurz zum Stand. Der Typ-Check ist sauber, der Linter auch, und es laufen <b>116 Tests</b>, alle grün. Für die Wiederholbarkeit gibt es sogar einen eigenen Test. Die kann also nicht unbemerkt kaputtgehen. Eine Sache habe ich bewusst nicht gebaut, nämlich den automatischen Deploy. Keine Änderung geht raus, bevor ein Mensch sie freigegeben hat. Diesen Deploy-Teil baue ich dann in Sprint 3.'
+    ]},
+    { t:'Stand & Ausblick', kern:'Messen ✓, Lernen ✓ — jetzt Handeln und aus Wirkung lernen.', seg:[
+      'Damit bin ich bei der Hälfte vom Projekt. Das Messen funktioniert, und das Lernen funktioniert jetzt auch.',
+      'In <b>Sprint 3</b> mache ich aus den Befunden echte Korrekturvorschläge. Freigeben muss die aber immer ein Mensch.',
+      'Und in <b>Sprint 4</b> prüfe ich nach sieben, vierzehn und achtundzwanzig Tagen, ob die Änderungen etwas gebracht haben. Das merkt sich das System dann. Ab da lernt es aus seinen eigenen Korrekturen. Das war Sprint 2. Vielen Dank, und ich freue mich auf Ihre Fragen.'
+    ]}
+  ];
+
+  var LS_STATE = 'geoS2_state', LS_CMD = 'geoS2_cmd';
+
+  /* ================= Modus B: Teleprompter (#script) ================= */
+  if (/script/.test(location.hash)){
+    document.body.classList.add('tp-mode');
+    document.title = 'Sprecher-Skript · Sprint 2 — geo-audit-loop';
+    var elNo = document.getElementById('tpNo'), elTitle = document.getElementById('tpTitle'),
+        elKern = document.getElementById('tpKern'), elBody = document.getElementById('tpBody'),
+        elNext = document.getElementById('tpNext'), elTimer = document.getElementById('tpTimer');
+    var cur = {i:-1, s:-1}, lastRaw = '', t0 = Date.now();
+
+    function pad(x){ return (x < 10 ? '0' : '') + x; }
+    setInterval(function(){
+      var sec = Math.floor((Date.now() - t0) / 1000);
+      elTimer.textContent = pad(Math.floor(sec / 60)) + ':' + pad(sec % 60);
+    }, 1000);
+    function resetTimer(){ t0 = Date.now(); elTimer.textContent = '00:00'; }
+    elTimer.onclick = resetTimer;
+
+    function render(idx, st){
+      var sc = SCRIPTS[idx]; if (!sc) return;
+      var sg = Math.max(0, Math.min(st, sc.seg.length - 1));
+      if (idx === cur.i && sg === cur.s) return;
+      var fresh = (idx !== cur.i);
+      if (fresh){
+        elNo.textContent = 'Folie ' + (idx + 1) + ' / ' + SCRIPTS.length;
+        elTitle.textContent = sc.t;
+        elKern.innerHTML = sc.kern;
+        elBody.innerHTML = '';
+        for (var k = 0; k < sc.seg.length; k++){
+          var p = document.createElement('p');
+          p.className = 'tp-seg'; p.innerHTML = sc.seg[k];
+          elBody.appendChild(p);
+        }
+      }
+      var ps = elBody.querySelectorAll('.tp-seg');
+      for (var k2 = 0; k2 < ps.length; k2++){
+        ps[k2].classList.toggle('on',   k2 === sg);
+        ps[k2].classList.toggle('done', k2 <  sg);
+      }
+      if (ps[sg]) ps[sg].scrollIntoView({block:'center', behavior: fresh ? 'auto' : 'smooth'});
+      if (sg < sc.seg.length - 1){
+        elNext.innerHTML = 'nächster Tastendruck → <span class="nx">Abschnitt ' + (sg + 2) + ' / ' + sc.seg.length + '</span>';
+      } else if (idx < SCRIPTS.length - 1){
+        elNext.innerHTML = 'nächster Tastendruck → <span class="nx">Folie ' + (idx + 2) + ' · ' + SCRIPTS[idx + 1].t + '</span>';
+      } else {
+        elNext.innerHTML = '<span class="nx">Letzte Folie — danach Fragen.</span>';
+      }
+      cur = {i: idx, s: sg};
+    }
+
+    function pull(){
+      var raw = null; try { raw = localStorage.getItem(LS_STATE); } catch(e){}
+      if (raw && raw !== lastRaw){
+        lastRaw = raw;
+        try { var st = JSON.parse(raw); render(st.i, st.s); } catch(e){}
+      }
+    }
+    window.addEventListener('storage', pull);
+    setInterval(pull, 150);
+    pull();
+    window.addEventListener('message', function(e){
+      if (window.opener && e.source !== window.opener) return;
+      var d = e.data;
+      if (d && d.geoS2 === 'state' && typeof d.i === 'number' && typeof d.s === 'number'){ render(d.i, d.s); }
+    });
+    /* Ready-Handshake: Deck schickt daraufhin sofort den aktuellen Zustand */
+    if (window.opener && !window.opener.closed){
+      try { window.opener.postMessage({geoS2:'ready'}, '*'); } catch(e){}
+    }
+
+    /* Kommandos als kleines Log (letzte 12) — die Sequenznummer n wird bei jedem
+       Senden frisch aus localStorage gelesen, damit auch mehrere Skript-Fenster
+       eine gemeinsame, monoton steigende Folge teilen. */
+    var localSeq = 0; /* hält die Folge auch dann monoton, wenn localStorage blockiert ist */
+    function sendCmd(a){
+      var cur = {};
+      try { cur = JSON.parse(localStorage.getItem(LS_CMD) || '{}') || {}; } catch(e){}
+      var n = Math.max(localSeq, cur.n || 0) + 1;
+      localSeq = n;
+      var list = (cur.list || []).concat([{a:a, n:n}]).slice(-12);
+      try { localStorage.setItem(LS_CMD, JSON.stringify({n:n, list:list})); } catch(e){}
+      if (window.opener && !window.opener.closed){
+        try { window.opener.postMessage({geoS2:'cmd', a:a, n:n}, '*'); } catch(e){}
+      }
+    }
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); sendCmd('next'); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); sendCmd('prev'); }
+      else if (e.key === 'Home'){ sendCmd('home'); }
+      else if (e.key === 'End'){ sendCmd('end'); }
+      else if (e.key === 'r' || e.key === 'R'){ resetTimer(); }
+    });
+    return;
+  }
+
+  /* ================= Modus A: Präsentation (Deck) ================= */
   var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
   var progress = document.getElementById('progress');
   var dotsWrap = document.getElementById('dots');
-  var i = 0, steps = [], s = 0;
+  var i = 0, steps = [], s = 0, stateSeq = 0, presenterWin = null;
 
   var dots = slides.map(function(_, k){
     var b = document.createElement('button');
@@ -509,6 +887,13 @@ FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager-vergleich
     dotsWrap.appendChild(b); return b;
   });
 
+  function broadcast(){
+    stateSeq++;
+    try { localStorage.setItem(LS_STATE, JSON.stringify({i:i, s:s, n:stateSeq})); } catch(e){}
+    if (presenterWin && !presenterWin.closed){
+      try { presenterWin.postMessage({geoS2:'state', i:i, s:s}, '*'); } catch(e){}
+    }
+  }
   function applySteps(){
     for (var k = 0; k < steps.length; k++){ steps[k].classList.toggle('shown', k < s); }
   }
@@ -523,9 +908,56 @@ FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager-vergleich
     applySteps();
     dots.forEach(function(d, k){ d.classList.toggle('on', k === i); });
     progress.style.width = (slides.length > 1 ? (i / (slides.length - 1) * 100) : 100) + '%';
+    broadcast();
   }
-  function next(){ if (s < steps.length){ s++; applySteps(); } else if (i < slides.length - 1){ show(i + 1, false); } }
-  function prev(){ if (s > 0){ s--; applySteps(); } else if (i > 0){ show(i - 1, true); } }
+  function next(){ if (s < steps.length){ s++; applySteps(); broadcast(); } else if (i < slides.length - 1){ show(i + 1, false); } }
+  function prev(){ if (s > 0){ s--; applySteps(); broadcast(); } else if (i > 0){ show(i - 1, true); } }
+
+  function openScript(){
+    presenterWin = window.open(location.href.split('#')[0] + '#script', 'geoS2script', 'width=980,height=760');
+    if (!presenterWin){
+      hint.textContent = 'Popup blockiert — Datei zusätzlich mit »#script« am URL-Ende in einem zweiten Fenster öffnen.';
+      hint.style.opacity = '1';
+      setTimeout(function(){ hint.style.opacity = '0'; }, 6000);
+      return;
+    }
+    setTimeout(broadcast, 500); /* Fallback, falls der Ready-Handshake ausbleibt */
+  }
+
+  /* Befehle aus dem Skript-Fenster (Pfeiltasten dort steuern das Deck mit).
+     LS_CMD hält ein Kommando-Log {n, list:[{a,n},…]} — so gehen auch schnell
+     aufeinanderfolgende Tastendrücke zwischen zwei Poll-Ticks nicht verloren. */
+  var lastCmd = 0;
+  try { lastCmd = (JSON.parse(localStorage.getItem(LS_CMD) || '{}').n) || 0; } catch(e){}
+  function runCmd(a){
+    if (a === 'next'){ next(); }
+    else if (a === 'prev'){ prev(); }
+    else if (a === 'home'){ show(0, false); }
+    else if (a === 'end'){ show(slides.length - 1, true); }
+  }
+  function processCmds(raw){
+    if (!raw) return;
+    try {
+      var c = JSON.parse(raw), list = c.list || [];
+      for (var k = 0; k < list.length; k++){
+        if (list[k].n > lastCmd){ lastCmd = list[k].n; runCmd(list[k].a); }
+      }
+    } catch(e){}
+  }
+  window.addEventListener('storage', function(e){
+    if (e.key === LS_CMD){ processCmds(e.newValue); }
+  });
+  setInterval(function(){
+    var raw = null; try { raw = localStorage.getItem(LS_CMD); } catch(e){}
+    processCmds(raw);
+  }, 150);
+  window.addEventListener('message', function(e){
+    if (presenterWin && e.source !== presenterWin) return;
+    var d = e.data;
+    if (!d) return;
+    if (d.geoS2 === 'ready'){ broadcast(); return; }
+    if (d.geoS2 === 'cmd' && typeof d.n === 'number' && d.n > lastCmd){ lastCmd = d.n; runCmd(d.a); }
+  });
 
   document.getElementById('nzr').onclick = next;
   document.getElementById('nzl').onclick = prev;
@@ -534,6 +966,7 @@ FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager-vergleich
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
     else if (e.key === 'Home'){ show(0, false); }
     else if (e.key === 'End'){ show(slides.length - 1, true); }
+    else if (e.key === 's' || e.key === 'S'){ openScript(); }
     else if (e.key === 'f' || e.key === 'F'){ if (!document.fullscreenElement){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } else { document.exitFullscreen && document.exitFullscreen(); } }
   });
   show(0, false);
