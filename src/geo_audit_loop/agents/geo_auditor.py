@@ -137,7 +137,13 @@ class GeoAuditorService:
     ) -> AuditReport:
         """Auditiert die Flop-Seiten gegen die Templates und baut den priorisierten AuditReport."""
         by_url = {inv.page.url: inv for inv in pages}
-        flop_features = [page_features(by_url[e.url]) for e in report.flop if e.url in by_url]
+        # Sprint 6: jede Flop-Seite traegt ihr statistisches Sichtbarkeits-Band -> der Auditor
+        # kann belastbar unterdurchschnittliche Seiten priorisieren (statt bloss rauschendes Tief).
+        flop_features = [
+            {**page_features(by_url[e.url]), "visibility_band": e.band.value}
+            for e in report.flop
+            if e.url in by_url
+        ]
         prompt = self._build_prompt(flop_features, patterns)
         findings = _apply_severity_floor(self._audit(run_context, prompt), by_url)
         log_event(
@@ -170,7 +176,9 @@ class GeoAuditorService:
         return (
             "Best-Practice-Templates der Top-Seiten:\n"
             f"{json.dumps(templates_brief, ensure_ascii=False, indent=2)}\n\n"
-            "Flop-Seiten (selten/nie zitiert) mit On-Page-Inventar:\n"
+            "Flop-Seiten (selten/nie zitiert) mit On-Page-Inventar. Das Feld 'visibility_band' "
+            "gibt die statistische Absetzung an: 'below_field' = belastbar unterdurchschnittlich "
+            "(klares Defizit), 'typical' = statistisch nicht vom Domain-Schnitt unterscheidbar:\n"
             f"{json.dumps(flop_features, ensure_ascii=False, indent=2)}\n\n"
             "Benenne pro Flop-Seite die konkreten Schwachstellen als Findings, jeweils mit "
             "Beleg, Hebel, Pyramide-Ebene, Schweregrad und Empfehlung. Gib NUR das JSON-Objekt "

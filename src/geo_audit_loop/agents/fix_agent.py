@@ -178,7 +178,13 @@ class FixAgentService:
 
     @staticmethod
     def _render_memory(memory_hypotheses: Seq[EffectHypothesis]) -> str:
-        """Rendert erwiesene Effekt-Hypothesen als expliziten Prompt-Block (§8; leer => "")."""
+        """Rendert erwiesene Effekt-Hypothesen als expliziten Prompt-Block (§8; leer => "").
+
+        Jede Hypothese traegt ihr 95%-Konfidenzintervall und das ``significant``-Flag: nur
+        signifikante Effekte (KI schliesst die Null aus) sind belastbar — genau die, die auch
+        der deterministische ``apply_memory_prior`` gewichtet. Prompt- und Code-Pfad wirken so
+        in dieselbe Richtung (Sprint 5).
+        """
         if not memory_hypotheses:
             return ""
         learned = [
@@ -186,14 +192,17 @@ class FixAgentService:
                 "lever": h.lever.value,
                 "change_type": h.change_type.value,
                 "delta_citation_rate": h.delta,
+                "ci_95": [h.ci_low, h.ci_high],
+                "significant": h.significant,
                 "confidence": h.confidence,
                 "direction": h.direction.value,
             }
             for h in memory_hypotheses
         ]
         return (
-            "Fruehere Effekt-Hypothesen aus dem Gedaechtnis (Vorher/Nachher gemessen). "
-            "Bevorzuge Aenderungsarten/Hebel mit erwiesen positivem delta_citation_rate:\n"
+            "Fruehere Effekt-Hypothesen aus dem Gedaechtnis (Vorher/Nachher gemessen, mit 95%-KI). "
+            "Bevorzuge Hebel/Aenderungsarten mit erwiesen positivem delta_citation_rate UND "
+            "significant=true; ignoriere nicht-signifikante Effekte als Rauschen:\n"
             f"{json.dumps(learned, ensure_ascii=False, indent=2)}\n\n"
         )
 

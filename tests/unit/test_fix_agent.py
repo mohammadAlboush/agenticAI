@@ -246,6 +246,9 @@ def _hyp(
         before_n=240,
         after_n=240,
         delta=round(delta, 6),
+        ci_low=round(delta * 0.9, 6),  # KI klar ueber der Null -> signifikanter Effekt
+        ci_high=round(min(1.0, delta + 0.05), 6),
+        significant=True,
         direction=EffectDirection.IMPROVED,
         confidence=confidence,
         suspected_cause="x",

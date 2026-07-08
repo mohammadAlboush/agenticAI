@@ -85,6 +85,9 @@ def _hypothesis() -> EffectHypothesis:
         before_n=240,
         after_n=240,
         delta=0.9,
+        ci_low=0.85,  # 95%-KI klar ueber der Null -> signifikant (belastbarer Effekt)
+        ci_high=0.95,
+        significant=True,
         direction=EffectDirection.IMPROVED,
         confidence=1.0,
         suspected_cause="seed",

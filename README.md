@@ -6,11 +6,13 @@ Templates auditiert, Fixes vorschlägt (Human-in-the-Loop), deployt und den Effe
 
 Master-Modulprojekt · Agentic AI · Westfälische Hochschule · Master Informatik.
 
-> **Status:** Sprint 4 (LERN-LOOP) abgeschlossen — der Regelkreis ist **geschlossen**: nach dem
-> (Dry-Run-)Deploy misst das System den Effekt per Re-Probe, bildet daraus strukturierte
-> `EffectHypothesis`-Objekte, schreibt sie ins `MemoryPort`-Gedächtnis und lässt sie den **nächsten**
-> Fix-Run messbar verfeinern. `mypy --strict` · `ruff` · alle Tests grün, offline bit-genau
-> reproduzierbar (der Effekt fließt in den Fingerprint).
+> **Status:** Sprint 6 (STATISTISCHE MESS-RIGOROSITÄT) abgeschlossen — der geschlossene Regelkreis ist
+> jetzt **end-to-end statistisch fundiert**: die Top/Flop-Eingangsmessung trägt ein **Wilson-95%-KI**
+> je Seite und ein Sichtbarkeits-Band relativ zum Domain-Schnitt (nur belastbar abgesetzte Seiten
+> speisen Miner/Auditor), und die Effekt-Ausgangsmessung bewertet jeden Fix mit einem
+> **Newcombe-95%-KI** (Sprint 5) — nur **signifikante** Effekte verfeinern den nächsten Fix-Run (kein
+> Lernen aus Rauschen). `mypy --strict` · `ruff` · alle Tests grün, offline bit-genau reproduzierbar
+> (Top/Flop **und** Effekt fließen in den Fingerprint).
 
 ---
 
@@ -111,9 +113,9 @@ berühren (Projektregeln §6: kein Auto-Deploy ohne HITL).
   ein **deterministischer** Boost der gepatchten URLs im Mock-Engine für einen reproduzierbaren
   Vorher/Nachher-Lift; live wird die Realität gemessen (unter Dry-Run ehrlich ≈ 0).
 - **`EffectHypothesis` (Contract §3.2):** je angewandtem Patch strukturiert — Vorher-/Nachher-Rate,
-  Delta, **deterministische** Confidence (`|Δ|·n/(n+k)`), vermutete Ursache als `(Hebel, ChangeType)`,
-  Provenienz zum Patch/Finding. Der **Effekt-Analyst** ist deterministisch (reine Domänen-Mathematik,
-  kein LLM) → bleibt bit-reproduzierbar.
+  Delta, **statistisches 95%-Konfidenzintervall** + `significant`-Flag (siehe Sprint 5), vermutete
+  Ursache als `(Hebel, ChangeType)`, Provenienz zum Patch/Finding. Der **Effekt-Analyst** ist
+  deterministisch (reine Domänen-Mathematik, kein LLM) → bleibt bit-reproduzierbar.
 - **`MemoryPort` (genau `store`/`retrieve`, §8):** `MockMemoryAdapter` (Default, SQLite, deterministisch)
   **und** `ChromaMemoryAdapter` (bge-m3, opt-in Extra `memory`). Domain-isoliert (Lernen leckt nicht
   zwischen Domains).
@@ -132,6 +134,84 @@ berühren (Projektregeln §6: kein Auto-Deploy ohne HITL).
 (Credentials + Sicherheits-Review); reichere semantische Retrieval-Strategien im Chroma-Adapter.
 
 > Demo: `docs/demo-sprint4.md`.
+
+---
+
+## Sprint 5 — Summary
+
+**Ziel:** Den Lern-Loop von einer **Heuristik** zu einem **statistisch belastbaren** Instrument
+machen — damit das System nicht mehr aus Rauschen „lernt" (Projektregeln §1: wissenschaftliche
+Aussagekraft; §7: Reproduzierbarkeit).
+
+**Das Problem:** Sprint 4 mass den Effekt als rohes Vorher/Nachher-Delta und bewertete ihn mit der
+Ad-hoc-Formel `min(1,|Δ|)·n/(n+k)`. Die ignoriert die **statistische Unsicherheit** völlig: ein Lift
+von +0.05 bei n=3 (reines Rauschen) bekam dieselbe positive „Confidence" wie ein robuster Effekt bei
+n=240 — und floss so als Hypothese ins Gedächtnis, das den nächsten Fix-Run verzerrte.
+
+**Gebaut:**
+- **`domain/statistics.py` (rein, kein I/O/RNG):** **Wilson-Score-Intervall** für eine Proportion +
+  **Newcombe (1998, Methode 10 / MOVER-W)** für das Konfidenzintervall der **Differenz** zweier
+  Proportionen (vorher/nachher) — closed-form ohne `scipy`, gegen den publizierten Referenzwert
+  verifiziert (56/70 vs. 48/80 → KI [0.0524, 0.3339]).
+- **`EffectHypothesis` trägt jetzt echtes 95%-KI (`ci_low`/`ci_high`) + `significant`-Flag:** ein
+  Effekt gilt nur dann als belastbar, wenn sein KI die **Null ausschließt**. Die `confidence` ist
+  nicht mehr heuristisch, sondern die **statistisch abgesicherte Effektstärke** (Abstand der Null zur
+  nächsten KI-Kante). `EffectDirection` ist **signifikanz-gesteuert**: nicht-signifikante Deltas sind
+  `UNCHANGED` — der Loop verankert keine Hypothese in Rauschen.
+- **Signifikanz-gesteuerter Lern-Hebel:** `apply_memory_prior` aggregiert **nur signifikante**
+  Hypothesen, gewichtet sie mit ihrer statistischen Confidence + **geometrischem Recency-Decay**
+  (aktuelle Effekte zählen mehr) und begrenzt den Confidence-Hub mit `tanh` (abnehmender Grenznutzen
+  statt unbegrenzter Addition). Ohne signifikante Evidenz bleibt der Plan **bit-genau** unverändert
+  (rückwärtskompatibel zu Sprint 3/4). Code- **und** Prompt-Pfad (`fix_agent.v2`) sehen dieselbe
+  Signifikanz — sie wirken in dieselbe Richtung (§8).
+- **Sichtbar in der CLI:** die Effekt-Tabelle (`render_effect`) zeigt je Hypothese das 95%-KI und
+  zählt in der Fußzeile, wie viele Effekte statistisch belastbar sind (KI ohne Null); das Dashboard
+  liefert die Kennzahlen (`n_improved`/`mean_delta`) über die API.
+- **Ein Lern-Signal, eine Definition:** derselbe Belastbarkeits-Test (`significant` **und**
+  `direction != UNCHANGED`) steuert Richtungs-Anzeige **und** Memory-Prior — der Loop lernt nie aus
+  etwas, das er selbst als „GLEICH" ausweist.
+
+**Das System kann jetzt:** einen gemessenen Vorher/Nachher-Effekt **von statistischem Rauschen
+unterscheiden** und ausschließlich aus belastbarer Evidenz lernen — deterministisch und offline
+bit-reproduzierbar. Der Regelkreis lernt nicht nur, er lernt **das Richtige**.
+
+**Bewusst offen (später):** eine Effekt-Tabelle im Web-Dashboard (heute nur CLI); Backfill des KI für
+vor Sprint 5 gespeicherte Hypothesen — solche „Alt-Effekte" (ohne KI) gelten als nicht belastbar und
+werden beim nächsten Lauf mit korrekter Statistik neu gemessen, statt mit der alten, unzuverlässigen
+Heuristik-Confidence weiterzuwirken.
+
+---
+
+## Sprint 6 — Summary
+
+**Ziel:** Die statistische Rigorosität von Sprint 5 (die *Effekt*-Messung am Loop-Ausgang) auch am
+**Eingang** der Pipeline verankern — bei der **Top/Flop-Messung**, auf der Pattern-Miner und
+GEO-Auditor aufsetzen.
+
+**Das Problem:** Die Top/Flop-Liste rankte Seiten nach **roher Zitations-Zählung**. Zwei Seiten, die
+sich nur um wenige Zitate von 240 unterscheiden, wurden als klar verschieden behandelt — der
+Pattern-Miner mint dann Templates aus Seiten, deren „Vorsprung" reines Stichproben-Rauschen ist, und
+der Auditor auditiert Flops, die statistisch gar nicht auffällig niedrig sind.
+
+**Gebaut:**
+- **Wilson-Konfidenzintervall je Seite:** jede `TopFlopEntry` trägt jetzt `rate_ci_low`/`rate_ci_high`
+  (95%-Wilson-KI ihrer Zitationsrate, aus `domain/statistics.py`) — die ehrliche Unsicherheit der
+  Messung, robust auch bei Raten nahe 0.
+- **Sichtbarkeits-Band (`VisibilityBand`):** relativ zum Domain-Durchschnitt (`field_citation_rate`)
+  wird jede Seite als `above_field` (KI komplett über dem Schnitt → belastbar top), `below_field`
+  (belastbar flop) oder `typical` (KI umschließt den Schnitt → statistisch nicht unterscheidbar)
+  klassifiziert. Die **Rangfolge bleibt** (rückwärtskompatibel zum Golden-Eval) — neu ist die
+  ehrliche Aussage, *welche* Ränge statistisch belastbar sind.
+- **Miner & Auditor sehen das Band:** der Pattern-Miner bevorzugt Muster aus `above_field`-Seiten
+  (Signal statt Rauschen), der GEO-Auditor priorisiert `below_field`-Flops — Code- und Prompt-Pfad
+  sehen dasselbe Signal.
+- **Sichtbar in der CLI:** die WAS-Tabelle zeigt je Seite das 95%-KI (grau = im Rauschen, farbig =
+  statistisch abgesetzt) und zählt, wie viele Seiten sich belastbar vom Schnitt absetzen.
+
+**Das System kann jetzt:** die gesamte Pipeline — von der Eingangs-Messung (Top/Flop) bis zum
+Ausgangs-Effekt — auf **statistisch belastbaren** Signalen aufbauen statt auf Zähl-Rauschen. Der
+Offline-Lauf zeigt es ehrlich: bei kleiner Stichprobe ist oft nur die Spitze/das Tail statistisch
+abgesetzt, der Mittelbau ist `typical` — genau das, was eine seriöse Messung eingestehen muss.
 
 ---
 
