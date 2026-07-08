@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 
 from geo_audit_loop.config.settings import Settings
+from geo_audit_loop.domain.coverage import CoverageReport, IntentCoverage
+from geo_audit_loop.domain.probe import QueryIntent
 from geo_audit_loop.domain.run import RunStatus
 from geo_audit_loop.orchestration.factory import assemble_run
 from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
@@ -64,6 +66,66 @@ def test_sprint2_flow_offline_produces_patterns_and_findings(tmp_path: Path) -> 
     ).fetchone()[0]
     con.close()
     assert n_log >= 2  # je ein Reasoning-Aufruf fuer Pattern-Miner und GEO-Auditor
+
+
+def test_query_generator_enriches_coverage_when_blind_spots_exist(tmp_path: Path) -> None:
+    """Session 4 (LLM): bei schwachen Intents fuellt der Query-Generator suggested_queries.
+
+    Das Offline-Sample hat keine Blind Spots (alle Intents abgedeckt) -> hier wird eine
+    schwache Coverage injiziert, um die Anreicherungs-Verdrahtung in ``mine_patterns`` aktiv
+    zu pruefen (Property + Re-Persistenz).
+    """
+    settings = Settings(
+        db_path=tmp_path / "geo.db", max_probes=1000, n_proxy_ips=5, top_n=5, run_seed=42
+    )
+    version, prompts = load_probe_set("v1")
+    assembly = assemble_run(
+        settings,
+        domain="it-sicherheit.de",
+        offline=True,
+        run_id="it-qg",
+        now=FIXED,
+        prompts=prompts,
+        prompt_version=version,
+        explain=True,
+    )
+    pipeline = assembly.pipeline
+    assert isinstance(pipeline, Sprint2Pipeline)
+    pipeline.sample()
+    pipeline.crawl_and_report()
+
+    # Blind Spot erzwingen: Coverage mit einem schwachen Intent injizieren.
+    weak = (QueryIntent.TROUBLESHOOTING,)
+    weak_coverage = CoverageReport(
+        run_id="it-qg",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        n_probes=48,
+        overall_citation_rate=0.2,
+        intents=(
+            IntentCoverage(
+                intent=QueryIntent.TROUBLESHOOTING,
+                n_prompts=1,
+                n_covered=0,
+                coverage_rate=0.0,
+                mean_citation_rate=0.0,
+            ),
+        ),
+        weakest_intents=weak,
+    )
+    pipeline._base._coverage = weak_coverage
+    assembly.storage.save_coverage_report(weak_coverage)
+
+    pipeline.mine_patterns()
+
+    enriched = pipeline.coverage
+    stored = assembly.storage.load_coverage_report("it-qg")
+    assembly.storage.close()
+    assert enriched is not None
+    assert enriched.suggested_queries  # Luecken-Fragen erzeugt
+    assert all(q.intent is QueryIntent.TROUBLESHOOTING for q in enriched.suggested_queries)
+    assert stored is not None
+    assert stored.suggested_queries == enriched.suggested_queries  # re-persistiert
 
 
 def test_sprint2_is_reproducible(tmp_path: Path) -> None:
