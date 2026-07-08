@@ -21,7 +21,7 @@ from starlette.routing import Route
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
 from geo_audit_loop.config.settings import Settings
 from geo_audit_loop.domain.fingerprint import report_fingerprint
-from geo_audit_loop.domain.probe import EngineId, ProbeResult
+from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeResult
 from geo_audit_loop.domain.run import RunRecord, RunStatus
 from geo_audit_loop.ports.storage import StoragePort
 from geo_audit_loop.prompts.loader import load_probe_set
@@ -200,7 +200,9 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         run = _selected_run(storage, request)
         if run is None:
             return JSONResponse({"run_id": None, "cells": []})
-        probes = storage.load_probes(run.run_id)
+        # Baseline-Phase: die Re-Probe (Sprint 4) wuerde sonst jede Zelle verdoppeln und die
+        # engine_rates ueber geboostete Probes verfaelschen (analog zum state-Endpoint).
+        probes = storage.load_probes(run.run_id, ProbePhase.BASELINE)
         prompts = _prompt_texts(run.prompt_set_version)
         engines = [engine.value for engine in EngineId]
         cells = [
@@ -237,7 +239,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         prompt = request.query_params.get("prompt", "")
         engine = request.query_params.get("engine", "")
         proxy = request.query_params.get("proxy", "")
-        for probe in storage.load_probes(run.run_id):
+        for probe in storage.load_probes(run.run_id, ProbePhase.BASELINE):
             if (
                 probe.prompt_id == prompt
                 and probe.engine_id.value == engine

@@ -182,6 +182,28 @@ def test_form_effect_report_is_deterministic_and_sorted() -> None:
     assert [h.patch_id for h in r1.hypotheses] == ["px-a", "px-b"]
 
 
+def test_form_effect_report_survives_fractional_rates() -> None:
+    # Regression: gebrochene Raten (1/3 -> 2/3) duerfen den _delta_consistent-Validator NICHT
+    # verletzen (Delta wird aus den gerundeten Raten abgeleitet). Frueher: ValidationError-Crash.
+    before = [_probe(cites_url=_URL), _probe(cites_url=None), _probe(cites_url=None)]  # 1/3
+    after = [_probe(cites_url=_URL), _probe(cites_url=_URL), _probe(cites_url=None)]  # 2/3
+    report = form_effect_report(
+        run_id="r1",
+        target_domain="it-sicherheit.de",
+        before_probes=before,
+        after_probes=after,
+        applied=[_proposal()],
+        prompt_version="v2",
+        generated_at=FIXED,
+    )
+    hyp = report.hypotheses[0]
+    assert hyp.before_citation_rate == round(1 / 3, 6)
+    assert hyp.after_citation_rate == round(2 / 3, 6)
+    # Delta ist konsistent mit den gespeicherten (gerundeten) Raten:
+    assert hyp.delta == round(hyp.after_citation_rate - hyp.before_citation_rate, 6)
+    assert hyp.direction is EffectDirection.IMPROVED
+
+
 def test_form_effect_report_empty_applied() -> None:
     report = form_effect_report(
         run_id="r1",

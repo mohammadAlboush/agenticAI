@@ -165,7 +165,12 @@ def form_effect_report(
     for proposal in sorted(applied, key=lambda p: p.patch_id):
         before_rate, before_n = url_citation_rate(before_probes, proposal.target_url)
         after_rate, after_n = url_citation_rate(after_probes, proposal.target_url)
-        delta = round(after_rate - before_rate, 6)
+        # Delta aus den GERUNDETEN Raten ableiten (exakt die, die persistiert werden), damit der
+        # _delta_consistent-Validator zustimmt. Sonst driften bei gebrochenen Raten (z.B. 1/3, 2/3)
+        # unabhaengig gerundete Felder um ~1e-6 vom aus Rohwerten berechneten Delta ab -> Crash.
+        before_cr = round(before_rate, 6)
+        after_cr = round(after_rate, 6)
+        delta = round(after_cr - before_cr, 6)
         direction = classify_direction(delta)
         hypotheses.append(
             EffectHypothesis(
@@ -179,8 +184,8 @@ def form_effect_report(
                 pyramid_level=proposal.pyramid_level,
                 change_type=proposal.change_type,
                 template_id=proposal.template_id,
-                before_citation_rate=round(before_rate, 6),
-                after_citation_rate=round(after_rate, 6),
+                before_citation_rate=before_cr,
+                after_citation_rate=after_cr,
                 before_n=before_n,
                 after_n=after_n,
                 delta=delta,
