@@ -18,7 +18,7 @@ from geo_audit_loop.domain.metrics import (
     count_target_url_citations,
     normalize_url,
 )
-from geo_audit_loop.domain.probe import ProbeResult, ProbeStatus
+from geo_audit_loop.domain.probe import ProbePhase, ProbeResult, ProbeStatus
 from geo_audit_loop.domain.run import RunContext
 from geo_audit_loop.observability.logging import log_event
 from geo_audit_loop.ports.crawl import CrawlPort
@@ -58,7 +58,9 @@ class InventoryCrawlerService:
         """Crawlt, persistiert Inventar und baut + speichert den Top/Flop-Report."""
         pages = self._crawl.crawl(run_context.target_domain, options)
         self._storage.save_pages(run_context.run_id, pages)
-        probes = self._storage.load_probes(run_context.run_id)
+        # Nur die Baseline-Phase zaehlt fuer die Top/Flop-Messung: bei einem fortgesetzten
+        # --learn-Lauf laegen sonst die geboosteten REPROBE-Probes mit im Nenner (Sprint 4).
+        probes = self._storage.load_probes(run_context.run_id, ProbePhase.BASELINE)
         scores = self._score_pages(pages, probes, run_context.target_domain)
         report = self._build_report(run_context, pages, scores, aggregates, top_n)
         self._storage.save_report(report)

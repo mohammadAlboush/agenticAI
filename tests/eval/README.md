@@ -18,3 +18,24 @@ Pattern-Miner und GEO-Auditor nutzen ein LLM. Ihre Evals docken an dieselbe Stru
 an, vergleichen aber **toleranzbasiert** (z. B. erwartete Template-Merkmale, Hebel-
 Bezug, Pyramide-Ebene statt exakter Stringgleichheit). Prompt-Aenderungen werden
 gegen diese Evals regressionsgetestet (Projektregeln §5.3).
+
+## Sprint 4 (Effekt / Lern-Loop, deterministisch)
+
+Der Effekt-Analyst ist deterministisch (reine Domaenen-Mathematik, kein LLM).
+`test_eval_effect_golden.py` pinnt toleranzbasiert die Vorher/Nachher-Re-Probe gegen
+`golden/effect_seed42.json`: Anzahl gebildeter Hypothesen in `[min,max]`, jede Hypothese
+an einem tatsaechlich angewandten Patch verankert, nicht-negatives Delta (Offline-Boost)
+und Confidence in `[0,1]`. Dass das Gedaechtnis den **naechsten** Fix-Run messbar
+veraendert (das eigentliche „Lernen"), sichern zusaetzlich die Integrationstests
+`tests/integration/test_memory_influence.py`.
+
+## Session 4 (Query-Intent-Coverage, deterministisch)
+
+Die Coverage-Analyse (fuer WELCHE Fragetypen wird die Domain zitiert?) ist eine reine,
+seed-stabile Domaenenfunktion. `test_eval_coverage_golden.py` pinnt ihre Offline-Ausgabe
+bei Seed 42 **bit-genau** gegen `golden/coverage_it_sicherheit_seed42.json` (Intent-Breite,
+mittlere Zitationsrate je Intent, Blind-Spot-Liste, Gesamt-Rate). Anders als die LLM-Evals
+ist hier exakte Gleichheit die Erwartung; eine bewusste Aenderung aktualisiert das Golden
+im selben Commit. Der (spaetere, nicht-deterministische) LLM-Query-Generator, der die
+schwachen Intents mit neuen Fragen fuellt, bekommt bei seiner Einfuehrung einen eigenen,
+toleranzbasierten Eval-Eintrag.

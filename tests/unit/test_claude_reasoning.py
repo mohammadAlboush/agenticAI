@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any
 
@@ -96,3 +97,45 @@ def test_api_error_returns_error_result() -> None:
 def test_missing_key_and_client_raises() -> None:
     with pytest.raises(ReasoningError):
         ClaudeReasoningAdapter(api_key=None, model="claude-x")
+
+
+class _ToolBlock:
+    def __init__(self, data: dict[str, Any]) -> None:
+        self.type = "tool_use"
+        self.name = "emit_result"
+        self.input = data
+
+
+class _ToolResp:
+    def __init__(self) -> None:
+        self.content = [_ToolBlock({"templates": [{"x": 1}]})]
+        self.usage = _Usage()
+
+
+class _ToolMessages:
+    def create(self, **kwargs: Any) -> _ToolResp:
+        return _ToolResp()
+
+
+class _ToolClient:
+    def __init__(self) -> None:
+        self.messages = _ToolMessages()
+
+
+def test_tool_use_returns_structured_json() -> None:
+    adapter = ClaudeReasoningAdapter(
+        api_key=None, model="claude-x", client=_ToolClient(), clock=lambda: FIXED
+    )
+    request = ReasoningRequest(
+        run_id="r",
+        task="pattern_miner",
+        system="s",
+        prompt_text="x",
+        model="claude-x",
+        max_tokens=100,
+        temperature=0.0,
+        response_schema={"type": "object"},
+    )
+    result = adapter.reason(request)
+    assert result.status is ReasoningStatus.OK
+    assert json.loads(result.text) == {"templates": [{"x": 1}]}

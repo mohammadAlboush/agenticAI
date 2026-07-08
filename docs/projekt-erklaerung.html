@@ -97,6 +97,11 @@ figcaption{font-size:12.5px;color:var(--mut);text-align:center;margin-top:12px;f
 .stat .l{font-size:12px;color:var(--mut);margin-top:3px}
 pre{background:#26251f;color:#eceae2;border-radius:14px;padding:18px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.55;overflow:auto;margin:18px 0}
 pre .c{color:#9a9684}.k{color:#b6dd7e}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:20px 0}
+.card{background:var(--surface);border-radius:16px;padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{margin:0;font-size:13.5px;color:var(--mut)}
+.card .ana{display:block;margin-top:8px;font-size:12.5px;color:var(--acc-deep)}
 .gloss{display:grid;grid-template-columns:200px 1fr;gap:2px 0;margin:14px 0}
 .gloss dt{font-weight:640;padding:9px 0}
 .gloss dd{margin:0;padding:9px 0;color:var(--mut);font-size:14.5px}
@@ -117,19 +122,20 @@ pre .c{color:#9a9684}.k{color:#b6dd7e}
   <div class="brand"><img src="assets/whs-logo.svg" alt="WHS"/></div>
   <div class="doctype">Projektdokumentation</div>
   <a href="#ch1"><span class="num">00</span>Management-Summary</a>
-  <a href="#ch2"><span class="num">01</span>Problem &amp; Motivation</a>
-  <a href="#ch3"><span class="num">02</span>Vision: der Lern-Loop</a>
-  <a href="#ch4"><span class="num">03</span>GEO-Grundlagen</a>
-  <a href="#ch5"><span class="num">04</span>Architektur &amp; Warum</a>
-  <a href="#ch6"><span class="num">05</span>Technologie-Entscheidungen</a>
-  <a href="#ch7"><span class="num">06</span>Forschungs-Methodik</a>
-  <a href="#ch8"><span class="num">07</span>Sprint 0 — Pitch</a>
-  <a href="#ch9"><span class="num">08</span>Sprint 1 — Foundation</a>
-  <a href="#ch10"><span class="num">09</span>Sprint 2 — Learning</a>
-  <a href="#ch11"><span class="num">10</span>Aktueller Stand &amp; Demo</a>
-  <a href="#ch12"><span class="num">11</span>Ausblick (Sprint 3–4)</a>
-  <a href="#ch13"><span class="num">12</span>Glossar</a>
-  <a href="#ch14"><span class="num">13</span>Quellen</a>
+  <a href="#ch1b"><span class="num">01</span>Grundwissen für Einsteiger</a>
+  <a href="#ch2"><span class="num">02</span>Problem &amp; Motivation</a>
+  <a href="#ch3"><span class="num">03</span>Vision: der Lern-Loop</a>
+  <a href="#ch4"><span class="num">04</span>GEO-Grundlagen</a>
+  <a href="#ch5"><span class="num">05</span>Architektur &amp; Warum</a>
+  <a href="#ch6"><span class="num">06</span>Technologie-Entscheidungen</a>
+  <a href="#ch7"><span class="num">07</span>Forschungs-Methodik</a>
+  <a href="#ch8"><span class="num">08</span>Sprint 0 — Pitch</a>
+  <a href="#ch9"><span class="num">09</span>Sprint 1 — Foundation</a>
+  <a href="#ch10"><span class="num">10</span>Sprint 2 — Learning</a>
+  <a href="#ch11"><span class="num">11</span>Aktueller Stand &amp; Demo</a>
+  <a href="#ch12"><span class="num">12</span>Ausblick (Sprint 3–4)</a>
+  <a href="#ch13"><span class="num">13</span>Glossar</a>
+  <a href="#ch14"><span class="num">14</span>Quellen</a>
 </nav>
 
 <main class="content">
@@ -144,7 +150,7 @@ pre .c{color:#9a9684}.k{color:#b6dd7e}
     <dt>Autor</dt><dd>Mohammad Alboush · Master Informatik · Westfälische Hochschule</dd>
     <dt>Pilot-Domain</dt><dd>it-sicherheit.de</dd>
     <dt>Stand</dt><dd>Sprint 2 (Learning) abgeschlossen · Juni 2026</dd>
-    <dt>Lesehinweis</dt><dd>Fachlich tief, aber von Grund auf erklärt — Fachbegriffe siehe Glossar (Kap. 12).</dd>
+    <dt>Lesehinweis</dt><dd>Fachlich tief, aber von Grund auf erklärt — Einsteiger starten mit Kap. 01 (Grundwissen); Fachbegriffe siehe Glossar (Kap. 13).</dd>
   </dl>
 </header>
 
@@ -169,8 +175,104 @@ und (4) <strong>misst die Wirkung erneut</strong> und schreibt das Gelernte in e
 und Nachvollziehbarkeit sind hier nicht optional, sondern Bewertungskriterium</em> — jede Design-Wahl
 zahlt darauf ein.</p>
 
+<!-- 0b: Grundwissen -->
+<h2 id="ch1b"><span class="chnum">Kapitel 01</span>Grundwissen für Einsteiger — die Bausteine von Null erklärt</h2>
+<p class="lead">Dieses Kapitel setzt <strong>kein</strong> Vorwissen voraus. Es erklärt die vier Dinge,
+auf denen alles Weitere aufbaut: wie Suchmaschinen arbeiten, was ein Sprachmodell (LLM) ist, was
+„Agenten" sind — und eine Handvoll Werkstatt-Begriffe aus der Software-Entwicklung.</p>
+
+<h3>1.1 Wie eine klassische Suchmaschine arbeitet — und was SEO ist</h3>
+<p>Eine Suchmaschine wie Google macht im Kern drei Dinge: Ein <strong>Crawler</strong> (ein automatisches
+Leseprogramm) besucht laufend Webseiten und lädt ihren Inhalt herunter. Daraus baut die Suchmaschine
+einen <strong>Index</strong> — vergleichbar einem riesigen Stichwortverzeichnis: zu jedem Begriff die
+Liste der Seiten, die ihn behandeln. Bei einer Suchanfrage sortiert ein <strong>Ranking</strong>-Verfahren
+die Treffer nach vermuteter Nützlichkeit (Inhalt, Verlinkung, Technik, Nutzersignale).</p>
+<p><strong>SEO</strong> (Search Engine Optimization) ist das Handwerk, die eigene Website so aufzubereiten,
+dass sie in diesem Verfahren gut abschneidet: sauber crawlbar, klar strukturiert, inhaltlich relevant.
+Wichtig für alles Folgende: Das Ziel von SEO ist eine gute <em>Position in einer Linkliste</em>.</p>
+
+<h3>1.2 Was ein Sprachmodell (LLM) ist — und warum es Quellen braucht</h3>
+<p>Ein <strong>LLM</strong> (Large Language Model, z.&nbsp;B. GPT oder Claude) ist ein Programm, das aus
+riesigen Textmengen gelernt hat, <em>wahrscheinlich passende Fortsetzungen</em> von Text zu erzeugen.
+Es schlägt nicht in einer Datenbank nach — es formuliert. Das macht es sprachlich stark, hat aber zwei
+praktische Folgen:</p>
+<ul>
+  <li>Sein Wissen ist auf dem Stand seines Trainings <strong>eingefroren</strong> — Neues kennt es nicht.</li>
+  <li>Es kann Aussagen erzeugen, die plausibel klingen, aber falsch sind (<strong>„Halluzination"</strong>).</li>
+</ul>
+<p>Deshalb arbeiten moderne <strong>KI-Antwortmaschinen</strong> (Perplexity, ChatGPT mit Suche, Google
+AI Overviews) zweistufig: Zur Frage werden zunächst <strong>aktuelle Quellen aus dem Web</strong>
+gesucht; das LLM formuliert seine Antwort dann <em>aus diesen Quellen</em> und nennt sie als Belege.
+Dieses Nachschlagen-dann-Formulieren ist der Grund, warum „zitiert werden" die neue Währung ist.</p>
+<figure>
+<svg viewBox="0 0 720 150" role="img" aria-label="Wie eine KI-Antwortmaschine arbeitet">
+  <rect class="nd t" x="20" y="50" width="130" height="44" rx="10"/><text class="lblw" x="85" y="77" text-anchor="middle">Frage</text>
+  <rect class="nd t" x="190" y="50" width="160" height="44" rx="10"/><text class="lblw" x="270" y="70" text-anchor="middle">Quellen suchen</text><text class="lbls" x="270" y="86" text-anchor="middle">Web, aktuell</text>
+  <rect class="nd core" x="390" y="50" width="160" height="44" rx="10"/><text class="lblw" x="470" y="70" text-anchor="middle">LLM formuliert</text><text class="lbls" x="470" y="86" text-anchor="middle">aus den Quellen</text>
+  <rect class="nd t" x="590" y="50" width="110" height="44" rx="10"/><text class="lblw" x="645" y="70" text-anchor="middle">Antwort</text><text class="lbls" x="645" y="86" text-anchor="middle">+ Zitate</text>
+  <path class="ed a" d="M152 72 H188"/><path class="ed a" d="M352 72 H388"/><path class="ed a" d="M552 72 H588"/>
+</svg>
+<figcaption>Abb. 0 — Antwortmaschinen suchen erst Quellen und lassen das LLM daraus formulieren. Wer in Schritt 2 gefunden und in Schritt 4 genannt wird, „gewinnt".</figcaption>
+</figure>
+
+<h3>1.3 Von SEO zu GEO — derselbe Gedanke, neues Ziel</h3>
+<p><strong>GEO</strong> (Generative Engine Optimization) überträgt das SEO-Handwerk auf Antwortmaschinen:
+Nicht mehr „Wie komme ich auf Platz 1 der Linkliste?", sondern <em class="q">„Wie werde ich zur Quelle,
+die die Maschine zitiert?"</em>. Was Inhalte zitierwürdig macht, behandelt Kapitel 04 systematisch
+(10 Hebel, Citation-Pyramide). Das Problem dahinter — und warum bestehende Werkzeuge nicht reichen —
+erklärt Kapitel 02.</p>
+
+<h3>1.4 Was „Agenten" und „agentische KI" bedeuten</h3>
+<p>Ein <strong>Agent</strong> ist mehr als ein Chatbot: ein LLM, das einen <strong>Auftrag</strong>, eine
+<strong>Rolle</strong>, <strong>Werkzeuge</strong> (z.&nbsp;B. Suche, Datenbank) und <strong>Regeln</strong>
+bekommt — und damit mehrschrittig auf ein Ziel hinarbeitet, statt nur eine Frage zu beantworten.
+Ein <strong>agentisches System</strong> verteilt eine größere Aufgabe auf mehrere spezialisierte
+Agenten, deren Übergaben klar definiert sind (Arbeitsteilung wie in einem Team).</p>
+<p>In diesem Projekt gibt es genau zwei LLM-Agenten: den <strong>Pattern-Miner</strong> (lernt Muster aus
+den Gewinner-Seiten) und den <strong>GEO-Auditor</strong> (prüft die Verlierer-Seiten dagegen). Alles
+andere — Messen, Zählen, Speichern, Sortieren — ist bewusst <strong>klassische, deterministische
+Software</strong>: Was sich exakt berechnen lässt, soll kein LLM „schätzen". Diese Trennung ist eine
+der wichtigsten Design-Entscheidungen (Kapitel 06–07).</p>
+
+<h3>1.5 Werkstatt-Begriffe — was in Demo &amp; Dokumentation immer wieder vorkommt</h3>
+<div class="cards">
+  <div class="card"><h4>Terminal / CLI</h4><p>Textfenster, in dem Programme per getipptem Befehl starten.
+    Vorteil für Forschung: Jeder Aufruf ist exakt dokumentier- und wiederholbar.</p>
+    <span class="ana">Analogie: Bestellzettel statt Zeigen auf die Theke.</span></div>
+  <div class="card"><h4>API</h4><p>Programmierbare Schnittstelle eines Dienstes: Ein Programm stellt
+    eine Anfrage (z.&nbsp;B. „beantworte diese Frage") und bekommt strukturierte Daten zurück — statt
+    eine Website zu bedienen.</p>
+    <span class="ana">Analogie: Lieferanteneingang statt Ladentheke.</span></div>
+  <div class="card"><h4>Mock</h4><p>Eingebauter Stellvertreter eines externen Dienstes: verhält sich
+    realistisch, antwortet aber lokal, kostenlos und <strong>immer gleich</strong>. Grundlage der
+    Offline-Demo und aller Tests.</p>
+    <span class="ana">Analogie: Flugsimulator — gleiche Instrumente, kontrollierte Bedingungen.</span></div>
+  <div class="card"><h4>Seed</h4><p>Startwert des (berechneten) Zufalls: Gleicher Seed ⇒ exakt dieselbe
+    „Zufalls"-Folge ⇒ wiederholbare Läufe. Hier traditionell: <strong>Seed 42</strong>.</p>
+    <span class="ana">Analogie: gleiche Startaufstellung ⇒ gleicher Stoß verteilt die Kugeln identisch.</span></div>
+  <div class="card"><h4>Hash / Fingerprint</h4><p>Kurze Prüfzeichenfolge, berechnet aus beliebig großen
+    Daten. Kleinste Änderung ⇒ völlig anderer Wert. Gleicher Fingerprint = beweisbar identische Daten.</p>
+    <span class="ana">Analogie: Siegelabdruck des gesamten Berichts in 12 Zeichen.</span></div>
+  <div class="card"><h4>Datenbank (SQLite)</h4><p>Strukturierter Speicher für alle Mess- und
+    Zwischenergebnisse — hier als einzelne Datei im Projekt, ohne Server. Erlaubt Fortsetzen
+    abgebrochener Läufe ohne Doppelarbeit.</p>
+    <span class="ana">Analogie: ein penibel geführtes Laborjournal.</span></div>
+  <div class="card"><h4>Test / Eval</h4><p>Automatische Prüfungen, die das Verhalten des Codes
+    festschreiben. <em>Tests</em> prüfen exakte Logik; <em>Evals</em> prüfen LLM-Agenten toleranzbasiert
+    (Struktur statt Wortlaut).</p>
+    <span class="ana">Analogie: TÜV-Prüfkatalog, der bei jeder Änderung komplett durchlaufen wird.</span></div>
+  <div class="card"><h4>Framework / Bibliothek</h4><p>Fertige, wiederverwendete Software-Bausteine.
+    Hier u.&nbsp;a. CrewAI (Agenten-Ablaufsteuerung), Pydantic (Datenverträge), rich
+    (Terminal-Darstellung).</p>
+    <span class="ana">Analogie: genormte Bauteile statt selbst gegossener Schrauben.</span></div>
+</div>
+<div class="callout"><b>Direkt weiterlesen:</b> Wie die Live-Demo Schritt für Schritt abläuft — was auf
+dem Bildschirm passiert und was dabei im Hintergrund geschieht — erklärt das Begleitdokument
+<a class="ref" href="live-demo-erklaerung.html"><code>docs/live-demo-erklaerung.html</code></a> ohne
+jedes Vorwissen.</div>
+
 <!-- 1 -->
-<h2 id="ch2"><span class="chnum">Kapitel 01</span>Das Problem &amp; die Motivation</h2>
+<h2 id="ch2"><span class="chnum">Kapitel 02</span>Das Problem &amp; die Motivation</h2>
 <p class="lead">Die Art, wie Menschen Informationen finden, hat sich verschoben — und damit die Regeln
 für Sichtbarkeit.</p>
 <p>Bei der klassischen Suche liefert Google eine <strong>Liste von Links</strong>; die Nutzerin klickt.
@@ -209,7 +311,7 @@ belastbar <em>warum</em> vergleichbarer Content besser läuft, und sie schließe
 Re-Validierung ist blind. Erst der geschlossene, lernende Loop macht GEO-Optimierung überprüfbar.</div>
 
 <!-- 2 -->
-<h2 id="ch3"><span class="chnum">Kapitel 02</span>Die Vision: der geschlossene Lern-Loop</h2>
+<h2 id="ch3"><span class="chnum">Kapitel 03</span>Die Vision: der geschlossene Lern-Loop</h2>
 <p class="lead">Das System ist als Regelkreis aus spezialisierten Agenten konzipiert — jede Stufe hat
 eine klar definierte Eingabe und Ausgabe (einen Datenvertrag).</p>
 <figure>
@@ -233,7 +335,7 @@ eine klar definierte Eingabe und Ausgabe (einen Datenvertrag).</p>
 </ul>
 
 <!-- 3 -->
-<h2 id="ch4"><span class="chnum">Kapitel 03</span>GEO-Grundlagen: 10 Hebel &amp; die Citation-Pyramide</h2>
+<h2 id="ch4"><span class="chnum">Kapitel 04</span>GEO-Grundlagen: 10 Hebel &amp; die Citation-Pyramide</h2>
 <p class="lead">GEO (Generative Engine Optimization) fragt nicht „ranke ich?", sondern „werde ich zitiert?".
 Das Projekt arbeitet mit einem festen Kriterienkatalog — damit jede Bewertung nachvollziehbar bleibt.</p>
 <p>Zehn Hebel treiben die Zitierwürdigkeit. Sie sind nicht gleichwertig, sondern in einer
@@ -266,7 +368,7 @@ eine perfekt geschriebene Seite nützt nichts, wenn der AI-Bot sie gar nicht les
 eine Ebene zurückgebunden werden; keine vagen „schreib besser"-Ratschläge.</p>
 
 <!-- 4 -->
-<h2 id="ch5"><span class="chnum">Kapitel 04</span>Architektur — und warum gerade so</h2>
+<h2 id="ch5"><span class="chnum">Kapitel 05</span>Architektur — und warum gerade so</h2>
 <p class="lead">Das System folgt der <strong>hexagonalen Architektur</strong> (Ports &amp; Adapters). Der
 fachliche Kern weiß nichts über die konkrete Außenwelt.</p>
 <figure>
@@ -303,7 +405,7 @@ beim Hinzufügen des <code>ReasoningPort</code> passiert. Das ist nicht Ästheti
 der wissenschaftlichen Reproduzierbarkeit.</p></div>
 
 <!-- 5 -->
-<h2 id="ch6"><span class="chnum">Kapitel 05</span>Technologie-Entscheidungen (das Herzstück)</h2>
+<h2 id="ch6"><span class="chnum">Kapitel 06</span>Technologie-Entscheidungen (das Herzstück)</h2>
 <p class="lead">Für ein Forschungsprojekt zählt nicht nur <em>was</em> benutzt wird, sondern <em>warum</em> —
 und welche Alternative aus welchem Grund verworfen wurde. Jede Karte: Was · Warum · Alternative ·
 Wirkung.</p>
@@ -376,7 +478,7 @@ Wirkung.</p>
 <dt>Wirkung</dt><dd>Ein lokales semantisches Gedächtnis, das künftige Fix-Läufe verfeinert (noch nicht aktiv).</dd></dl></div>
 
 <!-- 6 -->
-<h2 id="ch7"><span class="chnum">Kapitel 06</span>Forschungs-Methodik: warum jeder Lauf reproduzierbar ist</h2>
+<h2 id="ch7"><span class="chnum">Kapitel 07</span>Forschungs-Methodik: warum jeder Lauf reproduzierbar ist</h2>
 <p class="lead">Bewertet wird nicht nur, dass es läuft, sondern dass jeder Lauf <strong>rekonstruierbar</strong>
 und jede Aussage <strong>belegt</strong> ist. Mehrere Mechanismen sichern das.</p>
 <figure>
@@ -415,7 +517,7 @@ deshalb prüfen ihre Evals <strong>toleranzbasiert</strong>: Anzahl in einem Kor
 Severity, monotone Priorisierung. Robust gegen Prompt-Iteration, sensibel für echte Regression.</p>
 
 <!-- 7 -->
-<h2 id="ch8"><span class="chnum">Kapitel 07</span>Sprint 0 — der Pitch (Konzept)</h2>
+<h2 id="ch8"><span class="chnum">Kapitel 08</span>Sprint 0 — der Pitch (Konzept)</h2>
 <p class="lead">Sprint 0 war reine Konzeption: Problem, Lösungsidee, Marktlücke, Technik-Skizze und ein
 4-Sprint-Plan über 8 Wochen.</p>
 <table>
@@ -431,7 +533,7 @@ Severity, monotone Priorisierung. Robust gegen Prompt-Iteration, sensibel für e
 eine reale, themenstarke Domain für belastbare Messungen.</p>
 
 <!-- 8 -->
-<h2 id="ch9"><span class="chnum">Kapitel 08</span>Sprint 1 — Foundation (die Mess-Schicht)</h2>
+<h2 id="ch9"><span class="chnum">Kapitel 09</span>Sprint 1 — Foundation (die Mess-Schicht)</h2>
 <p class="lead">Ziel: das Fundament — neutral, getestet und reproduzierbar messen, welche Seiten zitiert werden.</p>
 <h3>Die Probe-Matrix: 4 × 12 × 5 = 240</h3>
 <figure>
@@ -490,7 +592,7 @@ TOP   1.  71x  /nis2-richtlinie     2.  42x  /ransomware-schutz   3.  39x  /zero
 FLOP  1.   7x  /security-awareness  2.  17x  /passwort-manager    3.  19x  /firewall-grundlagen</pre>
 
 <!-- 9 -->
-<h2 id="ch10"><span class="chnum">Kapitel 09</span>Sprint 2 — Learning (die Lern-Schicht)</h2>
+<h2 id="ch10"><span class="chnum">Kapitel 10</span>Sprint 2 — Learning (die Lern-Schicht)</h2>
 <p class="lead">Ziel: erklären, <strong>warum</strong> die Top-Seiten zitiert werden, und <strong>was</strong> den
 Flop-Seiten fehlt — über zwei LLM-gestützte Agenten.</p>
 <h3>Der neue <code>ReasoningPort</code> — und warum getrennt vom <code>EnginePort</code></h3>
@@ -531,25 +633,42 @@ Empfehlung). Ihre Prompts liegen <strong>versioniert</strong> in <code>prompts/<
 protokolliert; jeder Agent hat einen toleranzbasierten Eval-Slot.</p>
 
 <!-- 10 -->
-<h2 id="ch11"><span class="chnum">Kapitel 10</span>Aktueller Stand &amp; die Demo erklärt</h2>
+<h2 id="ch11"><span class="chnum">Kapitel 11</span>Aktueller Stand &amp; die Demo erklärt</h2>
 <p class="lead">In <strong>einem</strong> Befehl führt das System von der Messung zur Maßnahme — offline,
-deterministisch, ohne Kosten.</p>
+deterministisch, ohne Kosten. Die Ausgabe ist eine strukturierte Terminal-Oberfläche (Bibliothek
+<code>rich</code>): Tabellen mit Balken, farbige Dringlichkeits-Abzeichen, Live-Schrittanzeige.</p>
 <pre><span class="c">$ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3</span>
 
-<span class="k">WAS</span>   Top/Flop-Liste (s. Kap. 8)
-<span class="k">WARUM</span> [t1] Extrahierbarer Antwortblock + FAQ-Schema   (Konfidenz 0.82)
-            Ebene: Extrahierbarkeit | Hebel: Antwortblöcke, Maschinenlesbare Struktur
-<span class="k">WAS TUN</span> 1.[HIGH] /passwort-manager-vergleich · Maschinenlesbare Struktur
-            Fix: Vergleichstabelle + Product/Review-Schema ergänzen</pre>
+<span class="c">┌ Header ──────────────────────────────────────────────────────┐</span>
+<span class="c">│ geo-audit-loop · Sprint 2 — Learning</span>
+<span class="c">│ it-sicherheit.de  [OFFLINE · DETERMINISTISCH]  Seed 42 · run …</span>
+
+✓ Probe-Matrix sampeln   240 Probes      ✓ Pattern-Miner   3 Templates
+✓ Crawl + Top/Flop       8 Seiten        ✓ GEO-Auditor     6 Findings
+
+<span class="k">WAS</span>     Top/Flop-Tabelle mit Zitations-Balken (s. Kap. 9)
+<span class="k">WARUM</span>   [t1] Extrahierbarer Antwortblock + FAQ-Schema   (Konfidenz 0.82)
+<span class="k">WAS TUN</span> 1. [HIGH] /passwort-manager-vergleich · Maschinenlesbare Struktur
+            Fix: Vergleichstabelle + Product/Review-Schema ergänzen
+
+<span class="c">Kosten/Lauf 240 Probes · 39800 Tokens · $0.3115</span>
+Report-Fingerprint  <span class="k">0ab26644ea8d</span>  (Seed 42 — zweiter Lauf: identisch)</pre>
 <p>Die drei Blöcke entsprechen genau den drei Fragen: <em>Was</em> wird zitiert (Sampler), <em>warum</em>
 (Pattern-Miner: 3 Templates), <em>was tun</em> (GEO-Auditor: 6 nach Pyramide priorisierte Findings).
-Gleicher Seed ⇒ exakt dieselbe Ausgabe — im Terminal wie in der Präsentation.</p>
+Der <strong>Report-Fingerprint</strong> (SHA-256 über alle Ergebnis-Inhalte, ohne laufvariable Felder wie
+run-ID) macht den Determinismus beweisbar: Derselbe Befehl ein zweites Mal ⇒ identischer Fingerprint.
+Die 72-sekündige Bildschirmaufnahme dieses Doppellaufs liegt unter <code>docs/sprint2-demo.mp4</code>.</p>
+<div class="callout"><b>Demo Schritt für Schritt verstehen:</b> Das Begleitdokument
+<a class="ref" href="live-demo-erklaerung.html"><code>docs/live-demo-erklaerung.html</code></a> erklärt
+ohne Vorwissen jede Phase der Live-Demo — was auf dem Bildschirm zu sehen ist und was dabei im
+Hintergrund passiert (Befehl, Schrittanzeige, drei Akte, Fingerprint-Beweis, FAQ).</div>
 <div class="callout"><b>Stand:</b> Sprint 1 + 2 abgeschlossen; <code>ruff</code> und <code>mypy --strict</code>
-ohne Befund, alle Tests grün (Unit, Integration, toleranzbasierte Evals; Live-Tests opt-in). Keine neue
-Abhängigkeit nötig (<code>anthropic</code> war bereits gepinnt).</div>
+ohne Befund, alle Tests grün (Unit, Integration, toleranzbasierte Evals; Live-Tests opt-in). Einzige
+Ergänzung für die Demo-Oberfläche: <code>rich</code> als explizite Abhängigkeit (war bereits transitiv
+über CrewAI vorhanden — kein neues Paket).</div>
 
 <!-- 11 -->
-<h2 id="ch12"><span class="chnum">Kapitel 11</span>Ausblick — Sprint 3 &amp; 4</h2>
+<h2 id="ch12"><span class="chnum">Kapitel 12</span>Ausblick — Sprint 3 &amp; 4</h2>
 <figure>
 <svg viewBox="0 0 700 130" role="img" aria-label="Voller Loop mit Zukunft">
   <rect class="nd core" x="20" y="44" width="150" height="46" rx="11"/><text class="lblw" x="95" y="72" text-anchor="middle">Measure ✓</text>
@@ -571,7 +690,7 @@ Abhängigkeit nötig (<code>anthropic</code> war bereits gepinnt).</div>
 </ul>
 
 <!-- 12 -->
-<h2 id="ch13"><span class="chnum">Kapitel 12</span>Glossar</h2>
+<h2 id="ch13"><span class="chnum">Kapitel 13</span>Glossar</h2>
 <dl class="gloss">
   <dt>GEO</dt><dd>Generative Engine Optimization — Optimierung darauf, von KI-Antwortmaschinen <em>zitiert</em> zu werden (nicht nur zu ranken).</dd>
   <dt>Citation / Zitation</dt><dd>Eine von der Engine als Beleg genannte Quelle (URL). Die gemessene Zielgröße.</dd>
@@ -584,15 +703,25 @@ Abhängigkeit nötig (<code>anthropic</code> war bereits gepinnt).</div>
   <dt>Golden-Dataset</dt><dd>Fixierte Soll-Ausgabe, gegen die deterministischer Code geprüft wird.</dd>
   <dt>HITL</dt><dd>Human-in-the-Loop — menschliche Freigabe vor jedem Deploy.</dd>
   <dt>Determinismus</dt><dd>Gleicher Seed/Input ⇒ identische Ausgabe; Voraussetzung für Reproduzierbarkeit.</dd>
+  <dt>LLM</dt><dd>Large Language Model — KI-Modell, das aus Trainingstexten gelernt hat, passende Text-Fortsetzungen zu erzeugen (formuliert, schlägt nicht nach). S. Kap. 01.</dd>
+  <dt>Token</dt><dd>Text-Baustein (≈ Wortteil), in dem LLMs rechnen und abgerechnet werden — Grundlage der Kosten-Anzeige.</dd>
+  <dt>API</dt><dd>Programmierbare Schnittstelle eines Dienstes — strukturierte Anfrage/Antwort statt Bedienung einer Website.</dd>
+  <dt>Terminal / CLI</dt><dd>Textbasierte Eingabe-Konsole; Programme werden per getipptem, exakt wiederholbarem Befehl gestartet.</dd>
+  <dt>Mock</dt><dd>Eingebauter, deterministischer Stellvertreter eines externen Dienstes — Grundlage von Offline-Demo und Tests.</dd>
+  <dt>Seed</dt><dd>Startwert des berechneten Zufalls; gleicher Seed ⇒ gleiche Folge ⇒ wiederholbarer Lauf (hier: 42).</dd>
+  <dt>Hash / Fingerprint</dt><dd>Kurze Prüfzeichenfolge über beliebige Daten; kleinste Änderung ⇒ anderer Wert. Der Report-Fingerprint beweist identische Ergebnisse.</dd>
+  <dt>Schema.org</dt><dd>Standard-Vokabular für maschinenlesbare Auszeichnung von Webinhalten (FAQ, Produkt, Autor …) — zentraler GEO-Hebel.</dd>
 </dl>
 
 <!-- 13 -->
-<h2 id="ch14"><span class="chnum">Kapitel 13</span>Quellen &amp; Verweise</h2>
+<h2 id="ch14"><span class="chnum">Kapitel 14</span>Quellen &amp; Verweise</h2>
 <ul>
   <li>Projekt-Repository: <code>README.md</code>, <code>CLAUDE.md</code> (verbindliche Regeln), <code>src/geo_audit_loop/</code>.</li>
   <li>Skills als Wissensbasis: <code>.claude/skills/geo-strategy</code> (10 Hebel, Pyramide), <code>.claude/skills/agent-contracts</code>.</li>
   <li>Pitch (Sprint 0): Marktlücke &amp; Belege — Aggarwal et&nbsp;al., <em>GEO: Generative Engine Optimization</em>, KDD 2024; Zero-Click-Anteil im B2B.</li>
-  <li>Begleitende Dokumente: <code>docs/sprint2-praesentation.html</code> (Folien), <code>docs/demo-sprint2.md</code> (Demo-Ablauf).</li>
+  <li>Begleitende Dokumente: <code>docs/sprint2-praesentation.html</code> (Folien), <code>docs/demo-sprint2.md</code> (Demo-Ablauf),
+    <a class="ref" href="live-demo-erklaerung.html"><code>docs/live-demo-erklaerung.html</code></a> (die Live-Demo Schritt für Schritt erklärt),
+    <code>docs/sprint2-demo.mp4</code> (Bildschirmaufnahme des Doppellaufs).</li>
 </ul>
 <p style="color:var(--faint);font-size:13px;margin-top:30px">geo-audit-loop · Projektdokumentation · Westfälische Hochschule · Mohammad Alboush · Stand Juni 2026</p>
 

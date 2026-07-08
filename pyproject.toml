@@ -14,10 +14,22 @@ dependencies = [
     "crewai>=1.14,<2",                # Orchestrierung (Flow am Rand der Hexagonal-Architektur)
     "pydantic>=2.7,<3",               # Datenvertraege zwischen Agenten (Contracts)
     "pydantic-settings>=2.3,<3",      # Settings/Secrets via .env
+    "rich>=14.3,<15",                 # CLI-Praesentation (Report-Rendering; bereits transitiv via crewai)
+    "starlette>=1.2,<2",              # Run-Monitor Web-API (bereits transitiv via crewai)
+    "uvicorn>=0.48,<1",               # Run-Monitor Server (bereits transitiv via crewai)
     # Installiert jetzt, live erst spaeter (S1 = Mock-Adapter, nur Perplexity live ueber httpx):
     "anthropic>=0.105,<0.106",        # Claude-Engine-Adapter (Fast-Follow)
     "openai>=2.38,<3",                # ChatGPT-Engine-Adapter (Fast-Follow)
     "google-genai>=2.7,<3",           # Gemini-Engine-Adapter (Fast-Follow)
+]
+
+# Optionales Extra (CLAUDE.md §2: bge-m3 + Chroma als Vektorspeicher). Schwer (torch ist
+# transitiv) und daher NICHT im Default-Install/CI — der deterministische MockMemoryAdapter
+# braucht es nie. Live aktivieren via: uv sync --extra memory  bzw.  pip install '.[memory]'.
+[project.optional-dependencies]
+memory = [
+    "chromadb>=1.1,<2",              # Vektorspeicher (bereits transitiv via crewai vorhanden)
+    "sentence-transformers>=3,<6",   # bge-m3-Embeddings (zieht torch transitiv)
 ]
 
 [dependency-groups]
@@ -70,7 +82,7 @@ warn_unused_configs = true
 
 # Per-Modul-Overrides fuer Libs ohne eigene Typstubs (gezielt, nicht global).
 [[tool.mypy.overrides]]
-module = ["advertools.*", "crewai.*"]
+module = ["advertools.*", "crewai.*", "chromadb.*", "sentence_transformers.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

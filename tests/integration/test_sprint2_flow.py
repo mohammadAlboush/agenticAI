@@ -6,10 +6,12 @@ gemockten Ports aus und prueft Report, Templates, Findings und Determinismus (Se
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 from geo_audit_loop.config.settings import Settings
+from geo_audit_loop.domain.run import RunStatus
 from geo_audit_loop.orchestration.factory import assemble_run
 from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
 from geo_audit_loop.prompts.loader import load_probe_set
@@ -44,7 +46,24 @@ def test_sprint2_flow_offline_produces_patterns_and_findings(tmp_path: Path) -> 
     assert patterns.templates
     assert audit is not None
     assert audit.findings
+
+    # Sprint 2.1: Lern-Artefakte persistiert + Run-Kosten enthalten das Reasoning
+    assert assembly.storage.load_pattern_report("it-s2") is not None
+    assert assembly.storage.load_audit_report("it-s2") is not None
+    run = assembly.storage.load_run("it-s2")
+    snapshot_tokens = assembly.cost_tracker.snapshot().total_tokens
     assembly.storage.close()
+    assert run is not None
+    assert run.status is RunStatus.COMPLETED
+    assert run.total_tokens == snapshot_tokens  # Finalize nach Audit => Reasoning inklusive
+    assert run.total_tokens > 0
+
+    con = sqlite3.connect(str(settings.db_path))
+    n_log = con.execute(
+        "SELECT COUNT(*) FROM reasoning_log WHERE run_id = ?", ("it-s2",)
+    ).fetchone()[0]
+    con.close()
+    assert n_log >= 2  # je ein Reasoning-Aufruf fuer Pattern-Miner und GEO-Auditor
 
 
 def test_sprint2_is_reproducible(tmp_path: Path) -> None:
