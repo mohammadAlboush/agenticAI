@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
@@ -141,4 +142,13 @@ class StoragePort(Protocol):
 
     def load_effect_report(self, run_id: str) -> EffectReport | None:
         """Laedt den EffectReport eines Runs oder ``None``."""
+        ...
+
+    # --- Session-3-Wettbewerbs-Artefakt (Share of Voice) ---
+    def save_sov_report(self, report: ShareOfVoiceReport) -> None:
+        """Persistiert den Share-of-Voice-Report eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_sov_report(self, run_id: str) -> ShareOfVoiceReport | None:
+        """Laedt den Share-of-Voice-Report eines Runs oder ``None``."""
         ...

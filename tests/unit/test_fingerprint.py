@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
+from geo_audit_loop.domain.competitive import DomainShare, ShareOfVoiceReport
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fingerprint import report_fingerprint
 from geo_audit_loop.domain.fix import ChangeType, FixPlan, FixProposal
@@ -70,6 +71,56 @@ def _audit(run_id: str = "a", generated_at: datetime = FIXED) -> AuditReport:
             ),
         ),
     )
+
+
+def _sov(run_id: str = "a", generated_at: datetime = FIXED, count: int = 35) -> ShareOfVoiceReport:
+    return ShareOfVoiceReport(
+        run_id=run_id,
+        target_domain="it-sicherheit.de",
+        generated_at=generated_at,
+        n_probes=48,
+        target_rank=1,
+        target_share=0.77,
+        shares=(
+            DomainShare(
+                rank=1,
+                domain="it-sicherheit.de",
+                citation_count=37,
+                citation_rate=0.77,
+                is_target=True,
+            ),
+            DomainShare(
+                rank=2,
+                domain="bsi.bund.de",
+                citation_count=count,
+                citation_rate=0.73,
+                is_target=False,
+            ),
+        ),
+    )
+
+
+def test_sov_gated_absent_preserves_fingerprint() -> None:
+    # Ohne SoV-Report aendert der neue ``share``-Parameter den Hash NICHT (gated).
+    assert report_fingerprint(_topflop(), _patterns()) == report_fingerprint(
+        _topflop(), _patterns(), share=None
+    )
+
+
+def test_sov_folded_into_fingerprint() -> None:
+    assert report_fingerprint(_topflop()) != report_fingerprint(_topflop(), share=_sov())
+
+
+def test_sov_volatile_fields_do_not_change_fingerprint() -> None:
+    a = report_fingerprint(_topflop("a", FIXED), share=_sov("a", FIXED))
+    b = report_fingerprint(_topflop("b", OTHER), share=_sov("b", OTHER))
+    assert a == b  # run_id/generated_at gehen nicht in den Hash ein
+
+
+def test_sov_content_change_changes_fingerprint() -> None:
+    a = report_fingerprint(_topflop(), share=_sov(count=35))
+    b = report_fingerprint(_topflop(), share=_sov(count=30))
+    assert a != b
 
 
 def test_same_content_same_fingerprint() -> None:

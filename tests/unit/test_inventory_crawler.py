@@ -116,3 +116,26 @@ def test_pages_without_probes_score_zero(tmp_path: Path) -> None:
     assert report.n_probes == 0
     assert all(entry.citation_count == 0 for entry in report.top)
     assert all(entry.citation_rate == 0.0 for entry in report.top)
+
+
+def test_saves_share_of_voice_with_target_marked(tmp_path: Path) -> None:
+    # Session 3: der Crawler leitet aus denselben Baseline-Probes den SoV-Report ab + speichert ihn.
+    # Probes zitieren it-sicherheit.de (PAGES[0]=5, PAGES[1]=2 -> 7 Antworten) und other.com (3).
+    storage = _storage_with_probes(tmp_path)
+    service = InventoryCrawlerService(
+        crawl=MockCrawlAdapter(PAGES), storage=storage, clock=lambda: FIXED
+    )
+    service.run(_ctx(), CrawlOptions(user_agent="t"), aggregates=[], top_n=3)
+
+    sov = storage.load_sov_report("run-1")
+    assert sov is not None
+    assert sov.n_probes == 10
+    # Zieldomain zuerst (7/10), other.com als Wettbewerber (3/10).
+    assert sov.shares[0].domain == TARGET and sov.shares[0].is_target is True
+    assert sov.shares[0].citation_count == 7 and sov.shares[0].citation_rate == 0.7
+    assert sov.target_rank == 1
+    competitors = {s.domain for s in sov.shares if not s.is_target}
+    assert "other.com" in competitors
+    # Wettbewerber-Seiten enthalten die externe Seite, keine Ziel-Seite.
+    assert any(p.domain == "other.com" for p in sov.top_competitor_pages)
+    assert all(p.domain != TARGET for p in sov.top_competitor_pages)

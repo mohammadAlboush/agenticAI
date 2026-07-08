@@ -16,6 +16,7 @@ from rich.table import Table
 from rich.text import Text
 
 from geo_audit_loop.domain.audit import AuditReport, Severity
+from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.effect import EffectDirection, EffectReport
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
@@ -177,6 +178,52 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
         table.add_section()
     for entry in report.flop:
         _row(Text("▼ FLOP", style=f"bold {RED}"), entry, RED)
+    console.print(table)
+
+
+def render_share_of_voice(console: Console, report: ShareOfVoiceReport) -> None:
+    """Rendert die Wettbewerbslandschaft (WER gewinnt die Zitate?): der Share of Voice."""
+    console.print()
+    console.rule(
+        Text("WER — Wettbewerbs-Sichtbarkeit (Share of Voice)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    if not report.shares:
+        console.print(Text("Keine zitierten Domains gemessen.", style=GREY))
+        return
+    rank_txt = f"#{report.target_rank}" if report.target_rank is not None else "nicht zitiert"
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption=(
+            f"{report.n_probes} Probes · Zieldomain {rank_txt} "
+            f"({report.target_share:.0%} der Antworten) · Anteil = Antworten mit dieser Quelle"
+        ),
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("#", justify="right", width=3)
+    table.add_column("Domain", ratio=2, no_wrap=True)
+    table.add_column("Antworten", justify="right", width=10)
+    table.add_column("Share", justify="right", width=6)
+    table.add_column("", width=18)
+    scale = max((s.citation_rate for s in report.shares), default=0.0)
+    for share in report.shares:
+        is_t = share.is_target
+        domain = Text(share.domain, style=f"bold {ACCENT}" if is_t else "bold")
+        if is_t:
+            domain.append("  ← Zieldomain", style=ACCENT_DIM)
+        bar_style = ACCENT if is_t else AMBER
+        fraction = share.citation_rate / scale if scale > 0 else 0.0
+        table.add_row(
+            str(share.rank),
+            domain,
+            f"{share.citation_count}x",
+            f"{share.citation_rate:.0%}",
+            _bar(fraction, 18, bar_style),
+        )
     console.print(table)
 
 

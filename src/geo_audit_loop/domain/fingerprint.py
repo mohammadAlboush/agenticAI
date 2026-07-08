@@ -13,6 +13,7 @@ import json
 from typing import Final
 
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.competitive import ShareOfVoiceReport
 from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import FixPlan
@@ -39,6 +40,8 @@ def report_fingerprint(
     audit: AuditReport | None = None,
     fix_plan: FixPlan | None = None,
     effect: EffectReport | None = None,
+    *,
+    share: ShareOfVoiceReport | None = None,
 ) -> str:
     """Berechnet den inhaltsstabilen Fingerprint eines Runs (12 Hex-Zeichen).
 
@@ -51,6 +54,9 @@ def report_fingerprint(
         effect: Optional der Effekt-Report des geschlossenen Loops (Sprint 4). Die
             Vorher/Nachher-Deltas sind deterministisch (Offline-Boost) und daher
             fingerprint-faehig; laufvariable Zeitstempel bleiben ausgeschlossen.
+        share: Optional der Share-of-Voice-Report (Session 3). Deterministische
+            Wettbewerbs-Anteile — fingerprint-faehig; der Schluessel wird nur bei
+            vorhandenem Report ergaenzt, damit alte Fingerprints unveraendert bleiben.
 
     Returns:
         Die ersten 12 Hex-Zeichen des SHA-256 ueber das kanonische JSON der
@@ -73,5 +79,9 @@ def report_fingerprint(
         ),
         "effect": (_effect_payload(effect) if effect is not None else None),
     }
+    # Gated: nur bei vorhandenem SoV-Report ergaenzen -> bestehende Fingerprints (ohne share)
+    # bleiben bit-genau unveraendert (kein "share": null im kanonischen Blob).
+    if share is not None:
+        payload["share"] = share.model_dump(mode="json", exclude=_VOLATILE_FIELDS)
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]

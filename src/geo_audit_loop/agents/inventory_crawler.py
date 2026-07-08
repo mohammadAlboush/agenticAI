@@ -11,6 +11,7 @@ import logging
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 
+from geo_audit_loop.domain.competitive import compute_share_of_voice
 from geo_audit_loop.domain.findings import PageScore, TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.metrics import (
@@ -64,6 +65,15 @@ class InventoryCrawlerService:
         scores = self._score_pages(pages, probes, run_context.target_domain)
         report = self._build_report(run_context, pages, scores, aggregates, top_n)
         self._storage.save_report(report)
+        # Session 3: aus denselben Baseline-Probes den Wettbewerbs-Share-of-Voice ableiten
+        # (rein, deterministisch) und persistieren — erscheint so in jedem Sprint-Modus.
+        sov = compute_share_of_voice(
+            probes,
+            run_context.target_domain,
+            run_id=run_context.run_id,
+            generated_at=self._clock(),
+        )
+        self._storage.save_sov_report(sov)
         log_event(
             self._log,
             "inventory.done",
@@ -71,6 +81,8 @@ class InventoryCrawlerService:
             agent=_AGENT,
             n_pages=len(pages),
             n_probes=report.n_probes,
+            n_competitor_domains=sum(1 for s in sov.shares if not s.is_target),
+            target_share=sov.target_share,
         )
         return report
 
