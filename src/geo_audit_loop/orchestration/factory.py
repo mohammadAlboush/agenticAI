@@ -30,6 +30,7 @@ from geo_audit_loop.agents.fix_agent import FixAgentService
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
+from geo_audit_loop.agents.query_generator import QueryGeneratorService
 from geo_audit_loop.agents.sampler import SamplerService
 from geo_audit_loop.config import constants as c
 from geo_audit_loop.config.engines import ENGINE_REGISTRY
@@ -319,10 +320,22 @@ def assemble_run(
         storage=storage,
         logger=logger,
     )
+    qg_version, qg_prompt = load_prompt("query_generator")
+    query_generator = QueryGeneratorService(
+        reasoning=reasoning,
+        system_prompt=qg_prompt,
+        prompt_version=qg_version,
+        cost_tracker=cost_tracker,
+        prompts=prompts,
+        max_tokens=c.REASONING_MAX_TOKENS,
+        storage=storage,
+        logger=logger,
+    )
     sprint2 = Sprint2Pipeline(
         base=pipeline,
         pattern_miner=pattern_miner,
         geo_auditor=geo_auditor,
+        query_generator=query_generator,
         storage=storage,
         run_context=run_context,
         logger=logger,

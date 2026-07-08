@@ -274,10 +274,66 @@ _FIX_PROPOSALS: dict[str, object] = {
     ]
 }
 
+# Luecken-Fragen je Intent (Session 4, Query-Generator): deckt alle sechs Intents ab, damit
+# der Agent fuer jede schwache Intent-Menge deterministische Beispiel-Fragen filtern kann.
+_GENERATED_QUERIES: dict[str, object] = {
+    "queries": [
+        {
+            "intent": "informational",
+            "text": "Welche gesetzlichen IT-Sicherheitspflichten gelten fuer KMU in Deutschland?",
+        },
+        {
+            "intent": "informational",
+            "text": "Warum ist ein Informationssicherheits-Managementsystem (ISMS) wichtig?",
+        },
+        {
+            "intent": "howto",
+            "text": "Wie richtet man ein sicheres VPN fuer Remote-Mitarbeitende ein?",
+        },
+        {
+            "intent": "howto",
+            "text": "Wie segmentiert man ein Firmennetz in Sicherheitszonen?",
+        },
+        {
+            "intent": "comparison",
+            "text": "Welches SIEM-Tool eignet sich fuer mittelstaendische Unternehmen?",
+        },
+        {
+            "intent": "comparison",
+            "text": "EDR oder klassisches Antivirus — was schuetzt Endgeraete besser?",
+        },
+        {
+            "intent": "definition",
+            "text": "Was ist Zero Trust und wie unterscheidet es sich von Perimeter-Sicherheit?",
+        },
+        {
+            "intent": "definition",
+            "text": "Was bedeutet Defense in Depth in der IT-Sicherheit?",
+        },
+        {
+            "intent": "checklist",
+            "text": "Welche Schritte gehoeren in einen Notfallplan fuer einen Ransomware-Angriff?",
+        },
+        {
+            "intent": "checklist",
+            "text": "Was gehoert in eine Onboarding-Checkliste fuer sichere Mitarbeiter-Accounts?",
+        },
+        {
+            "intent": "troubleshooting",
+            "text": "Woran erkenne ich, dass mein Backup nicht zuverlaessig funktioniert?",
+        },
+        {
+            "intent": "troubleshooting",
+            "text": "Wie erkennt man einen kompromittierten E-Mail-Account fruehzeitig?",
+        },
+    ]
+}
+
 _PAYLOADS: dict[str, dict[str, object]] = {
     "pattern_miner": _PATTERN_TEMPLATES,
     "geo_auditor": _AUDIT_FINDINGS,
     "fix_agent": _FIX_PROPOSALS,
+    "query_generator": _GENERATED_QUERIES,
 }
 
 

@@ -44,6 +44,10 @@ seed-stabile Domaenenfunktion. `test_eval_coverage_golden.py` pinnt ihre Offline
 bei Seed 42 **bit-genau** gegen `golden/coverage_it_sicherheit_seed42.json` (Intent-Breite,
 mittlere Zitationsrate je Intent, Blind-Spot-Liste, Gesamt-Rate). Anders als die LLM-Evals
 ist hier exakte Gleichheit die Erwartung; eine bewusste Aenderung aktualisiert das Golden
-im selben Commit. Der (spaetere, nicht-deterministische) LLM-Query-Generator, der die
-schwachen Intents mit neuen Fragen fuellt, bekommt bei seiner Einfuehrung einen eigenen,
-toleranzbasierten Eval-Eintrag.
+im selben Commit.
+
+Der **Query-Generator** (LLM) fuellt die schwachen Intents mit neuen Fragen und ist
+nicht-deterministisch; `test_eval_query_generator_golden.py` prueft daher **toleranzbasiert**
+gegen `golden/query_generator_seed42.json`: fuer die vorgegebenen schwachen Intents genug
+valide Luecken-Fragen, jede Frage traegt einen der angeforderten Intents, Kappung je Intent
+eingehalten, keine Dubletten. Offline laeuft er gegen den deterministischen Mock.

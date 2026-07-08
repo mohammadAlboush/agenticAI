@@ -62,6 +62,9 @@ SOV_TOP_COMPETITOR_PAGES: Final = 10
 # --- Query-Intent-Coverage (Session 4) ---
 # Coverage-Rate (Anteil zitierter Prompts je Intent), unter der ein Intent als Blind Spot gilt.
 COVERAGE_WEAK_THRESHOLD: Final = 0.5
+# Query-Generator (Session 4, LLM): Task-Label + wie viele Luecken-Fragen je schwachem Intent.
+QUERY_GENERATOR_TASK: Final = "query_generator"
+QUERY_GENERATOR_MAX_PER_INTENT: Final = 3
 
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
