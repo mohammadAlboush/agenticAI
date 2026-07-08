@@ -14,6 +14,7 @@ from typing import Final
 
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.effect import EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import FixPlan
 from geo_audit_loop.domain.templates import PatternReport
@@ -39,6 +40,7 @@ def report_fingerprint(
     audit: AuditReport | None = None,
     fix_plan: FixPlan | None = None,
     effect: EffectReport | None = None,
+    entity_graph: EntityGraphReport | None = None,
 ) -> str:
     """Berechnet den inhaltsstabilen Fingerprint eines Runs (12 Hex-Zeichen).
 
@@ -51,6 +53,10 @@ def report_fingerprint(
         effect: Optional der Effekt-Report des geschlossenen Loops (Sprint 4). Die
             Vorher/Nachher-Deltas sind deterministisch (Offline-Boost) und daher
             fingerprint-faehig; laufvariable Zeitstempel bleiben ausgeschlossen.
+        entity_graph: Optional der Entity-/Knowledge-Graph-Report (Session 8). Rein
+            deterministisch (kein LLM/RNG) und damit fingerprint-faehig. Der Schluessel
+            wird nur eingehaengt, wenn ein Report vorliegt -> aeltere Fingerprints bleiben
+            bit-identisch.
 
     Returns:
         Die ersten 12 Hex-Zeichen des SHA-256 ueber das kanonische JSON der
@@ -73,5 +79,8 @@ def report_fingerprint(
         ),
         "effect": (_effect_payload(effect) if effect is not None else None),
     }
+    # Gated: nur einhaengen, wenn vorhanden -> Sprint-1..4-Fingerprints bleiben unveraendert.
+    if entity_graph is not None:
+        payload["entity_graph"] = entity_graph.model_dump(mode="json", exclude=_VOLATILE_FIELDS)
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]

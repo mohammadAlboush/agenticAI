@@ -17,6 +17,7 @@ from rich.text import Text
 
 from geo_audit_loop.domain.audit import AuditReport, Severity
 from geo_audit_loop.domain.effect import EffectDirection, EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -178,6 +179,58 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
     for entry in report.flop:
         _row(Text("▼ FLOP", style=f"bold {RED}"), entry, RED)
     console.print(table)
+
+
+def render_entity_graph(console: Console, report: EntityGraphReport) -> None:
+    """Rendert den Entity-/Knowledge-Graph (WER — Entitaeten-Klarheit) + den JSON-LD-Fix.
+
+    Zeigt die deklarierten Entitaeten (Marke + schema.org-Typen mit Deckung), die
+    schwaechsten Seiten (Klarheits-Luecken, rot) und den empfohlenen kanonischen
+    Organization-JSON-LD-Block — die konkrete semantische Fix-Vorlage.
+    """
+    console.print()
+    console.rule(
+        Text("WER — Entitaeten-Klarheit (Knowledge-Graph)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    weak = set(report.weakest_pages)
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption=(
+            f"Marke {report.brand_name} · mittlere Klarheit {report.mean_clarity:.2f} · "
+            f"{len(weak)} Seite(n) mit Luecken"
+        ),
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("Entitaet", ratio=2)
+    table.add_column("schema.org", width=16)
+    table.add_column("Seiten", justify="right", width=7)
+    table.add_column("Deckung", width=18)
+    for node in report.entities:
+        marker = "★ " if node.kind.value == "brand" else ""
+        bar_style = ACCENT if node.coverage_rate > 0 else RED
+        table.add_row(
+            Text(f"{marker}{node.name}", style="bold"),
+            Text(node.schema_type, style=ACCENT_DIM),
+            str(node.pages_declaring),
+            _bar(node.coverage_rate, 14, bar_style),
+        )
+    console.print(table)
+    if weak:
+        gaps = ", ".join(_short_url(url) for url in report.weakest_pages[:6])
+        console.print(Text(f"Klarheits-Luecken: {gaps}", style=RED))
+    jsonld = Panel(
+        Text(report.recommended_jsonld, style=GREY),
+        title=Text(" Empfohlener JSON-LD (Organization) ", style=f"bold black on {ACCENT}"),
+        title_align="left",
+        border_style=ACCENT_DIM,
+        padding=(1, 2),
+    )
+    console.print(jsonld)
 
 
 def render_patterns(console: Console, report: PatternReport) -> None:

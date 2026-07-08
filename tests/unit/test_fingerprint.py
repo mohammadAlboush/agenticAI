@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
+from geo_audit_loop.domain.entity import EntityGraphReport, build_entity_graph
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fingerprint import report_fingerprint
 from geo_audit_loop.domain.fix import ChangeType, FixPlan, FixProposal
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
+from geo_audit_loop.domain.inventory import CrawledPage, PageInventory, SchemaInventory
 from geo_audit_loop.domain.templates import PatternReport, Template
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -136,4 +138,50 @@ def test_fixplan_stable_across_volatile_fields() -> None:
 def test_fixplan_content_change_changes_fingerprint() -> None:
     a = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block A"))
     b = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block B"))
+    assert a != b
+
+
+def _entity_graph(
+    run_id: str = "a", generated_at: datetime = FIXED, *, opengraph: bool = True
+) -> EntityGraphReport:
+    pages = [
+        PageInventory(
+            page=CrawledPage(
+                url="https://it-sicherheit.de/nis2",
+                status_code=200,
+                canonical="https://it-sicherheit.de/nis2",
+                lang="de",
+            ),
+            schema_inventory=SchemaInventory(
+                url="https://it-sicherheit.de/nis2",
+                jsonld_types=("Organization",),
+                has_opengraph=opengraph,
+            ),
+        )
+    ]
+    return build_entity_graph("it-sicherheit.de", pages, run_id=run_id, generated_at=generated_at)
+
+
+def test_entity_graph_gated_out_when_absent() -> None:
+    """Ohne Entity-Graph-Argument bleibt der Fingerprint bit-identisch (Sprint 1..4 stabil)."""
+    without = report_fingerprint(_topflop(), _patterns(), _audit())
+    with_none = report_fingerprint(_topflop(), _patterns(), _audit(), entity_graph=None)
+    assert without == with_none
+
+
+def test_entity_graph_folded_into_fingerprint() -> None:
+    without = report_fingerprint(_topflop(), _patterns(), _audit())
+    with_eg = report_fingerprint(_topflop(), _patterns(), _audit(), entity_graph=_entity_graph())
+    assert without != with_eg  # Session 8 aendert den Fingerprint, sobald der Graph vorliegt
+
+
+def test_entity_graph_stable_across_volatile_fields() -> None:
+    a = report_fingerprint(_topflop("a", FIXED), entity_graph=_entity_graph("a", FIXED))
+    b = report_fingerprint(_topflop("b", OTHER), entity_graph=_entity_graph("b", OTHER))
+    assert a == b
+
+
+def test_entity_graph_content_change_changes_fingerprint() -> None:
+    a = report_fingerprint(_topflop(), entity_graph=_entity_graph(opengraph=True))
+    b = report_fingerprint(_topflop(), entity_graph=_entity_graph(opengraph=False))
     assert a != b

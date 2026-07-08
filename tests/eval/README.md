@@ -28,3 +28,14 @@ an einem tatsaechlich angewandten Patch verankert, nicht-negatives Delta (Offlin
 und Confidence in `[0,1]`. Dass das Gedaechtnis den **naechsten** Fix-Run messbar
 veraendert (das eigentliche „Lernen"), sichern zusaetzlich die Integrationstests
 `tests/integration/test_memory_influence.py`.
+
+## Session 8 (Entity-/Knowledge-Graph, deterministisch)
+
+Der Entity-Graph ist eine reine, seed-stabile Domaenenfunktion aus dem Seiten-Inventar
+(kein LLM/RNG). `test_eval_entity_graph_golden.py` pinnt seine Offline-Ausgabe bei Seed 42
+**bit-genau** gegen `golden/entity_graph_it_sicherheit_seed42.json`: Entity-Knoten (Marke +
+deklarierte schema.org-Typen mit Deckung), Klarheit je Seite, Blind-Spot-Liste und den
+empfohlenen kanonischen Organization-JSON-LD-Block. Exakte Gleichheit ist die Erwartung; eine
+bewusste Aenderung aktualisiert das Golden im selben Commit. Der (spaetere, nicht-
+deterministische) LLM-Entity-Extractor, der benannte Entitaeten und ``sameAs``-Kandidaten aus
+dem Fliesstext zieht, bekommt bei seiner Einfuehrung einen eigenen toleranzbasierten Eintrag.

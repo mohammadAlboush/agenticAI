@@ -168,13 +168,14 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         fix_plan = storage.load_fix_plan(run.run_id)
         deploy = storage.load_deploy_result(run.run_id)
         effect = storage.load_effect_report(run.run_id)
+        entity_graph = storage.load_entity_graph(run.run_id)
         # Nur die Baseline-Probes zaehlen als Fortschritt gegen die erwartete Matrix (Sprint 4:
         # die Re-Probe-Phase verdoppelt sonst die Zahl und laesst den Balken ueberlaufen).
         baseline_probes = [p for p in probes if p.phase.value == "baseline"]
         n_ips = len({probe.proxy_label or "" for probe in baseline_probes}) or cfg.n_proxy_ips
         expected = len(EngineId) * len(prompts) * n_ips
         fingerprint = (
-            report_fingerprint(report, patterns, audit, fix_plan, effect)
+            report_fingerprint(report, patterns, audit, fix_plan, effect, entity_graph)
             if report is not None
             else None
         )
@@ -190,6 +191,11 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             "n_hypotheses": len(effect.hypotheses) if effect is not None else None,
             "n_improved": effect.n_improved if effect is not None else None,
             "mean_delta": effect.mean_delta if effect is not None else None,
+            "n_entities": len(entity_graph.entities) if entity_graph is not None else None,
+            "mean_clarity": entity_graph.mean_clarity if entity_graph is not None else None,
+            "n_entity_gaps": (
+                len(entity_graph.weakest_pages) if entity_graph is not None else None
+            ),
             "has_report": report is not None,
             "fingerprint": fingerprint,
             "dashboard_alive": manager.is_alive(run.run_id),
@@ -280,6 +286,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                     "fix_plan": None,
                     "deploy": None,
                     "effect": None,
+                    "entity_graph": None,
                 }
             )
         report = storage.load_report(run.run_id)
@@ -288,6 +295,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         fix_plan = storage.load_fix_plan(run.run_id)
         deploy = storage.load_deploy_result(run.run_id)
         effect = storage.load_effect_report(run.run_id)
+        entity_graph = storage.load_entity_graph(run.run_id)
         return JSONResponse(
             {
                 "report": report.model_dump(mode="json") if report is not None else None,
@@ -296,6 +304,9 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                 "fix_plan": fix_plan.model_dump(mode="json") if fix_plan is not None else None,
                 "deploy": deploy.model_dump(mode="json") if deploy is not None else None,
                 "effect": effect.model_dump(mode="json") if effect is not None else None,
+                "entity_graph": (
+                    entity_graph.model_dump(mode="json") if entity_graph is not None else None
+                ),
             }
         )
 

@@ -16,6 +16,7 @@ from pydantic import BaseModel, PrivateAttr
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.errors import GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
@@ -59,6 +60,11 @@ class Sprint2Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der Top/Flop-Report aus Schritt 2 (Sprint-1-Messung)."""
         return self._base.report
+
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report aus Schritt 2 (Session 8, deterministisch)."""
+        return self._base.entity_graph
 
     @property
     def pattern_report(self) -> PatternReport | None:

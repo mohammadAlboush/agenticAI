@@ -22,6 +22,7 @@ from geo_audit_loop.agents.sampler import SamplerService
 from geo_audit_loop.config import constants as c
 from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
+from geo_audit_loop.domain.entity import EntityGraphReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan, FixProposal
 from geo_audit_loop.domain.memory import MemoryQuery
@@ -72,6 +73,11 @@ class Sprint4Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der Top/Flop-Report (Sprint-1-Messung)."""
         return self._base.report
+
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report (Session 8, deterministisch)."""
+        return self._base.entity_graph
 
     @property
     def pattern_report(self) -> PatternReport | None:

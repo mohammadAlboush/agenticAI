@@ -13,6 +13,7 @@ from geo_audit_loop.domain.effect import (
     EffectReport,
     derive_hypothesis_id,
 )
+from geo_audit_loop.domain.entity import build_entity_graph
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -310,6 +311,21 @@ def test_effect_report_roundtrip(tmp_path: Path) -> None:
     assert storage.load_effect_report("unknown") is None
     storage.delete_run("run-1")
     assert storage.load_effect_report("run-1") is None
+
+
+def test_entity_graph_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    report = build_entity_graph(
+        "it-sicherheit.de",
+        [build_sample_inventory("it-sicherheit.de")[0]],
+        run_id="run-1",
+        generated_at=FIXED,
+    )
+    storage.save_entity_graph(report)
+    assert storage.load_entity_graph("run-1") == report
+    assert storage.load_entity_graph("unknown") is None
+    storage.delete_run("run-1")
+    assert storage.load_entity_graph("run-1") is None
 
 
 def test_delete_run_removes_fix_artifacts(tmp_path: Path) -> None:
