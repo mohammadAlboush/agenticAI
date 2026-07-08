@@ -37,3 +37,13 @@ Der Share-of-Voice ist reine Domaenen-Mathematik ueber die Baseline-Citations (k
 Zeile ist die Zieldomain, die Rangfolge faellt (totaler Ordnungsschluessel), alle Shares in
 `[0,1]`, und die Wettbewerber-Seiten sind Nicht-Ziel-Seiten. Ein Golden-Unit-Test genuegt
 (kein Agenten-Eval-Slot noetig, da deterministisch).
+## Session 4 (Query-Intent-Coverage, deterministisch)
+
+Die Coverage-Analyse (fuer WELCHE Fragetypen wird die Domain zitiert?) ist eine reine,
+seed-stabile Domaenenfunktion. `test_eval_coverage_golden.py` pinnt ihre Offline-Ausgabe
+bei Seed 42 **bit-genau** gegen `golden/coverage_it_sicherheit_seed42.json` (Intent-Breite,
+mittlere Zitationsrate je Intent, Blind-Spot-Liste, Gesamt-Rate). Anders als die LLM-Evals
+ist hier exakte Gleichheit die Erwartung; eine bewusste Aenderung aktualisiert das Golden
+im selben Commit. Der (spaetere, nicht-deterministische) LLM-Query-Generator, der die
+schwachen Intents mit neuen Fragen fuellt, bekommt bei seiner Einfuehrung einen eigenen,
+toleranzbasierten Eval-Eintrag.

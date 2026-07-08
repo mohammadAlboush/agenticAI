@@ -126,9 +126,7 @@ def test_target_beyond_top_domains_is_kept_with_true_rank() -> None:
         + [_probe(10 + i, ["https://comp2.com/y"]) for i in range(2)]
         + [_probe(20, ["https://www.it-sicherheit.de/z"])]
     )
-    report = compute_share_of_voice(
-        probes, TARGET, run_id="r1", generated_at=FIXED, top_domains=2
-    )
+    report = compute_share_of_voice(probes, TARGET, run_id="r1", generated_at=FIXED, top_domains=2)
     assert report.target_rank == 3
     assert sum(1 for s in report.shares if s.is_target) == 1  # Invariante gewahrt trotz Kappung
     target = next(s for s in report.shares if s.is_target)

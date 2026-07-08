@@ -59,6 +59,9 @@ TOP_N: Final = 10
 # Wie viele Wettbewerber-Domains bzw. -Seiten der SoV-Report maximal auflistet.
 SOV_TOP_DOMAINS: Final = 10
 SOV_TOP_COMPETITOR_PAGES: Final = 10
+# --- Query-Intent-Coverage (Session 4) ---
+# Coverage-Rate (Anteil zitierter Prompts je Intent), unter der ein Intent als Blind Spot gilt.
+COVERAGE_WEAK_THRESHOLD: Final = 0.5
 
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"
