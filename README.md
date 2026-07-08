@@ -236,6 +236,13 @@ Ein gestarteter Lauf läuft als eigener Prozess (exakt der CLI-Code-Pfad, vorab 
   deshalb die Aufteilung SAIA=Reasoning, Gemini=Zitate. Perplexity bleibt als bezahlte
   Live-Engine opt-in; Live-Läufe sind naturgemäß nicht bit-reproduzierbar (Fingerprint-Beweis
   gilt offline).
+- **Zitations-Messung: Claude & ChatGPT mit Websuche (opt-in, bezahlt)** — hinter demselben
+  `EnginePort` messen jetzt auch **Claude** (Anthropic Messages API + `web_search`-Server-Tool,
+  `ANTHROPIC_API_KEY`) und **ChatGPT** (OpenAI Responses API + `web_search`, `OPENAI_API_KEY`),
+  welche AI-Engine die Zieldomain zitiert. Aktivieren via `GEO_LIVE_ENGINES=claude,chatgpt` (oder
+  gemischt mit `gemini`/`perplexity`). Nicht markierte Engines und der gesamte Offline-Pfad bleiben
+  gemockt und bit-reproduzierbar. Die heterogenen Zitationsformate werden auf **ein** `Citation`-Modell
+  normalisiert (Ports & Adapters, §3.1) — eine fünfte Engine ergänzt man ohne Kern-Änderung.
 - **Crawl im Live-Modus:** Standardmäßig nutzen auch Live-Läufe das schnelle, deterministische
   Sample-Inventar der Domain (der echte advertools-Crawl ist langsam und kann in den
   5-Minuten-Timeout laufen). Für einen echten Crawl der Zieldomain: `--live-crawl` ergänzen.

@@ -14,6 +14,8 @@ from datetime import datetime
 
 from geo_audit_loop.adapters.crawl.advertools_crawler import AdvertoolsCrawlAdapter
 from geo_audit_loop.adapters.crawl.mock import MockCrawlAdapter
+from geo_audit_loop.adapters.engines.chatgpt import ChatGPTEngineAdapter
+from geo_audit_loop.adapters.engines.claude import ClaudeEngineAdapter
 from geo_audit_loop.adapters.engines.gemini import GeminiEngineAdapter
 from geo_audit_loop.adapters.engines.mock import MockEngineAdapter
 from geo_audit_loop.adapters.engines.perplexity import PerplexityEngineAdapter
@@ -107,10 +109,20 @@ def _build_gemini(settings: Settings, proxy: ProxyPort) -> EnginePort:
     return GeminiEngineAdapter(api_keys=settings.api_keys_for(EngineId.GEMINI), proxy=proxy)
 
 
+def _build_claude_engine(settings: Settings, proxy: ProxyPort) -> EnginePort:
+    return ClaudeEngineAdapter(api_key=settings.api_key_for(EngineId.CLAUDE), proxy=proxy)
+
+
+def _build_chatgpt(settings: Settings, proxy: ProxyPort) -> EnginePort:
+    return ChatGPTEngineAdapter(api_key=settings.api_key_for(EngineId.CHATGPT), proxy=proxy)
+
+
 #: Engines mit Live-Adapter; alle anderen bleiben (auch im Live-Modus) gemockt.
 _LIVE_ENGINE_BUILDERS: dict[EngineId, Callable[[Settings, ProxyPort], EnginePort]] = {
     EngineId.PERPLEXITY: _build_perplexity,
     EngineId.GEMINI: _build_gemini,
+    EngineId.CLAUDE: _build_claude_engine,
+    EngineId.CHATGPT: _build_chatgpt,
 }
 
 
@@ -122,7 +134,7 @@ def build_engines(
     proxy: ProxyPort,
     boosted_urls: Sequence[str] = (),
 ) -> dict[EngineId, EnginePort]:
-    """Waehlt je Engine den Live- oder Mock-Adapter (live: Perplexity, Gemini).
+    """Waehlt je Engine den Live- oder Mock-Adapter (live: Perplexity, Gemini, Claude, ChatGPT).
 
     ``boosted_urls`` (Sprint 4, nur Mock): gepatchte URLs werden in der Re-Probe garantiert
     zitiert (deterministischer Effekt); Live-Adapter ignorieren den Boost (messen die Realitaet).
