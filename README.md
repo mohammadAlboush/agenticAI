@@ -6,8 +6,13 @@ Templates auditiert, Fixes vorschlägt (Human-in-the-Loop), deployt und den Effe
 
 Master-Modulprojekt · Agentic AI · Westfälische Hochschule · Master Informatik.
 
-> **Status:** Sprint 2 (LEARNING) abgeschlossen — Pattern-Miner & GEO-Auditor über einem neuen
-> `ReasoningPort` (Claude/Mock), toleranzbasierte Evals. `mypy --strict` · `ruff` · alle Tests grün.
+> **Status:** Sprint 6 (STATISTISCHE MESS-RIGOROSITÄT) abgeschlossen — der geschlossene Regelkreis ist
+> jetzt **end-to-end statistisch fundiert**: die Top/Flop-Eingangsmessung trägt ein **Wilson-95%-KI**
+> je Seite und ein Sichtbarkeits-Band relativ zum Domain-Schnitt (nur belastbar abgesetzte Seiten
+> speisen Miner/Auditor), und die Effekt-Ausgangsmessung bewertet jeden Fix mit einem
+> **Newcombe-95%-KI** (Sprint 5) — nur **signifikante** Effekte verfeinern den nächsten Fix-Run (kein
+> Lernen aus Rauschen). `mypy --strict` · `ruff` · alle Tests grün, offline bit-genau reproduzierbar
+> (Top/Flop **und** Effekt fließen in den Fingerprint).
 
 ---
 
@@ -63,10 +68,150 @@ zitiert werden und **was** den Flop-Seiten fehlt.
 Flop-Seiten zu tun ist — offline deterministisch (Seed 42) oder mit Live-Claude. Ohne neue
 Abhängigkeit (`anthropic` war bereits gepinnt).
 
-**Bewusst offen (Fast-Follow / Sprint 3–4):** Live-Adapter ChatGPT & Gemini; `MemoryPort` +
-Chroma/`bge-m3`; Fix-Agent + HITL + Deploy; Re-Probe + `EffectHypothesis`.
-
 > Demo: `docs/demo-sprint2.md` · Folien: `docs/sprint2-praesentation.html`.
+
+---
+
+## Sprint 3 — Summary
+
+**Ziel:** Den Loop schließen — aus den priorisierten Findings nicht nur sagen, *was* zu tun ist,
+sondern es **umsetzen**: konkrete Patches vorschlagen, nach **menschlicher Freigabe** anwenden.
+
+**Gebaut:**
+- **Fix-Agent:** macht aus jedem `AuditFinding` einen konkreten `FixProposal` (= Patch) — fertiger
+  Antwortblock, FAQ-/Autor-/Product-Schema (JSON-LD), Vergleichstabelle … — mit Beleg, Hebel,
+  Konfidenz und Herkunft (`finding_id` → Template). Über denselben `ReasoningPort` wie Sprint 2
+  (Mock offline-deterministisch · SAIA/Claude live).
+- **Human-in-the-Loop-Gate:** ein `ApprovalGate` entscheidet je Patch (`AutoApproveGate` für die
+  Demo, interaktiver Gate in der CLI, `RejectAllGate` für Tests). **Hart erzwungen:** `apply_patches`
+  ohne Freigabe wirft `DeployBlocked` — aus einem `FixPlan` wird **nie** direkt ein `DeployResult`.
+- **Publisher-Port + Adapter:** `MockPublisher` (Default, reiner Dry-Run), `FilesystemPublisher`
+  (schreibt Patch-Artefakte nach `runs/<run_id>/patches/` — **lokal**, nie die Live-Domain),
+  `WordPress`/`GitHub`-Stubs hinter demselben Port (opt-in, in Sprint 3 blockiert). Nicht
+  freigegebene Patches landen **immer** in `skipped_patch_ids`.
+- **Contracts & Disziplin:** `FixProposal`/`FixPlan`/`ApprovalDecision`/`DeployResult` (+ Enums);
+  deterministische `patch_id`; versionierter Prompt `fix_agent.v1.md`; toleranzbasierter Eval-Slot;
+  `Sprint3Flow` orchestriert sample → … → propose → approve → deploy; Fingerprint rechnet den
+  Fix-Plan mit ein (bit-genau reproduzierbar, Seed 42).
+
+**Das System kann jetzt:** in **einem** Lauf messen, verstehen, priorisieren **und** den Fix
+formulieren, freigeben und (Dry-Run) anwenden — offline deterministisch, ohne je eine Live-Seite zu
+berühren (Projektregeln §6: kein Auto-Deploy ohne HITL).
+
+> Demo: `docs/demo-sprint3.md` · Folien: `docs/sprint3-praesentation.html`.
+
+---
+
+## Sprint 4 — Summary
+
+**Ziel:** Den Regelkreis **schließen** — nicht nur fixen, sondern den **Effekt messen** und daraus
+**lernen**, sodass jeder Lauf die nächsten besser macht (Projektregeln §8).
+
+**Gebaut:**
+- **Effekt-Re-Probe:** Nach dem Dry-Run-Deploy misst der Sampler denselben Matrix-Schnitt erneut
+  (`ProbePhase.REPROBE`, kollisionsfrei neben der Baseline unter **einer** `run_id`). Offline sorgt
+  ein **deterministischer** Boost der gepatchten URLs im Mock-Engine für einen reproduzierbaren
+  Vorher/Nachher-Lift; live wird die Realität gemessen (unter Dry-Run ehrlich ≈ 0).
+- **`EffectHypothesis` (Contract §3.2):** je angewandtem Patch strukturiert — Vorher-/Nachher-Rate,
+  Delta, **statistisches 95%-Konfidenzintervall** + `significant`-Flag (siehe Sprint 5), vermutete
+  Ursache als `(Hebel, ChangeType)`, Provenienz zum Patch/Finding. Der **Effekt-Analyst** ist
+  deterministisch (reine Domänen-Mathematik, kein LLM) → bleibt bit-reproduzierbar.
+- **`MemoryPort` (genau `store`/`retrieve`, §8):** `MockMemoryAdapter` (Default, SQLite, deterministisch)
+  **und** `ChromaMemoryAdapter` (bge-m3, opt-in Extra `memory`). Domain-isoliert (Lernen leckt nicht
+  zwischen Domains).
+- **Der Lern-Hebel — explizit in Code UND Prompt (§8):** vor dem Fix ruft der Loop passende
+  Hypothesen ab; sie fließen (a) in `fix_agent.v2.md` (Live-LLM) **und** (b) deterministisch über
+  `apply_memory_prior` in die Patch-Confidence → `prioritize_proposals` ordnet den Plan messbar um.
+  Kein implizites „das LLM wird's schon nutzen".
+- **Sicherheit unverändert:** Deploy bleibt Dry-Run; das HITL-Gate bleibt hart (ohne Freigabe kein
+  Re-Probe, kein Lernen). Der Effekt fließt in den Report-Fingerprint (offline bit-genau).
+
+**Das System kann jetzt:** in **einem** Lauf messen, verstehen, priorisieren, fixen, freigeben,
+(Dry-Run-)deployen, den **Effekt re-proben** und als Hypothese ins Gedächtnis schreiben — und beim
+**nächsten** Lauf nachweislich anders (besser) fixen. Der Regelkreis ist geschlossen.
+
+**Bewusst offen (später):** echter WordPress/GitHub-Live-Deploy hinter dem bestehenden Port
+(Credentials + Sicherheits-Review); reichere semantische Retrieval-Strategien im Chroma-Adapter.
+
+> Demo: `docs/demo-sprint4.md`.
+
+---
+
+## Sprint 5 — Summary
+
+**Ziel:** Den Lern-Loop von einer **Heuristik** zu einem **statistisch belastbaren** Instrument
+machen — damit das System nicht mehr aus Rauschen „lernt" (Projektregeln §1: wissenschaftliche
+Aussagekraft; §7: Reproduzierbarkeit).
+
+**Das Problem:** Sprint 4 mass den Effekt als rohes Vorher/Nachher-Delta und bewertete ihn mit der
+Ad-hoc-Formel `min(1,|Δ|)·n/(n+k)`. Die ignoriert die **statistische Unsicherheit** völlig: ein Lift
+von +0.05 bei n=3 (reines Rauschen) bekam dieselbe positive „Confidence" wie ein robuster Effekt bei
+n=240 — und floss so als Hypothese ins Gedächtnis, das den nächsten Fix-Run verzerrte.
+
+**Gebaut:**
+- **`domain/statistics.py` (rein, kein I/O/RNG):** **Wilson-Score-Intervall** für eine Proportion +
+  **Newcombe (1998, Methode 10 / MOVER-W)** für das Konfidenzintervall der **Differenz** zweier
+  Proportionen (vorher/nachher) — closed-form ohne `scipy`, gegen den publizierten Referenzwert
+  verifiziert (56/70 vs. 48/80 → KI [0.0524, 0.3339]).
+- **`EffectHypothesis` trägt jetzt echtes 95%-KI (`ci_low`/`ci_high`) + `significant`-Flag:** ein
+  Effekt gilt nur dann als belastbar, wenn sein KI die **Null ausschließt**. Die `confidence` ist
+  nicht mehr heuristisch, sondern die **statistisch abgesicherte Effektstärke** (Abstand der Null zur
+  nächsten KI-Kante). `EffectDirection` ist **signifikanz-gesteuert**: nicht-signifikante Deltas sind
+  `UNCHANGED` — der Loop verankert keine Hypothese in Rauschen.
+- **Signifikanz-gesteuerter Lern-Hebel:** `apply_memory_prior` aggregiert **nur signifikante**
+  Hypothesen, gewichtet sie mit ihrer statistischen Confidence + **geometrischem Recency-Decay**
+  (aktuelle Effekte zählen mehr) und begrenzt den Confidence-Hub mit `tanh` (abnehmender Grenznutzen
+  statt unbegrenzter Addition). Ohne signifikante Evidenz bleibt der Plan **bit-genau** unverändert
+  (rückwärtskompatibel zu Sprint 3/4). Code- **und** Prompt-Pfad (`fix_agent.v2`) sehen dieselbe
+  Signifikanz — sie wirken in dieselbe Richtung (§8).
+- **Sichtbar in der CLI:** die Effekt-Tabelle (`render_effect`) zeigt je Hypothese das 95%-KI und
+  zählt in der Fußzeile, wie viele Effekte statistisch belastbar sind (KI ohne Null); das Dashboard
+  liefert die Kennzahlen (`n_improved`/`mean_delta`) über die API.
+- **Ein Lern-Signal, eine Definition:** derselbe Belastbarkeits-Test (`significant` **und**
+  `direction != UNCHANGED`) steuert Richtungs-Anzeige **und** Memory-Prior — der Loop lernt nie aus
+  etwas, das er selbst als „GLEICH" ausweist.
+
+**Das System kann jetzt:** einen gemessenen Vorher/Nachher-Effekt **von statistischem Rauschen
+unterscheiden** und ausschließlich aus belastbarer Evidenz lernen — deterministisch und offline
+bit-reproduzierbar. Der Regelkreis lernt nicht nur, er lernt **das Richtige**.
+
+**Bewusst offen (später):** eine Effekt-Tabelle im Web-Dashboard (heute nur CLI); Backfill des KI für
+vor Sprint 5 gespeicherte Hypothesen — solche „Alt-Effekte" (ohne KI) gelten als nicht belastbar und
+werden beim nächsten Lauf mit korrekter Statistik neu gemessen, statt mit der alten, unzuverlässigen
+Heuristik-Confidence weiterzuwirken.
+
+---
+
+## Sprint 6 — Summary
+
+**Ziel:** Die statistische Rigorosität von Sprint 5 (die *Effekt*-Messung am Loop-Ausgang) auch am
+**Eingang** der Pipeline verankern — bei der **Top/Flop-Messung**, auf der Pattern-Miner und
+GEO-Auditor aufsetzen.
+
+**Das Problem:** Die Top/Flop-Liste rankte Seiten nach **roher Zitations-Zählung**. Zwei Seiten, die
+sich nur um wenige Zitate von 240 unterscheiden, wurden als klar verschieden behandelt — der
+Pattern-Miner mint dann Templates aus Seiten, deren „Vorsprung" reines Stichproben-Rauschen ist, und
+der Auditor auditiert Flops, die statistisch gar nicht auffällig niedrig sind.
+
+**Gebaut:**
+- **Wilson-Konfidenzintervall je Seite:** jede `TopFlopEntry` trägt jetzt `rate_ci_low`/`rate_ci_high`
+  (95%-Wilson-KI ihrer Zitationsrate, aus `domain/statistics.py`) — die ehrliche Unsicherheit der
+  Messung, robust auch bei Raten nahe 0.
+- **Sichtbarkeits-Band (`VisibilityBand`):** relativ zum Domain-Durchschnitt (`field_citation_rate`)
+  wird jede Seite als `above_field` (KI komplett über dem Schnitt → belastbar top), `below_field`
+  (belastbar flop) oder `typical` (KI umschließt den Schnitt → statistisch nicht unterscheidbar)
+  klassifiziert. Die **Rangfolge bleibt** (rückwärtskompatibel zum Golden-Eval) — neu ist die
+  ehrliche Aussage, *welche* Ränge statistisch belastbar sind.
+- **Miner & Auditor sehen das Band:** der Pattern-Miner bevorzugt Muster aus `above_field`-Seiten
+  (Signal statt Rauschen), der GEO-Auditor priorisiert `below_field`-Flops — Code- und Prompt-Pfad
+  sehen dasselbe Signal.
+- **Sichtbar in der CLI:** die WAS-Tabelle zeigt je Seite das 95%-KI (grau = im Rauschen, farbig =
+  statistisch abgesetzt) und zählt, wie viele Seiten sich belastbar vom Schnitt absetzen.
+
+**Das System kann jetzt:** die gesamte Pipeline — von der Eingangs-Messung (Top/Flop) bis zum
+Ausgangs-Effekt — auf **statistisch belastbaren** Signalen aufbauen statt auf Zähl-Rauschen. Der
+Offline-Lauf zeigt es ehrlich: bei kleiner Stichprobe ist oft nur die Spitze/das Tail statistisch
+abgesetzt, der Mittelbau ist `typical` — genau das, was eine seriöse Messung eingestehen muss.
 
 ---
 
@@ -77,12 +222,13 @@ Hexagonal (Ports & Adapters). Der Kern (`domain` + `ports`) kennt keine konkrete
 ```
 src/geo_audit_loop/
   config/         Settings, Engine-Registry, Konstanten, Budget-/Preis-Tabelle
-  domain/         reine Pydantic-Contracts + Domänenlogik (kein I/O)
-  ports/          abstrakte Protocols (EnginePort, ProxyPort, CrawlPort, StoragePort)
-  adapters/       konkrete I/O-Implementierungen (engines, proxy, crawl, storage)
-  agents/         Sampler, Inventory-Crawler (deterministische Services)
-  orchestration/  CrewAI-Flow am Rand, verdrahtet die Pipeline
-  prompts/        versionierte Probe-Sets
+  domain/         reine Pydantic-Contracts + Domänenlogik (kein I/O) — inkl. effect/memory
+  ports/          abstrakte Protocols (EnginePort, ProxyPort, CrawlPort, StoragePort, MemoryPort)
+  adapters/       konkrete I/O-Implementierungen (engines, proxy, crawl, publisher, storage)
+  agents/         Sampler, Crawler, Pattern-Miner, GEO-Auditor, Fix-Agent, Effekt-Analyst
+  memory/         Gedächtnis hinter MemoryPort: MockMemoryAdapter (SQLite) + ChromaMemoryAdapter (bge-m3)
+  orchestration/  CrewAI-Flow am Rand, verdrahtet den geschlossenen Loop (Sprint 1–4)
+  prompts/        versionierte Probe-Sets + Agenten-Prompts (fix_agent.v2 = gedächtnis-informiert)
   observability/  JSON-Logging (run_id), Cost-/Budget-Tracking, Retry
 ```
 
@@ -112,6 +258,13 @@ uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --top-n 3
 # Sprint-2-Lern-Loop: zusätzlich WARUM (Templates) + WAS TUN (priorisierte Findings):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --top-n 3
 
+# Sprint-3-Fix-/Deploy-Loop: zusätzlich FIX (Patches) + FREIGABE (HITL) + DEPLOY (Dry-Run):
+uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --explain --fix --apply --approve-all --top-n 3
+
+# Sprint-4-Lern-Loop: zusätzlich RE-PROBE (Effekt) + GEDÄCHTNIS — schließt den Regelkreis:
+uv run python -m geo_audit_loop --domain it-sicherheit.de --offline --learn --approve-all --top-n 3
+# Zweiter Lauf auf derselben DB nutzt das Gedächtnis des ersten -> der Fix-Plan ändert sich (Lernen).
+
 # Opt-in Live-Probing (nur Perplexity, budget-gedeckelt; braucht .env + Proxies):
 uv run python -m geo_audit_loop --domain it-sicherheit.de --live
 ```
@@ -136,6 +289,36 @@ FLOP (selten/nie zitiert):
 > Offline nutzt deterministische Mock-Engines (Seed-gesteuert) — gleicher Seed liefert
 > denselben Report. Im Live-Modus wird ausschließlich **Perplexity** real abgefragt;
 > die übrigen Engines bleiben in Sprint 1 gemockt.
+
+## Steuerzentrale (Web-Dashboard)
+
+Läufe **starten, stoppen, verwalten und live beobachten** — „Neuer Lauf"-Formular (Domain,
+Offline/Live, Engine-/Reasoning-Auswahl je nach hinterlegten Keys, Top-N, Seed, Proxy-IPs),
+Lauf-Verlauf mit Ansehen/Löschen, Probe-Matrix mit klickbaren Zellen (Antwort & Quellen),
+Inventar, Top/Flop, Templates, Findings, Fingerprint:
+
+```bash
+uv run python -m geo_audit_loop --serve            # http://127.0.0.1:8042
+```
+
+Ein gestarteter Lauf läuft als eigener Prozess (exakt der CLI-Code-Pfad, vorab vergebene
+`--run-id`); das Dashboard beobachtet ihn über die SQLite. Bindung nur an `127.0.0.1`.
+
+## Echte Engines (kostenlos)
+
+- **Reasoning (Pattern-Miner/GEO-Auditor): SAIA/KISSKI** — Hochschul-LLM-Dienst, OpenAI-kompatibel,
+  kostenlos. `SAIA_API_KEY` in `.env`, dann `GEO_REASONING_PROVIDER=saia` (oder im Dashboard wählen).
+- **Zitations-Messung: Gemini mit Google-Search-Grounding** — einziger echter Gratis-Weg zu
+  Quellen-URLs (500 Anfragen/Tag frei, Stand 06/2026). Kostenlosen Key von
+  [aistudio.google.com/apikey](https://aistudio.google.com/apikey) als `GOOGLE_API_KEY` in `.env`,
+  dann `GEO_LIVE_ENGINES=gemini` (Free-Tier-Tipp: `GEO_N_PROXY_IPS=1` ⇒ 12 Anfragen/Lauf).
+  Hinweis: SAIA-Modelle haben keine Websuche und liefern daher keine echten Quellen —
+  deshalb die Aufteilung SAIA=Reasoning, Gemini=Zitate. Perplexity bleibt als bezahlte
+  Live-Engine opt-in; Live-Läufe sind naturgemäß nicht bit-reproduzierbar (Fingerprint-Beweis
+  gilt offline).
+- **Crawl im Live-Modus:** Standardmäßig nutzen auch Live-Läufe das schnelle, deterministische
+  Sample-Inventar der Domain (der echte advertools-Crawl ist langsam und kann in den
+  5-Minuten-Timeout laufen). Für einen echten Crawl der Zieldomain: `--live-crawl` ergänzen.
 
 ## Eval
 

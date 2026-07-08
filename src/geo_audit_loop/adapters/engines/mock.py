@@ -43,11 +43,15 @@ class MockEngineAdapter:
         *,
         target_urls: Sequence[str] = (),
         seed: int = 0,
+        boosted_urls: Sequence[str] = (),
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._engine_id = engine_id
         self._target_urls = tuple(target_urls)
         self._seed = seed
+        # Sprint-4-Effekt-Simulation: URLs mit angewandtem Patch werden in der Re-Probe
+        # GARANTIERT zitiert (deterministischer Vorher/Nachher-Lift). Leer => Baseline-Verhalten.
+        self._boosted = tuple(dict.fromkeys(boosted_urls))
         self._clock = clock if clock is not None else _utc_now
 
     @property
@@ -74,6 +78,12 @@ class MockEngineAdapter:
         """Erzeugt ein deterministisches, plausibles ``ProbeResult`` (kein Netz)."""
         rng = self._rng(request)
         target_hits = self._pick_target_urls(rng)
+        # Boost NACH dem RNG-Zug: kein zusaetzlicher Zufallsschritt -> die Baseline-Ziehung
+        # bleibt bit-identisch (leerer Boost == unveraendertes Verhalten). Angewandte Patch-URLs
+        # werden garantiert ergaenzt -> Re-Probe misst einen deterministischen positiven Effekt.
+        for url in self._boosted:
+            if url not in target_hits:
+                target_hits.append(url)
         external = rng.sample(_EXTERNAL_URLS, k=rng.randint(1, len(_EXTERNAL_URLS)))
 
         urls = target_hits + external
