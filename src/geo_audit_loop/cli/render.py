@@ -223,6 +223,18 @@ def render_entity_graph(console: Console, report: EntityGraphReport) -> None:
     if weak:
         gaps = ", ".join(_short_url(url) for url in report.weakest_pages[:6])
         console.print(Text(f"Klarheits-Luecken: {gaps}", style=RED))
+    if report.brand_same_as:
+        console.print(
+            Text(
+                f"sameAs-Autoritaets-Quellen (Entity-Extractor): {len(report.brand_same_as)}",
+                style=f"bold {ACCENT}",
+            )
+        )
+        for url in report.brand_same_as:
+            line = Text()
+            line.append("  → ", style=ACCENT_DIM)
+            line.append(url, style="bold")
+            console.print(line)
     jsonld = Panel(
         Text(report.recommended_jsonld, style=GREY),
         title=Text(" Empfohlener JSON-LD (Organization) ", style=f"bold black on {ACCENT}"),

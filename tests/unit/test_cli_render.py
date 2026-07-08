@@ -177,6 +177,18 @@ def test_entity_graph_shows_brand_gap_and_jsonld() -> None:
     assert "@id" in text  # empfohlener JSON-LD-Block
 
 
+def test_entity_graph_shows_same_as_when_extracted() -> None:
+    console = _console()
+    base = build_entity_graph("it-sicherheit.de", _entity_pages(), run_id="r1", generated_at=FIXED)
+    enriched = base.model_copy(
+        update={"brand_same_as": ("https://de.wikipedia.org/wiki/IT-Sicherheit",)}
+    )
+    render_entity_graph(console, enriched)
+    text = console.export_text()
+    assert "sameAs" in text  # Abschnittsueberschrift
+    assert "de.wikipedia.org" in text  # die extrahierte Autoritaets-URL
+
+
 def test_summary_shows_cost_and_fingerprint() -> None:
     console = _console()
     render_summary(
