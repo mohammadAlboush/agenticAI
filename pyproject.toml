@@ -23,6 +23,15 @@ dependencies = [
     "google-genai>=2.7,<3",           # Gemini-Engine-Adapter (Fast-Follow)
 ]
 
+# Optionales Extra (CLAUDE.md §2: bge-m3 + Chroma als Vektorspeicher). Schwer (torch ist
+# transitiv) und daher NICHT im Default-Install/CI — der deterministische MockMemoryAdapter
+# braucht es nie. Live aktivieren via: uv sync --extra memory  bzw.  pip install '.[memory]'.
+[project.optional-dependencies]
+memory = [
+    "chromadb>=1.1,<2",              # Vektorspeicher (bereits transitiv via crewai vorhanden)
+    "sentence-transformers>=3,<6",   # bge-m3-Embeddings (zieht torch transitiv)
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.2,<9",
@@ -73,7 +82,7 @@ warn_unused_configs = true
 
 # Per-Modul-Overrides fuer Libs ohne eigene Typstubs (gezielt, nicht global).
 [[tool.mypy.overrides]]
-module = ["advertools.*", "crewai.*"]
+module = ["advertools.*", "crewai.*", "chromadb.*", "sentence_transformers.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------
