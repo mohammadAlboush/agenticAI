@@ -1,0 +1,129 @@
+{
+  "seed": 42,
+  "domain": "it-sicherheit.de",
+  "prompt_set_version": "v1",
+  "entity_graph": {
+    "target_domain": "it-sicherheit.de",
+    "n_pages": 8,
+    "brand_name": "it-sicherheit",
+    "mean_clarity": 0.575,
+    "entities": [
+      {
+        "name": "it-sicherheit",
+        "kind": "brand",
+        "schema_type": "Organization",
+        "pages_declaring": 0,
+        "coverage_rate": 0.0
+      },
+      {
+        "name": "Article",
+        "kind": "schema_type",
+        "schema_type": "Article",
+        "pages_declaring": 8,
+        "coverage_rate": 1.0
+      },
+      {
+        "name": "FAQPage",
+        "kind": "schema_type",
+        "schema_type": "FAQPage",
+        "pages_declaring": 2,
+        "coverage_rate": 0.25
+      },
+      {
+        "name": "HowTo",
+        "kind": "schema_type",
+        "schema_type": "HowTo",
+        "pages_declaring": 2,
+        "coverage_rate": 0.25
+      },
+      {
+        "name": "BreadcrumbList",
+        "kind": "schema_type",
+        "schema_type": "BreadcrumbList",
+        "pages_declaring": 1,
+        "coverage_rate": 0.125
+      }
+    ],
+    "page_scores": [
+      {
+        "url": "https://www.it-sicherheit.de/firewall-grundlagen",
+        "clarity_score": 0.45,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": false,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/passwort-manager-vergleich",
+        "clarity_score": 0.45,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": false,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/phishing-erkennen",
+        "clarity_score": 0.45,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": false,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/dsgvo-checkliste",
+        "clarity_score": 0.65,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": true,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/nis2-richtlinie",
+        "clarity_score": 0.65,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": true,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/ransomware-schutz",
+        "clarity_score": 0.65,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": true,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/security-awareness-training",
+        "clarity_score": 0.65,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": true,
+        "has_canonical": true,
+        "has_lang": true
+      },
+      {
+        "url": "https://www.it-sicherheit.de/zero-trust-architektur",
+        "clarity_score": 0.65,
+        "declares_organization": false,
+        "has_opengraph": true,
+        "has_author": true,
+        "has_canonical": true,
+        "has_lang": true
+      }
+    ],
+    "weakest_pages": [
+      "https://www.it-sicherheit.de/firewall-grundlagen",
+      "https://www.it-sicherheit.de/passwort-manager-vergleich",
+      "https://www.it-sicherheit.de/phishing-erkennen"
+    ],
+    "brand_same_as": [],
+    "recommended_jsonld": "{\n  \"@context\": \"https://schema.org\",\n  \"@id\": \"https://it-sicherheit.de/#organization\",\n  \"@type\": \"Organization\",\n  \"name\": \"it-sicherheit\",\n  \"url\": \"https://it-sicherheit.de\"\n}"
+  }
+}

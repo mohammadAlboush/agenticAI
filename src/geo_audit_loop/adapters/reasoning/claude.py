@@ -10,6 +10,7 @@ Factory laedt dieses Modul nur im Live-Pfad.
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -38,6 +39,7 @@ _RETRYABLE: tuple[type[Exception], ...] = (
     anthropic.InternalServerError,
 )
 _DEFAULT_TIMEOUT_S = 60.0
+_TOOL_NAME = "emit_result"  # erzwingt strukturierte JSON-Ausgabe (Tool-Use)
 
 
 def _utc_now() -> datetime:
@@ -93,6 +95,16 @@ class ClaudeReasoningAdapter:
         }
         if request.system:
             kwargs["system"] = request.system
+        if request.response_schema is not None:
+            # Tool-Use erzwingt schema-konformes JSON statt Freitext -> kein Parse-Risiko.
+            kwargs["tools"] = [
+                {
+                    "name": _TOOL_NAME,
+                    "description": "Gib das Ergebnis strukturiert ueber dieses Tool zurueck.",
+                    "input_schema": request.response_schema,
+                }
+            ]
+            kwargs["tool_choice"] = {"type": "tool", "name": _TOOL_NAME}
         started = time.perf_counter()
         try:
             response = retry_call(
@@ -136,10 +148,13 @@ class ClaudeReasoningAdapter:
 
 
 def _extract_text(response: Any) -> str:
-    """Konkateniert die Text-Bloecke einer Anthropic-Antwort (robust gegen Block-Typen)."""
+    """Antworttext: bevorzugt das ``tool_use``-Ergebnis als JSON, sonst Text-Bloecke."""
     parts: list[str] = []
     for block in getattr(response, "content", None) or []:
-        if getattr(block, "type", None) == "text":
+        btype = getattr(block, "type", None)
+        if btype == "tool_use":
+            return json.dumps(getattr(block, "input", {}) or {}, ensure_ascii=False)
+        if btype == "text":
             parts.append(str(getattr(block, "text", "")))
     return "".join(parts)
 

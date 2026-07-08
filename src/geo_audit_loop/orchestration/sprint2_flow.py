@@ -13,9 +13,13 @@ import logging
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel, PrivateAttr
 
+from geo_audit_loop.agents.entity_extractor import EntityExtractorService
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
+from geo_audit_loop.agents.query_generator import QueryGeneratorService
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.coverage import CoverageReport
+from geo_audit_loop.domain.entity import EntityGraphReport, render_organization_jsonld
 from geo_audit_loop.domain.errors import GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
@@ -38,17 +42,23 @@ class Sprint2Pipeline:
         geo_auditor: GeoAuditorService,
         storage: StoragePort,
         run_context: RunContext,
+        query_generator: QueryGeneratorService | None = None,
+        entity_extractor: EntityExtractorService | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._base = base
         self._pattern_miner = pattern_miner
         self._geo_auditor = geo_auditor
+        self._query_generator = query_generator
+        self._entity_extractor = entity_extractor
         self._storage = storage
         self._run_context = run_context
         self._log = logger if logger is not None else logging.getLogger(__name__)
         self._pages: tuple[PageInventory, ...] | None = None
         self._pattern_report: PatternReport | None = None
         self._audit_report: AuditReport | None = None
+        self._enriched_coverage: CoverageReport | None = None
+        self._enriched_entity_graph: EntityGraphReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -59,6 +69,28 @@ class Sprint2Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der Top/Flop-Report aus Schritt 2 (Sprint-1-Messung)."""
         return self._base.report
+
+    @property
+    def coverage(self) -> CoverageReport | None:
+        """Der Query-Intent-Coverage-Report (deterministischer Kern; ggf. mit LLM-Luecken-Fragen).
+
+        Nach ``mine_patterns`` liefert die Property die um ``suggested_queries`` angereicherte
+        Fassung (Session 4, Query-Generator), sonst den deterministischen Basis-Report.
+        """
+        if self._enriched_coverage is not None:
+            return self._enriched_coverage
+        return self._base.coverage
+
+    @property
+    def entity_graph(self) -> EntityGraphReport | None:
+        """Der Entity-/Knowledge-Graph-Report (deterministischer Kern; ggf. mit LLM-sameAs).
+
+        Nach ``mine_patterns`` liefert die Property die um ``brand_same_as`` + regenerierten
+        JSON-LD angereicherte Fassung (Session 8, Entity-Extractor), sonst den Basis-Report.
+        """
+        if self._enriched_entity_graph is not None:
+            return self._enriched_entity_graph
+        return self._base.entity_graph
 
     @property
     def pattern_report(self) -> PatternReport | None:
@@ -75,8 +107,8 @@ class Sprint2Pipeline:
         self._base.sample()
 
     def crawl_and_report(self) -> TopFlopReport:
-        """Schritt 2: Inventar crawlen und Top/Flop-Report bauen (S1-Pipeline)."""
-        return self._base.crawl_and_report()
+        """Schritt 2: Inventar crawlen und Top/Flop-Report bauen (Finalize aufgeschoben)."""
+        return self._base.crawl_and_report(finalize=False)
 
     def _require_report(self) -> TopFlopReport:
         report = self._base.report
@@ -89,21 +121,79 @@ class Sprint2Pipeline:
             self._pages = tuple(self._storage.load_pages(self._run_context.run_id))
         return self._pages
 
+    def load_pages(self) -> tuple[PageInventory, ...]:
+        """Oeffentlicher Zugriff auf das (gecachte) Seiten-Inventar (fuer Sprint 3)."""
+        return self._load_pages()
+
+    def finalize_completed(self) -> None:
+        """Schliesst den Run als COMPLETED ab (idempotent; Sprint 3 finalisiert spaeter erneut)."""
+        self._base.finalize_completed()
+
     def mine_patterns(self) -> PatternReport:
-        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen."""
+        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren).
+
+        Danach (Session 4, LLM): fuellt die schwachen Coverage-Intents mit generierten
+        Luecken-Fragen — der erste Reasoning-Schritt, in dem das Gedaechtnis/LLM verfuegbar ist.
+        """
         self._pattern_report = self._pattern_miner.run(
             self._run_context, self._require_report(), self._load_pages()
         )
+        self._storage.save_pattern_report(self._pattern_report)
+        self._generate_gap_queries()
+        self._extract_brand_entities()
         return self._pattern_report
 
+    def _extract_brand_entities(self) -> None:
+        """Reichert den Entity-Graph um LLM-gefundene sameAs-URLs an (+ re-persistiert).
+
+        No-Op ohne Entity-Extractor, ohne Graph oder wenn keine valide sameAs-URL gefunden
+        wird. Sonst wird ``brand_same_as`` gesetzt und ``recommended_jsonld`` deterministisch
+        mit den sameAs neu erzeugt; die angereicherte Fassung ersetzt (Upsert) den Basis-Report.
+        """
+        graph = self._base.entity_graph
+        if self._entity_extractor is None or graph is None:
+            return
+        same_as = self._entity_extractor.run(self._run_context, graph, self._load_pages())
+        if not same_as:
+            return
+        enriched = graph.model_copy(
+            update={
+                "brand_same_as": same_as,
+                "recommended_jsonld": render_organization_jsonld(
+                    graph.brand_name, graph.target_domain, same_as=same_as
+                ),
+            }
+        )
+        self._storage.save_entity_graph(enriched)
+        self._enriched_entity_graph = enriched
+
+    def _generate_gap_queries(self) -> None:
+        """Reichert den Coverage-Report um LLM-generierte Luecken-Fragen an (+ re-persistiert).
+
+        No-Op ohne Query-Generator oder ohne Coverage; ohne schwache Intents macht der Generator
+        selbst keinen LLM-Aufruf. Die angereicherte Fassung ersetzt (Upsert) den deterministischen
+        Basis-Report und wird ueber ``coverage`` sichtbar (Offline mit Mock -> reproduzierbar).
+        """
+        coverage = self._base.coverage
+        if self._query_generator is None or coverage is None:
+            return
+        queries = self._query_generator.run(self._run_context, coverage)
+        if not queries:
+            return
+        enriched = coverage.model_copy(update={"suggested_queries": queries})
+        self._storage.save_coverage_report(enriched)
+        self._enriched_coverage = enriched
+
     def audit_flops(self) -> AuditReport:
-        """Schritt 4: Flop-Seiten gegen die Templates auditieren (priorisierte Findings)."""
+        """Schritt 4: Flop-Seiten auditieren, Lern-Artefakte speichern, Run finalisieren."""
         if self._pattern_report is None:
             self.mine_patterns()
         assert self._pattern_report is not None
         self._audit_report = self._geo_auditor.run(
             self._run_context, self._require_report(), self._load_pages(), self._pattern_report
         )
+        self._storage.save_audit_report(self._audit_report)
+        self._base.finalize_completed()  # jetzt enthalten die persistierten Kosten das Reasoning
         return self._audit_report
 
     def run(self) -> TopFlopReport:

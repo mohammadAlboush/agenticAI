@@ -63,3 +63,44 @@ def test_mock_forms_a_distribution_across_probes() -> None:
         for i in range(40)
     )
     assert 0 < cited < 40
+
+
+def test_boost_empty_is_byte_identical_to_baseline() -> None:
+    # Sprint-4-Invariante: leerer Boost aendert die Baseline-Ziehung NICHT (Golden bleibt gruen).
+    baseline = MockEngineAdapter(EngineId.PERPLEXITY, target_urls=TARGETS, seed=7)
+    boosted_empty = MockEngineAdapter(
+        EngineId.PERPLEXITY, target_urls=TARGETS, seed=7, boosted_urls=()
+    )
+    for i in range(20):
+        req = _req(prompt_id=f"p{i}", proxy_label=f"proxy-{i % 5}")
+        assert baseline.probe(req).citations == boosted_empty.probe(req).citations
+
+
+def test_boost_forces_citation_of_patched_url() -> None:
+    patched = "https://www.it-sicherheit.de/p4"  # niedrig gewichtet -> selten in der Baseline
+    baseline = MockEngineAdapter(EngineId.PERPLEXITY, target_urls=TARGETS, seed=7)
+    boosted = MockEngineAdapter(
+        EngineId.PERPLEXITY, target_urls=TARGETS, seed=7, boosted_urls=(patched,)
+    )
+    base_hits = 0
+    boost_hits = 0
+    for i in range(20):
+        req = _req(prompt_id=f"p{i}", proxy_label=f"proxy-{i % 5}")
+        base_hits += any(c.url == patched for c in baseline.probe(req).citations)
+        boost_hits += any(c.url == patched for c in boosted.probe(req).citations)
+    assert boost_hits == 20  # jede Re-Probe zitiert die gepatchte URL garantiert
+    assert base_hits < 20  # in der Baseline nicht immer -> deterministischer positiver Effekt
+
+
+def test_boost_preserves_other_citations() -> None:
+    # Der Boost ergaenzt nur; die uebrigen (Baseline-)Zitate bleiben erhalten.
+    patched = "https://www.it-sicherheit.de/p3"
+    baseline = MockEngineAdapter(EngineId.PERPLEXITY, target_urls=TARGETS, seed=2)
+    boosted = MockEngineAdapter(
+        EngineId.PERPLEXITY, target_urls=TARGETS, seed=2, boosted_urls=(patched,)
+    )
+    req = _req(prompt_id="p1", proxy_label="proxy-0")
+    base_urls = {c.url for c in baseline.probe(req).citations}
+    boost_urls = {c.url for c in boosted.probe(req).citations}
+    assert base_urls - {patched} <= boost_urls  # nichts geht verloren
+    assert patched in boost_urls

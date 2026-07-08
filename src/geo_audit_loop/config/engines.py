@@ -41,7 +41,9 @@ ENGINE_REGISTRY: dict[EngineId, EngineConfig] = {
     ),
     EngineId.GEMINI: EngineConfig(
         engine_id=EngineId.GEMINI,
-        model="gemini-2.0-flash",
+        # 2.5-flash: einziges Modell mit Grounding im Free Tier (gemini-2.0-flash
+        # wurde am 2026-06-01 abgeschaltet; Gemini-3-Grounding ist Free-Tier-gesperrt).
+        model="gemini-2.5-flash",
         api_key_env="GOOGLE_API_KEY",
     ),
 }

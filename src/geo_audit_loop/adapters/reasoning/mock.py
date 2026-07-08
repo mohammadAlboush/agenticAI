@@ -152,9 +152,202 @@ _AUDIT_FINDINGS: dict[str, object] = {
     ]
 }
 
+# Konkrete Patches je Finding (Sprint 3): finding_id/target_url/template_id stimmen mit
+# _AUDIT_FINDINGS ueberein; patch_id ist deterministisch (px-<finding>-<change_type>).
+_FIX_PROPOSALS: dict[str, object] = {
+    "proposals": [
+        {
+            "patch_id": "px-f1-insert_block",
+            "finding_id": "f1",
+            "target_url": f"{_BASE}/firewall-grundlagen",
+            "lever": "fact_density",
+            "pyramid_level": "substance",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "Eine Firewall filtert den Netzwerkverkehr anhand definierter Regeln. "
+                "Moderne Stateful-Firewalls bewerten Verbindungszustaende; laut BSI-Grundschutz "
+                "(Baustein NET.3.2) gehoeren Regelwerk-Reviews mindestens jaehrlich zum Standard."
+            ),
+            "rationale": (
+                "Template t2 (Faktendichte) verlangt belegte Zahlen/Normen statt Marketing-Prosa "
+                "— der Block ergaenzt konkrete BSI-Referenz und Pruefintervall."
+            ),
+            "confidence": 0.78,
+            "template_id": "t2",
+        },
+        {
+            "patch_id": "px-f2-add_schema",
+            "finding_id": "f2",
+            "target_url": f"{_BASE}/firewall-grundlagen",
+            "lever": "definition_blocks",
+            "pyramid_level": "extractability",
+            "change_type": "add_schema",
+            "proposed_content": (
+                '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":'
+                '[{"@type":"Question","name":"Was ist eine Firewall?","acceptedAnswer":'
+                '{"@type":"Answer","text":"Eine Firewall ist ein System, das Netzwerkverkehr '
+                'anhand von Regeln zulaesst oder blockiert."}}]}'
+            ),
+            "rationale": (
+                "Template t1 (Antwortblock + FAQ-Schema) verlangt maschinenlesbare Definitionen "
+                "— FAQPage-JSON-LD macht den Kernbegriff extrahierbar."
+            ),
+            "confidence": 0.74,
+            "template_id": "t1",
+        },
+        {
+            "patch_id": "px-f3-insert_block",
+            "finding_id": "f3",
+            "target_url": f"{_BASE}/passwort-manager-vergleich",
+            "lever": "machine_readable",
+            "pyramid_level": "extractability",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "| Passwort-Manager | Open Source | 2FA | Preis/Jahr |\n"
+                "|---|---|---|---|\n| Bitwarden | ja | ja | 0-10 EUR |\n"
+                "| KeePassXC | ja | ueber Plugin | 0 EUR |\n| 1Password | nein | ja | 36 EUR |"
+            ),
+            "rationale": (
+                "Template t1 verlangt extrahierbare Struktur — eine Vergleichstabelle ersetzt den "
+                "Fliesstext und bedient den Query-Fan-out (Preis, 2FA, Open Source)."
+            ),
+            "confidence": 0.80,
+            "template_id": "t1",
+        },
+        {
+            "patch_id": "px-f4-add_schema",
+            "finding_id": "f4",
+            "target_url": f"{_BASE}/passwort-manager-vergleich",
+            "lever": "entity_clarity",
+            "pyramid_level": "substance",
+            "change_type": "add_schema",
+            "proposed_content": (
+                '{"@context":"https://schema.org","@type":"Article","author":'
+                '{"@type":"Person","name":"Redaktion IT-Sicherheit"},'
+                '"dateModified":"2026-06-01"}'
+            ),
+            "rationale": (
+                "Template t2 (Autor-Entitaet) verlangt eine klare Quelle — Person-Schema plus "
+                "sichtbares dateModified erhoehen Vertrauen und Aktualitaetssignal."
+            ),
+            "confidence": 0.72,
+            "template_id": "t2",
+        },
+        {
+            "patch_id": "px-f5-insert_block",
+            "finding_id": "f5",
+            "target_url": f"{_BASE}/security-awareness-training",
+            "lever": "answer_blocks",
+            "pyramid_level": "extractability",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "Security-Awareness-Training schult Mitarbeitende darin, Phishing, Social "
+                "Engineering und unsichere Passwoerter zu erkennen. Wirksame Programme kombinieren "
+                "kurze Lerneinheiten mit simulierten Angriffen und messen die Klickrate ueber Zeit."
+            ),
+            "rationale": (
+                "Template t1 verlangt einen 40-60-Woerter-Antwortblock direkt unter der H1 — der "
+                "Block ist eigenstaendig zitierbar."
+            ),
+            "confidence": 0.77,
+            "template_id": "t1",
+        },
+        {
+            "patch_id": "px-f6-insert_block",
+            "finding_id": "f6",
+            "target_url": f"{_BASE}/security-awareness-training",
+            "lever": "query_coverage",
+            "pyramid_level": "citation",
+            "change_type": "insert_block",
+            "proposed_content": (
+                "FAQ: Was kostet ein Security-Awareness-Training? Wie oft sollte es stattfinden? "
+                "Welche Tools eignen sich? — jede Teilfrage als eigener H3-Abschnitt mit "
+                "praegnanter Antwort."
+            ),
+            "rationale": (
+                "Template t3 (Frage-Deckung) verlangt explizite Teilfragen des Query-Fan-out — "
+                "die FAQ deckt Kosten, Haeufigkeit und Tools ab."
+            ),
+            "confidence": 0.69,
+            "template_id": "t3",
+        },
+    ]
+}
+
+# Luecken-Fragen je Intent (Session 4, Query-Generator): deckt alle sechs Intents ab, damit
+# der Agent fuer jede schwache Intent-Menge deterministische Beispiel-Fragen filtern kann.
+_GENERATED_QUERIES: dict[str, object] = {
+    "queries": [
+        {
+            "intent": "informational",
+            "text": "Welche gesetzlichen IT-Sicherheitspflichten gelten fuer KMU in Deutschland?",
+        },
+        {
+            "intent": "informational",
+            "text": "Warum ist ein Informationssicherheits-Managementsystem (ISMS) wichtig?",
+        },
+        {
+            "intent": "howto",
+            "text": "Wie richtet man ein sicheres VPN fuer Remote-Mitarbeitende ein?",
+        },
+        {
+            "intent": "howto",
+            "text": "Wie segmentiert man ein Firmennetz in Sicherheitszonen?",
+        },
+        {
+            "intent": "comparison",
+            "text": "Welches SIEM-Tool eignet sich fuer mittelstaendische Unternehmen?",
+        },
+        {
+            "intent": "comparison",
+            "text": "EDR oder klassisches Antivirus — was schuetzt Endgeraete besser?",
+        },
+        {
+            "intent": "definition",
+            "text": "Was ist Zero Trust und wie unterscheidet es sich von Perimeter-Sicherheit?",
+        },
+        {
+            "intent": "definition",
+            "text": "Was bedeutet Defense in Depth in der IT-Sicherheit?",
+        },
+        {
+            "intent": "checklist",
+            "text": "Welche Schritte gehoeren in einen Notfallplan fuer einen Ransomware-Angriff?",
+        },
+        {
+            "intent": "checklist",
+            "text": "Was gehoert in eine Onboarding-Checkliste fuer sichere Mitarbeiter-Accounts?",
+        },
+        {
+            "intent": "troubleshooting",
+            "text": "Woran erkenne ich, dass mein Backup nicht zuverlaessig funktioniert?",
+        },
+        {
+            "intent": "troubleshooting",
+            "text": "Wie erkennt man einen kompromittierten E-Mail-Account fruehzeitig?",
+        },
+    ]
+}
+
+# sameAs-Autoritaets-URLs der Beispiel-Marke (Session 8, Entity-Extractor): stabile,
+# offizielle Quellen, auf die das Organization-Schema verweisen sollte. Enthaelt bewusst
+# eine Dublette + eine relative URL, damit der Agent-Filter (Dedupe/URL-Validierung) greift.
+_EXTRACTED_ENTITIES: dict[str, object] = {
+    "same_as": [
+        "https://de.wikipedia.org/wiki/IT-Sicherheit",
+        "https://www.wikidata.org/wiki/Q3968",
+        "https://de.wikipedia.org/wiki/IT-Sicherheit",
+        "/nur-relativ-kein-authoritaets-ziel",
+        "https://www.linkedin.com/company/it-sicherheit",
+    ]
+}
+
 _PAYLOADS: dict[str, dict[str, object]] = {
     "pattern_miner": _PATTERN_TEMPLATES,
     "geo_auditor": _AUDIT_FINDINGS,
+    "fix_agent": _FIX_PROPOSALS,
+    "query_generator": _GENERATED_QUERIES,
+    "entity_extractor": _EXTRACTED_ENTITIES,
 }
 
 

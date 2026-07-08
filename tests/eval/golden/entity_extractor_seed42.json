@@ -1,0 +1,7 @@
+{
+  "seed": 42,
+  "domain": "it-sicherheit.de",
+  "prompt_set_version": "v1",
+  "max_same_as": 5,
+  "min_same_as": 1
+}
