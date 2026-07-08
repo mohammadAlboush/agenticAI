@@ -213,6 +213,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             "n_entity_gaps": (
                 len(entity_graph.weakest_pages) if entity_graph is not None else None
             ),
+            "n_same_as": (len(entity_graph.brand_same_as) if entity_graph is not None else None),
             "has_report": report is not None,
             "fingerprint": fingerprint,
             "dashboard_alive": manager.is_alive(run.run_id),

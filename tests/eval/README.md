@@ -60,3 +60,8 @@ Der Entity-Graph ist eine reine, seed-stabile Domaenenfunktion aus dem Seiten-In
 deklarierte schema.org-Typen mit Deckung), Klarheit je Seite, Blind-Spot-Liste und den
 empfohlenen kanonischen Organization-JSON-LD-Block. Exakte Gleichheit ist die Erwartung; eine
 bewusste Aenderung aktualisiert das Golden im selben Commit.
+
+Der **Entity-Extractor** (LLM) findet die `sameAs`-Autoritaets-URLs der Marke und ist
+nicht-deterministisch; `test_eval_entity_extractor_golden.py` prueft daher toleranzbasiert
+gegen `golden/entity_extractor_seed42.json`: genug valide sameAs-URLs, alle absolut, keine
+Dubletten, Kappung eingehalten. Die angereicherte Fassung regeneriert `recommended_jsonld`.

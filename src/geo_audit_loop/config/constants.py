@@ -81,6 +81,9 @@ ORGANIZATION_SCHEMA_TYPES: Final = frozenset(
 )
 # Klarheits-Score, unter dem eine Seite als Entitaeten-Luecke gilt.
 ENTITY_CLARITY_WEAK_THRESHOLD: Final = 0.5
+# Entity-Extractor (Session 8, LLM): Task-Label + Obergrenze der sameAs-Autoritaets-URLs.
+ENTITY_EXTRACTOR_TASK: Final = "entity_extractor"
+ENTITY_EXTRACTOR_MAX_SAME_AS: Final = 5
 
 # --- Versioniertes Prompt-Set ---
 DEFAULT_PROMPT_SET_VERSION: Final = "v1"

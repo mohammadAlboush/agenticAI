@@ -123,6 +123,7 @@
       "https://www.it-sicherheit.de/passwort-manager-vergleich",
       "https://www.it-sicherheit.de/phishing-erkennen"
     ],
+    "brand_same_as": [],
     "recommended_jsonld": "{\n  \"@context\": \"https://schema.org\",\n  \"@id\": \"https://it-sicherheit.de/#organization\",\n  \"@type\": \"Organization\",\n  \"name\": \"it-sicherheit\",\n  \"url\": \"https://it-sicherheit.de\"\n}"
   }
 }
