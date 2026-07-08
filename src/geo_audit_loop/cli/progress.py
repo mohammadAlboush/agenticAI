@@ -25,20 +25,23 @@ from geo_audit_loop.observability.cost import CostTracker
 from geo_audit_loop.orchestration.sprint1_flow import Sprint1Pipeline
 from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
 from geo_audit_loop.orchestration.sprint3_flow import Sprint3Pipeline
+from geo_audit_loop.orchestration.sprint4_flow import Sprint4Pipeline
 
 if TYPE_CHECKING:
     from crewai.events.event_bus import CrewAIEventsBus
     from rich.console import Console
 
-#: Deutsche Labels der Flow-Schritte (Sprint-1- bis Sprint-3-Flow).
+#: Deutsche Labels der Flow-Schritte (Sprint-1- bis Sprint-4-Flow).
 _STEP_LABELS: Final[dict[str, str]] = {
     "sample": "Probe-Matrix sampeln (Engines x Prompts x IPs)",
     "crawl_and_report": "Inventar crawlen + Top/Flop-Report",
     "mine_patterns": "Pattern-Miner — Muster der Top-Seiten",
     "audit_flops": "GEO-Auditor — Flop-Seiten pruefen",
+    "retrieve_memory": "Gedaechtnis — fruehere Effekte abrufen",
     "propose_fixes": "Fix-Agent — Patches ableiten",
     "await_approval": "Human-in-the-Loop — Freigabe",
     "apply_patches": "Deploy — Patches anwenden (Dry-Run)",
+    "reprobe_and_learn": "Effekt re-proben + ins Gedaechtnis schreiben",
 }
 
 
@@ -74,7 +77,7 @@ class FlowProgressListener(BaseEventListener):
         self,
         *,
         progress: Progress,
-        pipeline: Sprint1Pipeline | Sprint2Pipeline | Sprint3Pipeline,
+        pipeline: Sprint1Pipeline | Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline,
         cost_tracker: CostTracker,
     ) -> None:
         # Attribute VOR super().__init__() setzen: die Basisklasse registriert die
@@ -107,12 +110,12 @@ class FlowProgressListener(BaseEventListener):
         if method_name == "crawl_and_report":
             report = self._pipeline.report
             return f"{report.n_pages} Seiten" if report is not None else None
-        if isinstance(self._pipeline, Sprint2Pipeline | Sprint3Pipeline):
+        if isinstance(self._pipeline, Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline):
             if method_name == "mine_patterns" and self._pipeline.pattern_report is not None:
                 return f"{len(self._pipeline.pattern_report.templates)} Templates"
             if method_name == "audit_flops" and self._pipeline.audit_report is not None:
                 return f"{len(self._pipeline.audit_report.findings)} Findings"
-        if isinstance(self._pipeline, Sprint3Pipeline):
+        if isinstance(self._pipeline, Sprint3Pipeline | Sprint4Pipeline):
             if method_name == "propose_fixes" and self._pipeline.fix_plan is not None:
                 return f"{len(self._pipeline.fix_plan.proposals)} Patches"
             if method_name == "await_approval" and self._pipeline.decisions is not None:
@@ -120,6 +123,12 @@ class FlowProgressListener(BaseEventListener):
                 return f"{n_ok} freigegeben"
             if method_name == "apply_patches" and self._pipeline.deploy_result is not None:
                 return f"{len(self._pipeline.deploy_result.applied_patch_ids)} Deploy (Dry-Run)"
+        if isinstance(self._pipeline, Sprint4Pipeline):
+            if method_name == "retrieve_memory":
+                return f"{len(self._pipeline.retrieved_memory)} Hypothesen"
+            if method_name == "reprobe_and_learn" and self._pipeline.effect_report is not None:
+                effect = self._pipeline.effect_report
+                return f"{effect.n_improved}/{len(effect.hypotheses)} verbessert"
         return None
 
     def _step_started(self, method_name: str) -> None:

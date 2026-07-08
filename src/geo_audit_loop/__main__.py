@@ -19,6 +19,7 @@ from rich.console import Console
 
 from geo_audit_loop.cli.render import (
     render_deploy,
+    render_effect,
     render_error,
     render_findings,
     render_fixplan,
@@ -59,6 +60,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--apply",
         action="store_true",
         help="Deploy-Schritt aktivieren (Alias zu --fix; reiner Dry-Run, kein externer Write)",
+    )
+    parser.add_argument(
+        "--learn",
+        action="store_true",
+        help="Sprint-4-Lern-Loop: Gedaechtnis-Abruf vor dem Fix + Effekt-Re-Probe danach "
+        "(schliesst den Regelkreis; impliziert --fix)",
     )
     parser.add_argument(
         "--approve-all",
@@ -128,10 +135,13 @@ def main(argv: list[str] | None = None) -> int:
 
     version, prompts = load_probe_set(settings.prompt_set_version)
     run_id = args.run_id if args.run_id else uuid.uuid4().hex[:12]
-    fix = args.fix or args.apply
+    learn = args.learn
+    fix = args.fix or args.apply or learn
     explain = args.explain or fix
     stage_label = (
-        "Sprint 3 — Fix & Deploy"
+        "Sprint 4 — Learning Loop"
+        if learn
+        else "Sprint 3 — Fix & Deploy"
         if fix
         else "Sprint 2 — Learning"
         if explain
@@ -163,6 +173,7 @@ def main(argv: list[str] | None = None) -> int:
     from geo_audit_loop.orchestration.factory import assemble_run
     from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
     from geo_audit_loop.orchestration.sprint3_flow import Sprint3Pipeline
+    from geo_audit_loop.orchestration.sprint4_flow import Sprint4Pipeline
 
     # HITL-Gate: interaktiv (Default) oder Auto (--approve-all). Nur relevant bei --fix.
     gate: ApprovalGate | None = (
@@ -181,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         prompt_version=version,
         explain=explain,
         fix=fix,
+        learn=learn,
         approval_gate=gate,
         live_crawl=args.live_crawl,
     )
@@ -212,10 +224,11 @@ def main(argv: list[str] | None = None) -> int:
     patterns = None
     audit = None
     fix_plan = None
+    effect = None
     if report is not None:
         _pace()
         render_topflop(console, report)
-    if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline):
+    if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline):
         patterns = assembly.pipeline.pattern_report
         audit = assembly.pipeline.audit_report
         if patterns is not None:
@@ -224,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
         if audit is not None:
             _pace()
             render_findings(console, audit)
-    if isinstance(assembly.pipeline, Sprint3Pipeline):
+    if isinstance(assembly.pipeline, Sprint3Pipeline | Sprint4Pipeline):
         fix_plan = assembly.pipeline.fix_plan
         decisions = assembly.pipeline.decisions
         deploy = assembly.pipeline.deploy_result
@@ -237,12 +250,17 @@ def main(argv: list[str] | None = None) -> int:
         if deploy is not None:
             _pace()
             render_deploy(console, deploy)
+    if isinstance(assembly.pipeline, Sprint4Pipeline):
+        effect = assembly.pipeline.effect_report
+        if effect is not None:
+            _pace()
+            render_effect(console, effect)
     if report is not None:
         _pace()
         render_summary(
             console,
             snapshot=assembly.cost_tracker.snapshot(),
-            fingerprint=report_fingerprint(report, patterns, audit, fix_plan),
+            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect),
             seed=settings.run_seed,
             duration_s=duration,
         )

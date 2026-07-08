@@ -126,6 +126,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                 offline=offline,
                 explain=bool(payload.get("explain", True)),
                 fix=bool(payload.get("fix", False)),
+                learn=bool(payload.get("learn", False)),
                 top_n=max(1, min(10, int(payload.get("top_n", 3)))),
                 seed=int(payload.get("seed", 42)),
                 n_proxy_ips=max(1, min(5, int(payload.get("n_proxy_ips", 5)))),
@@ -166,20 +167,29 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         prompts = _prompt_texts(run.prompt_set_version)
         fix_plan = storage.load_fix_plan(run.run_id)
         deploy = storage.load_deploy_result(run.run_id)
-        n_ips = len({probe.proxy_label or "" for probe in probes}) or cfg.n_proxy_ips
+        effect = storage.load_effect_report(run.run_id)
+        # Nur die Baseline-Probes zaehlen als Fortschritt gegen die erwartete Matrix (Sprint 4:
+        # die Re-Probe-Phase verdoppelt sonst die Zahl und laesst den Balken ueberlaufen).
+        baseline_probes = [p for p in probes if p.phase.value == "baseline"]
+        n_ips = len({probe.proxy_label or "" for probe in baseline_probes}) or cfg.n_proxy_ips
         expected = len(EngineId) * len(prompts) * n_ips
         fingerprint = (
-            report_fingerprint(report, patterns, audit, fix_plan) if report is not None else None
+            report_fingerprint(report, patterns, audit, fix_plan, effect)
+            if report is not None
+            else None
         )
         payload: dict[str, Any] = {
             "run": run.model_dump(mode="json"),
             "expected_probes": expected,
-            "n_probes": len(probes),
+            "n_probes": len(baseline_probes),
             "n_pages": len(pages),
             "n_templates": len(patterns.templates) if patterns is not None else None,
             "n_findings": len(audit.findings) if audit is not None else None,
             "n_proposals": len(fix_plan.proposals) if fix_plan is not None else None,
             "deploy_status": deploy.status.value if deploy is not None else None,
+            "n_hypotheses": len(effect.hypotheses) if effect is not None else None,
+            "n_improved": effect.n_improved if effect is not None else None,
+            "mean_delta": effect.mean_delta if effect is not None else None,
             "has_report": report is not None,
             "fingerprint": fingerprint,
             "dashboard_alive": manager.is_alive(run.run_id),
@@ -261,13 +271,21 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         run = _selected_run(storage, request)
         if run is None:
             return JSONResponse(
-                {"report": None, "patterns": None, "audit": None, "fix_plan": None, "deploy": None}
+                {
+                    "report": None,
+                    "patterns": None,
+                    "audit": None,
+                    "fix_plan": None,
+                    "deploy": None,
+                    "effect": None,
+                }
             )
         report = storage.load_report(run.run_id)
         patterns = storage.load_pattern_report(run.run_id)
         audit = storage.load_audit_report(run.run_id)
         fix_plan = storage.load_fix_plan(run.run_id)
         deploy = storage.load_deploy_result(run.run_id)
+        effect = storage.load_effect_report(run.run_id)
         return JSONResponse(
             {
                 "report": report.model_dump(mode="json") if report is not None else None,
@@ -275,6 +293,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                 "audit": audit.model_dump(mode="json") if audit is not None else None,
                 "fix_plan": fix_plan.model_dump(mode="json") if fix_plan is not None else None,
                 "deploy": deploy.model_dump(mode="json") if deploy is not None else None,
+                "effect": effect.model_dump(mode="json") if effect is not None else None,
             }
         )
 

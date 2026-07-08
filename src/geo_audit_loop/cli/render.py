@@ -16,6 +16,7 @@ from rich.table import Table
 from rich.text import Text
 
 from geo_audit_loop.domain.audit import AuditReport, Severity
+from geo_audit_loop.domain.effect import EffectDirection, EffectReport
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -60,6 +61,13 @@ _DEPLOY_STYLES: Final[dict[DeployStatus, str]] = {
     DeployStatus.APPLIED: f"bold black on {ACCENT}",
     DeployStatus.BLOCKED: "bold black on #e4b73f",
     DeployStatus.FAILED: "bold white on #a8392c",
+}
+
+#: Badges der Effekt-Richtung (Sprint 4).
+_DIRECTION_BADGES: Final[dict[EffectDirection, tuple[str, str]]] = {
+    EffectDirection.IMPROVED: ("▲ BESSER", f"bold black on {ACCENT}"),
+    EffectDirection.REGRESSED: ("▼ SCHLECHTER", "bold white on #a8392c"),
+    EffectDirection.UNCHANGED: ("— GLEICH", "bold black on grey62"),
 }
 
 
@@ -357,6 +365,65 @@ def render_deploy(console: Console, result: DeployResult) -> None:
             padding=(1, 2),
         )
     )
+
+
+def render_effect(console: Console, report: EffectReport) -> None:
+    """Rendert Akt 7 (EFFEKT): die Vorher/Nachher-Re-Probe und die gelernten Hypothesen."""
+    console.print()
+    console.rule(
+        Text("EFFEKT — Re-Probe & Gedaechtnis (Sprint 4)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    if not report.hypotheses:
+        console.print(
+            Text(
+                "Keine freigegebenen Patches → kein Effekt gemessen (HITL bleibt hart).",
+                style=GREY,
+            )
+        )
+        return
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption=(
+            f"{report.n_improved}/{len(report.hypotheses)} verbessert · "
+            f"mittleres Δ {report.mean_delta:+.2f} · in das Gedaechtnis geschrieben"
+        ),
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("Seite · Hebel", ratio=3)
+    table.add_column("Vorher", justify="right", width=7)
+    table.add_column("Nachher", justify="right", width=7)
+    table.add_column("Δ Rate", width=16)
+    table.add_column("Richtung", width=13)
+    table.add_column("Konfidenz", width=16)
+    for hyp in report.hypotheses:
+        page = Text()
+        page.append(_short_url(hyp.target_url), style="bold")
+        page.append(
+            f"\n{PYRAMID_LABELS[hyp.pyramid_level]} · {LEVER_LABELS[hyp.lever]}",
+            style=ACCENT_DIM,
+        )
+        delta_bar = Text()
+        delta_style = ACCENT if hyp.delta >= 0 else RED
+        delta_bar.append_text(_bar(abs(hyp.delta), 10, delta_style))
+        delta_bar.append(f" {hyp.delta:+.2f}", style="bold")
+        label, style = _DIRECTION_BADGES[hyp.direction]
+        confidence = Text()
+        confidence.append_text(_bar(hyp.confidence, 10, ACCENT))
+        confidence.append(f" {hyp.confidence:.2f}", style="bold")
+        table.add_row(
+            page,
+            f"{hyp.before_citation_rate:.2f}",
+            f"{hyp.after_citation_rate:.2f}",
+            delta_bar,
+            Text(f" {label} ", style=style),
+            confidence,
+        )
+    console.print(table)
 
 
 def render_summary(

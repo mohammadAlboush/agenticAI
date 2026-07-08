@@ -11,6 +11,7 @@ from geo_audit_loop.adapters.sample_data import build_sample_inventory
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
 from geo_audit_loop.config.settings import Settings
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
+from geo_audit_loop.domain.effect import EffectDirection, EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -161,6 +162,39 @@ def _seed(tmp_path: Path, *, with_results: bool = True) -> None:
             status=DeployStatus.DRY_RUN,
         )
     )
+    storage.save_effect_report(
+        EffectReport(
+            run_id=RUN,
+            target_domain="it-sicherheit.de",
+            generated_at=FIXED,
+            prompt_version="v2",
+            reprobe_matrix_size=1,
+            mean_delta=0.9,
+            n_improved=1,
+            hypotheses=(
+                EffectHypothesis(
+                    hypothesis_id="eh-run-web-px-f1-add_schema",
+                    run_id=RUN,
+                    target_domain="it-sicherheit.de",
+                    target_url="/firewall-grundlagen",
+                    patch_id="px-f1-add_schema",
+                    finding_id="f1",
+                    lever=Lever.DEFINITION_BLOCKS,
+                    pyramid_level=PyramidLevel.EXTRACTABILITY,
+                    change_type=ChangeType.ADD_SCHEMA,
+                    before_citation_rate=0.05,
+                    after_citation_rate=0.95,
+                    before_n=1,
+                    after_n=1,
+                    delta=0.9,
+                    direction=EffectDirection.IMPROVED,
+                    confidence=0.6,
+                    suspected_cause="x",
+                    observed_at=FIXED,
+                ),
+            ),
+        )
+    )
     storage.close()
 
 
@@ -229,6 +263,33 @@ def test_state_surfaces_sprint3_counts(tmp_path: Path) -> None:
     state = client.get("/api/state").json()
     assert state["n_proposals"] == 1
     assert state["deploy_status"] == "dry_run"
+
+
+def test_results_and_state_surface_effect(tmp_path: Path) -> None:
+    _seed(tmp_path)
+    client = TestClient(create_app(_settings(tmp_path)))
+    effect = client.get("/api/results").json()["effect"]
+    assert effect["n_improved"] == 1
+    assert effect["hypotheses"][0]["patch_id"] == "px-f1-add_schema"
+    state = client.get("/api/state").json()
+    assert state["n_hypotheses"] == 1
+    assert state["n_improved"] == 1
+    assert state["mean_delta"] == 0.9
+
+
+def test_start_run_with_learn_spawns_learn_flag(tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def spawn(args: list[str], env: dict[str, str]) -> _FakeProc:
+        captured["args"] = args
+        return _FakeProc()
+
+    client = TestClient(create_app(_settings(tmp_path), spawn=spawn))
+    response = client.post("/api/runs", json={"domain": "it-sicherheit.de", "learn": True})
+    assert response.status_code == 201
+    args = captured["args"]
+    assert isinstance(args, list)
+    assert "--learn" in args and "--approve-all" in args
 
 
 def test_start_run_with_fix_spawns_fix_flags(tmp_path: Path) -> None:

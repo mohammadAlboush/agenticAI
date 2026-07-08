@@ -23,6 +23,7 @@ from geo_audit_loop.adapters.publisher.mock import MockPublisher
 from geo_audit_loop.adapters.reasoning.mock import MockReasoningAdapter
 from geo_audit_loop.adapters.sample_data import build_sample_inventory, sample_target_urls
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+from geo_audit_loop.agents.effect_analyst import EffectAnalystService
 from geo_audit_loop.agents.fix_agent import FixAgentService
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
@@ -33,15 +34,18 @@ from geo_audit_loop.config.engines import ENGINE_REGISTRY
 from geo_audit_loop.config.pricing import PRICE_TABLE
 from geo_audit_loop.config.settings import Settings
 from geo_audit_loop.domain.inventory import CrawlOptions
-from geo_audit_loop.domain.probe import EngineId, EngineProbeSpec, ProbePrompt
+from geo_audit_loop.domain.probe import EngineId, EngineProbeSpec, ProbePhase, ProbePrompt
 from geo_audit_loop.domain.run import RunContext
+from geo_audit_loop.memory.mock import MockMemoryAdapter
 from geo_audit_loop.observability.cost import CostTracker
 from geo_audit_loop.orchestration.approval import ApprovalGate, AutoApproveGate
 from geo_audit_loop.orchestration.sprint1_flow import Sprint1Flow, Sprint1Pipeline
 from geo_audit_loop.orchestration.sprint2_flow import Sprint2Flow, Sprint2Pipeline
 from geo_audit_loop.orchestration.sprint3_flow import Sprint3Flow, Sprint3Pipeline
+from geo_audit_loop.orchestration.sprint4_flow import Sprint4Flow, Sprint4Pipeline
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
+from geo_audit_loop.ports.memory import MemoryPort
 from geo_audit_loop.ports.proxy import ProxyPort
 from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.reasoning import ReasoningPort
@@ -56,8 +60,8 @@ class RunAssembly:
     oder Sprint-3-Variante (Fix + HITL + Deploy); alle teilen die ``report``-Property.
     """
 
-    flow: Sprint1Flow | Sprint2Flow | Sprint3Flow
-    pipeline: Sprint1Pipeline | Sprint2Pipeline | Sprint3Pipeline
+    flow: Sprint1Flow | Sprint2Flow | Sprint3Flow | Sprint4Flow
+    pipeline: Sprint1Pipeline | Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline
     storage: SqliteStorage
     cost_tracker: CostTracker
     run_context: RunContext
@@ -111,9 +115,18 @@ _LIVE_ENGINE_BUILDERS: dict[EngineId, Callable[[Settings, ProxyPort], EnginePort
 
 
 def build_engines(
-    settings: Settings, *, offline: bool, target_urls: Sequence[str], proxy: ProxyPort
+    settings: Settings,
+    *,
+    offline: bool,
+    target_urls: Sequence[str],
+    proxy: ProxyPort,
+    boosted_urls: Sequence[str] = (),
 ) -> dict[EngineId, EnginePort]:
-    """Waehlt je Engine den Live- oder Mock-Adapter (live: Perplexity, Gemini)."""
+    """Waehlt je Engine den Live- oder Mock-Adapter (live: Perplexity, Gemini).
+
+    ``boosted_urls`` (Sprint 4, nur Mock): gepatchte URLs werden in der Re-Probe garantiert
+    zitiert (deterministischer Effekt); Live-Adapter ignorieren den Boost (messen die Realitaet).
+    """
     engines: dict[EngineId, EnginePort] = {}
     for engine_id in ENGINE_REGISTRY:
         builder = _LIVE_ENGINE_BUILDERS.get(engine_id)
@@ -121,9 +134,27 @@ def build_engines(
             engines[engine_id] = builder(settings, proxy)
         else:
             engines[engine_id] = MockEngineAdapter(
-                engine_id, target_urls=target_urls, seed=settings.run_seed
+                engine_id,
+                target_urls=target_urls,
+                seed=settings.run_seed,
+                boosted_urls=boosted_urls,
             )
     return engines
+
+
+def build_memory(settings: Settings, *, offline: bool) -> MemoryPort:
+    """Waehlt das Gedaechtnis-Backend: ``mock`` (Default, deterministisch) | ``chroma`` (bge-m3).
+
+    Offline erzwingt immer das deterministische Mock (Reproduzierbarkeit, §7). Der Chroma-Adapter
+    ist opt-in (Extra ``memory``); sein Import ist lazy — der Offline-/CI-Pfad laedt ihn nie.
+    """
+    if offline or settings.memory_provider == "mock":
+        return MockMemoryAdapter(settings.db_path)
+    from geo_audit_loop.memory.chroma import ChromaMemoryAdapter
+
+    return ChromaMemoryAdapter(
+        chroma_path=settings.chroma_path, embedding_model=settings.embedding_model
+    )
 
 
 def build_crawl(*, offline: bool, domain: str, live_crawl: bool = False) -> CrawlPort:
@@ -179,6 +210,7 @@ def assemble_run(
     prompt_version: str,
     explain: bool = False,
     fix: bool = False,
+    learn: bool = False,
     approval_gate: ApprovalGate | None = None,
     live_crawl: bool = False,
     logger: logging.Logger | None = None,
@@ -187,15 +219,18 @@ def assemble_run(
 
     ``explain=True`` haengt den Sprint-2-Lern-Loop (Pattern-Miner + GEO-Auditor) an die
     Sprint-1-Messung. ``fix=True`` haengt zusaetzlich den Sprint-3-Fix-/Deploy-Loop an
-    (Fix-Agent + HITL-Gate + Publisher); es impliziert ``explain``. Das HITL-Gate ist
-    ``approval_gate`` (Default: ``AutoApproveGate`` — die CLI reicht bei interaktiver
-    Freigabe einen eigenen Gate durch). ``live_crawl=True`` crawlt die Zieldomain real.
+    (Fix-Agent + HITL-Gate + Publisher). ``learn=True`` schliesst den Sprint-4-Loop
+    (Gedaechtnis-Abruf vor dem Fix + Effekt-Re-Probe danach); es impliziert ``fix`` (und damit
+    ``explain``). Das HITL-Gate ist ``approval_gate`` (Default: ``AutoApproveGate``).
+    ``live_crawl=True`` crawlt die Zieldomain real.
     """
+    fix = fix or learn
     explain = explain or fix
     storage = SqliteStorage(settings.db_path)
     storage.initialize()
     cost_tracker = CostTracker(
-        max_probes=settings.max_probes,
+        # Sprint 4: Der Loop probt zweimal (Baseline + Re-Probe) -> Budget fuer beide Matrizen.
+        max_probes=settings.max_probes * 2 if learn else settings.max_probes,
         max_usd=settings.max_usd,
         max_tokens=settings.max_tokens,
         price_table=PRICE_TABLE,
@@ -289,7 +324,9 @@ def assemble_run(
             run_context=run_context,
         )
 
-    fx_version, fx_prompt = load_prompt("fix_agent")
+    # Unter --learn nutzt der Fix-Agent den gedaechtnis-informierten Prompt v2 (sonst v1).
+    fix_prompt_name = c.FIX_AGENT_LEARN_VERSION if learn else "v1"
+    fx_version, fx_prompt = load_prompt("fix_agent", fix_prompt_name)
     fix_agent = FixAgentService(
         reasoning=reasoning,
         system_prompt=fx_prompt,
@@ -309,9 +346,52 @@ def assemble_run(
         run_context=run_context,
         logger=logger,
     )
+    if not learn:
+        return RunAssembly(
+            flow=Sprint3Flow(sprint3),
+            pipeline=sprint3,
+            storage=storage,
+            cost_tracker=cost_tracker,
+            run_context=run_context,
+        )
+
+    # --- Sprint 4: geschlossener Lern-Loop (Gedaechtnis + Effekt-Re-Probe) ---
+    memory = build_memory(settings, offline=offline)
+    effect_analyst = EffectAnalystService(memory=memory, storage=storage, logger=logger)
+    specs = build_specs()
+
+    def build_reprobe_sampler(approved_urls: frozenset[str]) -> SamplerService:
+        """Baut den Re-Probe-Sampler: geboostete Engines (gepatchte URLs) + REPROBE-Phase."""
+        reprobe_engines = build_engines(
+            settings,
+            offline=offline,
+            target_urls=target_urls,
+            proxy=proxy,
+            boosted_urls=tuple(sorted(approved_urls)),
+        )
+        return SamplerService(
+            engines=reprobe_engines,
+            specs=specs,
+            proxy=proxy,
+            storage=storage,
+            cost_tracker=cost_tracker,  # geteiltes Budget: Re-Probe zaehlt mit
+            n_proxy_ips=settings.n_proxy_ips,
+            phase=ProbePhase.REPROBE,
+            logger=logger,
+        )
+
+    sprint4 = Sprint4Pipeline(
+        base=sprint3,
+        memory=memory,
+        effect_analyst=effect_analyst,
+        build_reprobe_sampler=build_reprobe_sampler,
+        prompts=prompts,
+        run_context=run_context,
+        logger=logger,
+    )
     return RunAssembly(
-        flow=Sprint3Flow(sprint3),
-        pipeline=sprint3,
+        flow=Sprint4Flow(sprint4),
+        pipeline=sprint4,
         storage=storage,
         cost_tracker=cost_tracker,
         run_context=run_context,

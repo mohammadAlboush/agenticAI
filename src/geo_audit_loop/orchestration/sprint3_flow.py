@@ -13,12 +13,14 @@ wirft ``DeployBlocked`` — aus einem ``FixPlan`` wird NIE direkt ein ``DeployRe
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel, PrivateAttr
 
 from geo_audit_loop.agents.fix_agent import FixAgentService
 from geo_audit_loop.domain.audit import AuditReport
+from geo_audit_loop.domain.effect import EffectHypothesis
 from geo_audit_loop.domain.errors import DeployBlocked, GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
@@ -93,6 +95,10 @@ class Sprint3Pipeline:
         """Das Deploy-Ergebnis aus Schritt 7 (``None`` vor Ausfuehrung)."""
         return self._deploy_result
 
+    def finalize_completed(self) -> None:
+        """Schliesst den Run als COMPLETED ab (delegiert; Sprint 4 finalisiert spaeter)."""
+        self._base.finalize_completed()
+
     # --- Sprint-1/2-Schritte (Delegation) -----------------------------------
     def sample(self) -> None:
         """Schritt 1: Sampling."""
@@ -111,8 +117,12 @@ class Sprint3Pipeline:
         return self._base.audit_flops()
 
     # --- Sprint-3-Schritte --------------------------------------------------
-    def propose_fixes(self) -> FixPlan:
-        """Schritt 5: aus den Findings konkrete Patches ableiten (+ persistieren)."""
+    def propose_fixes(self, memory_hypotheses: Sequence[EffectHypothesis] = ()) -> FixPlan:
+        """Schritt 5: aus den Findings konkrete Patches ableiten (+ persistieren).
+
+        ``memory_hypotheses`` (Sprint 4) reicht der Fix-Agent an sein Lern-Signal weiter;
+        leer => unveraendertes Sprint-3-Verhalten.
+        """
         if self._base.audit_report is None:
             self.audit_flops()
         audit = self._base.audit_report
@@ -120,7 +130,7 @@ class Sprint3Pipeline:
         if audit is None or patterns is None:
             raise GeoAuditError("Audit/Pattern fehlt - audit_flops zuerst ausfuehren")
         self._fix_plan = self._fix_agent.run(
-            self._run_context, audit, patterns, self._base.load_pages()
+            self._run_context, audit, patterns, self._base.load_pages(), memory_hypotheses
         )
         self._storage.save_fix_plan(self._fix_plan)
         return self._fix_plan
@@ -134,10 +144,12 @@ class Sprint3Pipeline:
         self._storage.save_approvals(self._run_context.run_id, tuple(self._decisions.values()))
         return self._decisions
 
-    def apply_patches(self) -> DeployResult:
+    def apply_patches(self, *, finalize: bool = True) -> DeployResult:
         """Schritt 7: freigegebene Patches deployen (sicherer Dry-Run) + Run finalisieren.
 
         Hartes Gate (Projektregeln §6): ohne vorherige ``await_approval`` -> ``DeployBlocked``.
+        ``finalize=False`` schiebt den COMPLETED-Abschluss auf (Sprint 4 finalisiert erst nach
+        Re-Probe + Gedaechtnis-Schreiben, damit die persistierten Kosten alles enthalten).
         """
         if self._decisions is None:
             raise DeployBlocked("HITL-Freigabe fehlt - await_approval zuerst ausfuehren")
@@ -146,7 +158,8 @@ class Sprint3Pipeline:
             self._fix_plan, self._decisions, run_context=self._run_context, dry_run=True
         )
         self._storage.save_deploy_result(self._deploy_result)
-        self._base.finalize_completed()  # Kosten enthalten jetzt das Fix-Reasoning
+        if finalize:
+            self._base.finalize_completed()  # Kosten enthalten jetzt das Fix-Reasoning
         return self._deploy_result
 
     def run(self) -> TopFlopReport:

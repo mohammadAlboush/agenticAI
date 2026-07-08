@@ -46,6 +46,7 @@ class RunParams:
     offline: bool = True
     explain: bool = True
     fix: bool = False  # Sprint 3: Fix-/Deploy-Loop (Dashboard gibt automatisch frei)
+    learn: bool = False  # Sprint 4: geschlossener Lern-Loop (Re-Probe + Gedaechtnis)
     top_n: int = 3
     seed: int = 42
     n_proxy_ips: int = 5
@@ -95,7 +96,10 @@ class RunManager:
         ]
         if params.explain:
             args.append("--explain")
-        if params.fix:
+        if params.learn:
+            # Sprint 4: schliesst den Loop (impliziert --fix); Dashboard gibt automatisch frei.
+            args += ["--learn", "--approve-all"]
+        elif params.fix:
             # Dashboard-Lauf gibt automatisch frei (nicht-interaktiv); Deploy bleibt Dry-Run.
             args += ["--fix", "--approve-all"]
         env_overlay = {

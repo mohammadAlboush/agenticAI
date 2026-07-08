@@ -78,6 +78,16 @@ class Settings(BaseSettings):
         default="mock", validation_alias="GEO_PUBLISHER"
     )
 
+    # --- Sprint 4: Gedaechtnis-Backend (Lern-Loop) ---
+    # mock (Default, deterministisch, SQLite) | chroma (bge-m3, opt-in Extra 'memory', nicht det.).
+    memory_provider: Literal["mock", "chroma"] = Field(
+        default="mock", validation_alias="GEO_MEMORY_PROVIDER"
+    )
+    chroma_path: Path = Field(default=Path("runs/chroma"), validation_alias="GEO_CHROMA_PATH")
+    embedding_model: str = Field(
+        default=c.DEFAULT_EMBEDDING_MODEL, validation_alias="GEO_EMBEDDING_MODEL"
+    )
+
     @field_validator("live_engines", mode="before")
     @classmethod
     def _parse_live_engines(cls, value: object) -> object:
@@ -120,6 +130,9 @@ class Settings(BaseSettings):
             "max_tokens": self.max_tokens,
             "prompt_set_version": self.prompt_set_version,
             "live_engines": sorted(e.value for e in self.live_engines),
+            # Sprint 4: Mock (deterministisch) vs. Chroma (semantisch) sind unterschiedliche
+            # Reproduzierbarkeits-Klassen; chroma_path/embedding_model bleiben irrelevant.
+            "memory_provider": self.memory_provider,
             "models": {
                 eid.value: cfg.model
                 for eid, cfg in sorted(ENGINE_REGISTRY.items(), key=lambda kv: kv[0].value)
