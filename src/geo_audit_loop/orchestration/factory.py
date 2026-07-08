@@ -24,6 +24,7 @@ from geo_audit_loop.adapters.reasoning.mock import MockReasoningAdapter
 from geo_audit_loop.adapters.sample_data import build_sample_inventory, sample_target_urls
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
 from geo_audit_loop.agents.effect_analyst import EffectAnalystService
+from geo_audit_loop.agents.entity_extractor import EntityExtractorService
 from geo_audit_loop.agents.fix_agent import FixAgentService
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
@@ -307,10 +308,21 @@ def assemble_run(
         storage=storage,
         logger=logger,
     )
+    ee_version, ee_prompt = load_prompt("entity_extractor")
+    entity_extractor = EntityExtractorService(
+        reasoning=reasoning,
+        system_prompt=ee_prompt,
+        prompt_version=ee_version,
+        cost_tracker=cost_tracker,
+        max_tokens=c.REASONING_MAX_TOKENS,
+        storage=storage,
+        logger=logger,
+    )
     sprint2 = Sprint2Pipeline(
         base=pipeline,
         pattern_miner=pattern_miner,
         geo_auditor=geo_auditor,
+        entity_extractor=entity_extractor,
         storage=storage,
         run_context=run_context,
         logger=logger,

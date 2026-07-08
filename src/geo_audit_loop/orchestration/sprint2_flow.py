@@ -13,10 +13,11 @@ import logging
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel, PrivateAttr
 
+from geo_audit_loop.agents.entity_extractor import EntityExtractorService
 from geo_audit_loop.agents.geo_auditor import GeoAuditorService
 from geo_audit_loop.agents.pattern_miner import PatternMinerService
 from geo_audit_loop.domain.audit import AuditReport
-from geo_audit_loop.domain.entity import EntityGraphReport
+from geo_audit_loop.domain.entity import EntityGraphReport, render_organization_jsonld
 from geo_audit_loop.domain.errors import GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
@@ -39,17 +40,20 @@ class Sprint2Pipeline:
         geo_auditor: GeoAuditorService,
         storage: StoragePort,
         run_context: RunContext,
+        entity_extractor: EntityExtractorService | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._base = base
         self._pattern_miner = pattern_miner
         self._geo_auditor = geo_auditor
+        self._entity_extractor = entity_extractor
         self._storage = storage
         self._run_context = run_context
         self._log = logger if logger is not None else logging.getLogger(__name__)
         self._pages: tuple[PageInventory, ...] | None = None
         self._pattern_report: PatternReport | None = None
         self._audit_report: AuditReport | None = None
+        self._enriched_entity_graph: EntityGraphReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -63,7 +67,13 @@ class Sprint2Pipeline:
 
     @property
     def entity_graph(self) -> EntityGraphReport | None:
-        """Der Entity-/Knowledge-Graph-Report aus Schritt 2 (Session 8, deterministisch)."""
+        """Der Entity-/Knowledge-Graph-Report (deterministischer Kern; ggf. mit LLM-sameAs).
+
+        Nach ``mine_patterns`` liefert die Property die um ``brand_same_as`` + regenerierten
+        JSON-LD angereicherte Fassung (Session 8, Entity-Extractor), sonst den Basis-Report.
+        """
+        if self._enriched_entity_graph is not None:
+            return self._enriched_entity_graph
         return self._base.entity_graph
 
     @property
@@ -104,12 +114,41 @@ class Sprint2Pipeline:
         self._base.finalize_completed()
 
     def mine_patterns(self) -> PatternReport:
-        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren)."""
+        """Schritt 3: aus den Top-Seiten Best-Practice-Templates minen (+ persistieren).
+
+        Danach (Session 8, LLM): verfeinert den Entity-Graph um sameAs-Autoritaets-URLs der
+        Marke — der erste Reasoning-Schritt, in dem das LLM verfuegbar ist.
+        """
         self._pattern_report = self._pattern_miner.run(
             self._run_context, self._require_report(), self._load_pages()
         )
         self._storage.save_pattern_report(self._pattern_report)
+        self._extract_brand_entities()
         return self._pattern_report
+
+    def _extract_brand_entities(self) -> None:
+        """Reichert den Entity-Graph um LLM-gefundene sameAs-URLs an (+ re-persistiert).
+
+        No-Op ohne Entity-Extractor, ohne Graph oder wenn keine valide sameAs-URL gefunden
+        wird. Sonst wird ``brand_same_as`` gesetzt und ``recommended_jsonld`` deterministisch
+        mit den sameAs neu erzeugt; die angereicherte Fassung ersetzt (Upsert) den Basis-Report.
+        """
+        graph = self._base.entity_graph
+        if self._entity_extractor is None or graph is None:
+            return
+        same_as = self._entity_extractor.run(self._run_context, graph, self._load_pages())
+        if not same_as:
+            return
+        enriched = graph.model_copy(
+            update={
+                "brand_same_as": same_as,
+                "recommended_jsonld": render_organization_jsonld(
+                    graph.brand_name, graph.target_domain, same_as=same_as
+                ),
+            }
+        )
+        self._storage.save_entity_graph(enriched)
+        self._enriched_entity_graph = enriched
 
     def audit_flops(self) -> AuditReport:
         """Schritt 4: Flop-Seiten auditieren, Lern-Artefakte speichern, Run finalisieren."""

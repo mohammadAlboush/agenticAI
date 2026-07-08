@@ -274,10 +274,24 @@ _FIX_PROPOSALS: dict[str, object] = {
     ]
 }
 
+# sameAs-Autoritaets-URLs der Beispiel-Marke (Session 8, Entity-Extractor): stabile,
+# offizielle Quellen, auf die das Organization-Schema verweisen sollte. Enthaelt bewusst
+# eine Dublette + eine relative URL, damit der Agent-Filter (Dedupe/URL-Validierung) greift.
+_EXTRACTED_ENTITIES: dict[str, object] = {
+    "same_as": [
+        "https://de.wikipedia.org/wiki/IT-Sicherheit",
+        "https://www.wikidata.org/wiki/Q3968",
+        "https://de.wikipedia.org/wiki/IT-Sicherheit",
+        "/nur-relativ-kein-authoritaets-ziel",
+        "https://www.linkedin.com/company/it-sicherheit",
+    ]
+}
+
 _PAYLOADS: dict[str, dict[str, object]] = {
     "pattern_miner": _PATTERN_TEMPLATES,
     "geo_auditor": _AUDIT_FINDINGS,
     "fix_agent": _FIX_PROPOSALS,
+    "entity_extractor": _EXTRACTED_ENTITIES,
 }
 
 

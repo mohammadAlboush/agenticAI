@@ -66,6 +66,40 @@ def test_sprint2_flow_offline_produces_patterns_and_findings(tmp_path: Path) -> 
     assert n_log >= 2  # je ein Reasoning-Aufruf fuer Pattern-Miner und GEO-Auditor
 
 
+def test_entity_extractor_enriches_graph_with_same_as(tmp_path: Path) -> None:
+    """Session 8 (LLM): der Entity-Extractor fuellt brand_same_as + regeneriert den JSON-LD.
+
+    Der Extractor laeuft in jedem S2-Lauf (die Marke ist immer vorhanden); nach dem Flow traegt
+    der Entity-Graph valide sameAs-URLs und der empfohlene JSON-LD-Block enthaelt sie.
+    """
+    settings = Settings(
+        db_path=tmp_path / "geo.db", max_probes=1000, n_proxy_ips=5, top_n=5, run_seed=42
+    )
+    version, prompts = load_probe_set("v1")
+    assembly = assemble_run(
+        settings,
+        domain="it-sicherheit.de",
+        offline=True,
+        run_id="it-ee",
+        now=FIXED,
+        prompts=prompts,
+        prompt_version=version,
+        explain=True,
+    )
+    assembly.flow.kickoff()
+
+    assert isinstance(assembly.pipeline, Sprint2Pipeline)
+    graph = assembly.pipeline.entity_graph
+    stored = assembly.storage.load_entity_graph("it-ee")
+    assembly.storage.close()
+    assert graph is not None
+    assert graph.brand_same_as  # sameAs-URLs gefunden
+    assert all(url.startswith(("http://", "https://")) for url in graph.brand_same_as)
+    assert "sameAs" in graph.recommended_jsonld  # in den JSON-LD-Fix eingebaut
+    assert stored is not None
+    assert stored.brand_same_as == graph.brand_same_as  # re-persistiert
+
+
 def test_sprint2_is_reproducible(tmp_path: Path) -> None:
     version, prompts = load_probe_set("v1")
 

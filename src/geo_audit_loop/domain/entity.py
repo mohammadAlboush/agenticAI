@@ -76,6 +76,9 @@ class EntityGraphReport(FrozenModel):
     entities: tuple[EntityNode, ...] = ()  # Marke zuerst, dann nach Deckung (deterministisch)
     page_scores: tuple[PageEntityClarity, ...] = ()  # schwaechste zuerst
     weakest_pages: tuple[str, ...] = ()  # clarity_score < Schwelle -> Klarheits-Luecken
+    # ``sameAs``-Autoritaets-URLs der Marke (Session 8, LLM-Entity-Extractor). Leer im rein
+    # deterministischen Kern; der Extractor fuellt sie und regeneriert ``recommended_jsonld``.
+    brand_same_as: tuple[str, ...] = ()
     recommended_jsonld: str = Field(min_length=1)  # kanonischer Organization-Block (der Fix)
 
 
