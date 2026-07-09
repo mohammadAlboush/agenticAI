@@ -2,8 +2,11 @@
 
 Deterministische Reihenfolge (Prompts wie uebergeben, Engines nach Id sortiert, IP-Slots
 0..n-1). Checkpoint-faehig: bereits erledigte Probes werden uebersprungen. Budget wird vor
-jeder Probe geprueft (``BudgetExceeded`` bricht den Lauf sauber ab; erledigte Probes
-bleiben persistiert). Haengt nur an domain, ports und observability - nie an Adaptern.
+jeder Probe geprueft: globale Limits (Probes/Tokens/USD) brechen den Lauf hart ab
+(``BudgetExceeded``; erledigte Probes bleiben persistiert). Eine erschoepfte
+Pro-Provider-Request-Quote (``BudgetExceeded`` mit gesetztem ``provider``) ueberspringt
+dagegen NUR die restlichen Zellen dieser Engine — andere Engines messen in unveraenderter
+Reihenfolge weiter. Haengt nur an domain, ports und observability - nie an Adaptern.
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ import logging
 import time
 from collections.abc import Mapping, Sequence
 
+from geo_audit_loop.domain.errors import BudgetExceeded
 from geo_audit_loop.domain.metrics import ProbeAggregate, aggregate_probes
 from geo_audit_loop.domain.probe import (
     EngineId,
@@ -60,10 +64,47 @@ class SamplerService:
         return sorted((e for e in self._engines if e in self._specs), key=lambda e: e.value)
 
     def run(self, run_context: RunContext, prompts: Sequence[ProbePrompt]) -> list[ProbeAggregate]:
-        """Fuehrt die gesamte Probe-Matrix aus und liefert die Aggregate je (Engine, Prompt)."""
+        """Fuehrt die gesamte Probe-Matrix aus und liefert die Aggregate je (Engine, Prompt).
+
+        Pro-Provider-Quoten (``BudgetExceeded`` mit ``provider``) ueberspringen nur die
+        restlichen Zellen der betroffenen Engine (inkl. der angebrochenen Zelle im
+        Skip-Zaehler); globale Limits brechen den Lauf weiterhin hart ab. Die Reihenfolge
+        der uebrigen Probes bleibt dabei unveraendert (Determinismus).
+        """
+        # Engine -> Anzahl Zellen mit mindestens einer wegen Quota uebersprungenen Probe.
+        skipped_cells: dict[EngineId, int] = {}
         for prompt in prompts:
             for engine_id in self._engine_order():
-                self._probe_cell(run_context, prompt, engine_id)
+                if engine_id in skipped_cells:
+                    skipped_cells[engine_id] += 1
+                    continue
+                try:
+                    self._probe_cell(run_context, prompt, engine_id)
+                except BudgetExceeded as exc:
+                    if exc.provider is None:
+                        raise  # Globales Limit: harter Abbruch (Projektregeln §6).
+                    skipped_cells[engine_id] = 1
+                    log_event(
+                        self._log,
+                        "probe.provider_quota_reached",
+                        run_id=run_context.run_id,
+                        level=logging.WARNING,
+                        agent=_AGENT,
+                        engine=engine_id.value,
+                        limit_name=exc.limit_name,
+                        limit=exc.limit,
+                        used=exc.used,
+                    )
+        for engine_id, n_cells in sorted(skipped_cells.items(), key=lambda item: item[0].value):
+            log_event(
+                self._log,
+                "probe.provider_quota_skipped",
+                run_id=run_context.run_id,
+                level=logging.WARNING,
+                agent=_AGENT,
+                engine=engine_id.value,
+                skipped_cells=n_cells,
+            )
         return aggregate_probes(self._storage.load_probes(run_context.run_id, self._phase))
 
     def _probe_cell(
@@ -77,7 +118,7 @@ class SamplerService:
                 run_context.run_id, prompt.prompt_id, engine_id, proxy_label, self._phase
             ):
                 continue
-            self._cost.ensure_can_probe()
+            self._cost.ensure_can_probe(provider=engine_id.value)
             request = ProbeRequest(
                 run_id=run_context.run_id,
                 engine_id=engine_id,
@@ -98,6 +139,8 @@ class SamplerService:
             result = engine.probe(request).model_copy(update={"phase": self._phase})
             self._storage.save_probe(result)
             self._cost.record(result.model, result.usage)
+            # Speist die Pro-Provider-Quote (z.B. Gemini-Free-Tier, Projektregeln §6).
+            self._cost.record_request(engine_id.value)
             log_event(
                 self._log,
                 "probe.done",

@@ -81,13 +81,19 @@ def _sampler(
     engines: dict[EngineId, _CountingEngine],
     *,
     max_probes: int = 1000,
+    request_limits: dict[str, int] | None = None,
 ) -> SamplerService:
     return SamplerService(
         engines=engines,
         specs=_specs(),
         proxy=WebshareProxyPool(PROXIES, seed=42),
         storage=storage,
-        cost_tracker=CostTracker(max_probes=max_probes, max_usd=1000.0, max_tokens=10**9),
+        cost_tracker=CostTracker(
+            max_probes=max_probes,
+            max_usd=1000.0,
+            max_tokens=10**9,
+            request_limits=request_limits,
+        ),
         n_proxy_ips=N_IPS,
     )
 
@@ -124,3 +130,74 @@ def test_budget_cap_aborts_and_persists_checkpoint(tmp_path: Path) -> None:
     with pytest.raises(BudgetExceeded):
         sampler.run(_ctx(), PROMPTS)
     assert len(storage.load_probes("run-1")) == 3
+
+
+def test_provider_quota_skips_only_that_engine(tmp_path: Path) -> None:
+    """Gedeckelte Engine wird uebersprungen, die andere misst vollstaendig weiter."""
+    engines = _engines()
+    storage = _storage(tmp_path)
+    sampler = _sampler(storage, engines, request_limits={"perplexity": 3})
+
+    aggregates = sampler.run(_ctx(), PROMPTS)  # darf NICHT werfen
+
+    assert engines[EngineId.PERPLEXITY].calls == 3
+    assert engines[EngineId.CLAUDE].calls == 2 * N_IPS  # 10, komplett
+    probes = storage.load_probes("run-1")
+    assert len(probes) == 3 + 2 * N_IPS
+    by_engine = {e: [p for p in probes if p.engine_id == e] for e in engines}
+    assert len(by_engine[EngineId.PERPLEXITY]) == 3
+    assert len(by_engine[EngineId.CLAUDE]) == 2 * N_IPS
+    # Aggregate: Claude p1+p2 vollstaendig, Perplexity nur die angebrochene p1-Zelle.
+    keys = {(agg.engine_id, agg.prompt_id) for agg in aggregates}
+    assert keys == {
+        (EngineId.CLAUDE, "p1"),
+        (EngineId.CLAUDE, "p2"),
+        (EngineId.PERPLEXITY, "p1"),
+    }
+
+
+def test_provider_quota_does_not_change_other_engine_probes(tmp_path: Path) -> None:
+    """Skip einer Engine laesst die Probes der uebrigen Engine byte-identisch."""
+    storage_free = _storage(tmp_path / "free")
+    _sampler(storage_free, _engines()).run(_ctx(), PROMPTS)
+
+    storage_capped = SqliteStorage(tmp_path / "capped" / "db.sqlite")
+    storage_capped.initialize()
+    _sampler(storage_capped, _engines(), request_limits={"perplexity": 3}).run(_ctx(), PROMPTS)
+
+    def _claude_dump(storage: SqliteStorage) -> list[str]:
+        return [
+            p.model_dump_json()
+            for p in storage.load_probes("run-1")
+            if p.engine_id is EngineId.CLAUDE
+        ]
+
+    assert _claude_dump(storage_capped) == _claude_dump(storage_free)
+
+
+def test_global_cap_aborts_hard_even_with_request_limits(tmp_path: Path) -> None:
+    """Globale Limits brechen weiterhin hart ab — auch wenn Provider-Quoten gesetzt sind."""
+    storage = _storage(tmp_path)
+    sampler = _sampler(storage, _engines(), max_probes=4, request_limits={"perplexity": 3})
+    with pytest.raises(BudgetExceeded) as excinfo:
+        sampler.run(_ctx(), PROMPTS)
+    assert excinfo.value.provider is None
+    assert excinfo.value.limit_name == "max_probes"
+    assert len(storage.load_probes("run-1")) == 4
+
+
+def test_offline_without_limits_byte_identical(tmp_path: Path) -> None:
+    """Ohne Quoten (Offline-Default) ist die Matrix byte-identisch zu grosszuegigen Quoten."""
+    storage_none = _storage(tmp_path / "none")
+    _sampler(storage_none, _engines()).run(_ctx(), PROMPTS)
+
+    storage_high = SqliteStorage(tmp_path / "high" / "db.sqlite")
+    storage_high.initialize()
+    _sampler(storage_high, _engines(), request_limits={"perplexity": 10_000, "claude": 10_000}).run(
+        _ctx(), PROMPTS
+    )
+
+    dump_none = [p.model_dump_json() for p in storage_none.load_probes("run-1")]
+    dump_high = [p.model_dump_json() for p in storage_high.load_probes("run-1")]
+    assert len(dump_none) == 2 * 2 * N_IPS
+    assert dump_none == dump_high
