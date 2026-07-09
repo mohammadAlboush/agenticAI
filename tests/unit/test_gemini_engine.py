@@ -26,7 +26,7 @@ def _req() -> ProbeRequest:
         prompt_id="p1",
         prompt_text="Was ist die NIS2-Richtlinie?",
         prompt_version="v1",
-        model="gemini-2.5-flash",
+        model="gemini-3.5-flash",
         target_domain="it-sicherheit.de",
         max_tokens=256,
         temperature=0.2,

@@ -32,9 +32,10 @@ PRICE_TABLE: dict[str, Price] = {
     # Suchkosten bei ~$1.50 und kollidiert inkl. Tokens mit DEFAULT_MAX_USD=2.0 —
     # Live nur mit bewusst erhoehtem Cap.
     "gpt-4o": Price(usd_per_1m_input=2.5, usd_per_1m_output=10.0, usd_per_search=0.025),
-    # Gemini 2.5 Flash: im AI-Studio-Free-Tier kostenlos inkl. 500 Grounding-Anfragen/Tag
-    # (Stand 2026-06); Kosten-Tracking daher 0 — das Budget-Cap greift ueber max_probes.
-    "gemini-2.5-flash": Price(),
+    # Gemini 3.5 Flash: im AI-Studio-Free-Tier kostenlos inkl. Grounding-Kontingent/Tag
+    # (Stand 2026-07; Vorgaenger gemini-2.5-flash abgeschaltet); Kosten-Tracking daher 0 —
+    # das Budget-Cap greift ueber max_probes bzw. GEO_MAX_REQUESTS_GEMINI.
+    "gemini-3.5-flash": Price(),
     # SAIA/KISSKI (Hochschul-Dienst): kostenlos fuer Forschung/Lehre.
     "openai-gpt-oss-120b": Price(),
 }
