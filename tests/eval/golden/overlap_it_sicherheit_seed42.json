@@ -1,0 +1,144 @@
+{
+  "domain": "it-sicherheit.de",
+  "seed": 42,
+  "prompt_set_version": "v1",
+  "serp_query_set_version": "v1",
+  "provider": "mock",
+  "n_queries": 12,
+  "mean_jaccard": 0.214817,
+  "mean_ai_in_serp_share": 0.355868,
+  "stats": [
+    {
+      "query_id": "q01",
+      "prompt_id": "p01",
+      "jaccard": 0.3125,
+      "ai_in_serp_share": 0.454545,
+      "domain_jaccard": 0.444444,
+      "target_serp_rank": 1,
+      "target_ai_citation_rate": 0.9,
+      "n_serp_urls": 10,
+      "n_ai_urls": 11
+    },
+    {
+      "query_id": "q02",
+      "prompt_id": "p02",
+      "jaccard": 0.176471,
+      "ai_in_serp_share": 0.3,
+      "domain_jaccard": 0.181818,
+      "target_serp_rank": 4,
+      "target_ai_citation_rate": 0.95,
+      "n_serp_urls": 10,
+      "n_ai_urls": 10
+    },
+    {
+      "query_id": "q03",
+      "prompt_id": "p03",
+      "jaccard": 0.111111,
+      "ai_in_serp_share": 0.181818,
+      "domain_jaccard": 0.181818,
+      "target_serp_rank": 7,
+      "target_ai_citation_rate": 0.7,
+      "n_serp_urls": 9,
+      "n_ai_urls": 11
+    },
+    {
+      "query_id": "q04",
+      "prompt_id": "p04",
+      "jaccard": 0.166667,
+      "ai_in_serp_share": 0.272727,
+      "domain_jaccard": 0.181818,
+      "target_serp_rank": 7,
+      "target_ai_citation_rate": 0.75,
+      "n_serp_urls": 10,
+      "n_ai_urls": 11
+    },
+    {
+      "query_id": "q05",
+      "prompt_id": "p05",
+      "jaccard": 0.117647,
+      "ai_in_serp_share": 0.2,
+      "domain_jaccard": 0.181818,
+      "target_serp_rank": null,
+      "target_ai_citation_rate": 0.7,
+      "n_serp_urls": 9,
+      "n_ai_urls": 10
+    },
+    {
+      "query_id": "q06",
+      "prompt_id": "p06",
+      "jaccard": 0.285714,
+      "ai_in_serp_share": 0.5,
+      "domain_jaccard": 0.4,
+      "target_serp_rank": 7,
+      "target_ai_citation_rate": 0.9,
+      "n_serp_urls": 10,
+      "n_ai_urls": 8
+    },
+    {
+      "query_id": "q07",
+      "prompt_id": "p07",
+      "jaccard": 0.166667,
+      "ai_in_serp_share": 0.272727,
+      "domain_jaccard": 0.272727,
+      "target_serp_rank": 2,
+      "target_ai_citation_rate": 1.0,
+      "n_serp_urls": 10,
+      "n_ai_urls": 11
+    },
+    {
+      "query_id": "q08",
+      "prompt_id": "p08",
+      "jaccard": 0.307692,
+      "ai_in_serp_share": 0.571429,
+      "domain_jaccard": 0.3,
+      "target_serp_rank": 9,
+      "target_ai_citation_rate": 0.75,
+      "n_serp_urls": 10,
+      "n_ai_urls": 7
+    },
+    {
+      "query_id": "q09",
+      "prompt_id": "p09",
+      "jaccard": 0.25,
+      "ai_in_serp_share": 0.4,
+      "domain_jaccard": 0.3,
+      "target_serp_rank": 2,
+      "target_ai_citation_rate": 0.85,
+      "n_serp_urls": 10,
+      "n_ai_urls": 10
+    },
+    {
+      "query_id": "q10",
+      "prompt_id": "p10",
+      "jaccard": 0.266667,
+      "ai_in_serp_share": 0.444444,
+      "domain_jaccard": 0.4,
+      "target_serp_rank": 5,
+      "target_ai_citation_rate": 0.85,
+      "n_serp_urls": 10,
+      "n_ai_urls": 9
+    },
+    {
+      "query_id": "q11",
+      "prompt_id": "p11",
+      "jaccard": 0.166667,
+      "ai_in_serp_share": 0.272727,
+      "domain_jaccard": 0.181818,
+      "target_serp_rank": 1,
+      "target_ai_citation_rate": 0.8,
+      "n_serp_urls": 10,
+      "n_ai_urls": 11
+    },
+    {
+      "query_id": "q12",
+      "prompt_id": "p12",
+      "jaccard": 0.25,
+      "ai_in_serp_share": 0.4,
+      "domain_jaccard": 0.4,
+      "target_serp_rank": 9,
+      "target_ai_citation_rate": 0.85,
+      "n_serp_urls": 10,
+      "n_ai_urls": 10
+    }
+  ]
+}
