@@ -15,8 +15,11 @@ Sicherheitsnetz (Projektregeln §6, HITL hart):
    anhaengen); ADD_HEADING/META_UPDATE werden mit Detail uebersprungen.
 
 HTTP-Fehler werfen nie aus ``publish()`` heraus: betroffene Patches werden mit Detail
-uebersprungen. 5xx/Transportfehler (und 429 — eigene Site, begrenzt unkritisch) werden
-mit Backoff wiederholt (``retry_call``). Credentials erscheinen nie im ``DeployResult``.
+uebersprungen. Das gilt auch fuer Nicht-JSON-Antworten (klassisch: PHP-Warnung vor dem
+JSON-Body bei HTTP 200) — nach einem erfolgreichen Write-POST zaehlt der Patch dabei
+weiterhin als angewandt (der Write ist nicht idempotent!). 5xx/Transportfehler (und 429 —
+eigene Site, begrenzt unkritisch) werden mit Backoff wiederholt (``retry_call``).
+Credentials erscheinen nie im ``DeployResult``.
 """
 
 from __future__ import annotations
@@ -207,6 +210,8 @@ class WordPressPublisher:
             resolved = self._resolve(client, slug)
         except (httpx.HTTPError, _RetryableStatus) as exc:
             return _PatchOutcome(False, True, f"fehlgeschlagen: Slug-Resolve ({exc})")
+        except ValueError:  # json.JSONDecodeError: z.B. PHP-Warnung vor dem JSON-Body
+            return _PatchOutcome(False, True, "fehlgeschlagen: Slug-Resolve (Antwort kein JSON)")
         if resolved is None:
             return _PatchOutcome(
                 False, False, f"uebersprungen: Slug '{slug}' weder als Post noch Page aufloesbar"
@@ -226,6 +231,10 @@ class WordPressPublisher:
         except (httpx.HTTPError, _RetryableStatus) as exc:
             return _PatchOutcome(
                 False, True, f"fehlgeschlagen: Edit-Kontext nicht lesbar ({exc}) => kein Backup"
+            )
+        except ValueError:  # json.JSONDecodeError: kein Backup moeglich => kein Write
+            return _PatchOutcome(
+                False, True, "fehlgeschlagen: Edit-Kontext kein JSON => kein Backup"
             )
         raw = _extract_raw(edit_data)
         if raw is None:
@@ -253,7 +262,14 @@ class WordPressPublisher:
             return _PatchOutcome(
                 False, True, f"fehlgeschlagen: Write-POST ({exc})", backup_written=True
             )
-        ref = f"wp:{collection.removesuffix('s')}/{post_id}@{_extract_modified(response.json())}"
+        try:
+            modified = _extract_modified(response.json())
+        except ValueError:  # json.JSONDecodeError
+            # Der Write WAR erfolgreich (nicht idempotent!) — eine Nicht-JSON-Antwort
+            # (z.B. PHP-Warnung vor dem Body) darf ihn nicht als Fehler werten, sonst
+            # wuerde ein Wiederholungslauf den Block ein zweites Mal voranstellen.
+            modified = "unbekannt"
+        ref = f"wp:{collection.removesuffix('s')}/{post_id}@{modified}"
         return _PatchOutcome(True, False, f"angewandt ({ref})", ref=ref, backup_written=True)
 
     def _resolve(self, client: httpx.Client, slug: str) -> tuple[str, int] | None:

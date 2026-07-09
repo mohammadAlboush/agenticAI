@@ -371,6 +371,73 @@ def test_persistent_5xx_marks_failed_without_raising(tmp_path: Path) -> None:
     assert result.dry_run is True  # nichts extern geaendert -> IndexNow-Gate bleibt zu
 
 
+# --- Nicht-JSON-Antworten (PHP-Warnung/HTML vor dem JSON-Body, HTTP 200) ------
+
+
+def test_non_json_write_response_still_counts_as_applied(tmp_path: Path) -> None:
+    log: list[tuple[str, str]] = []
+    inner = _make_handler(log)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        response = inner(request)
+        if request.method == "POST":
+            # Write kommt an (HTTP 200), aber eine PHP-Warnung macht den Body unparsebar.
+            return httpx.Response(200, text='<b>Warning</b>: mysqli ... {"id": 7}')
+        return response
+
+    pub = _publisher(handler, tmp_path)
+    decisions = {"px-a": _decision("px-a", True)}
+    result = pub.publish(_plan(_proposal("px-a")), decisions, run_context=_ctx(), dry_run=False)
+    # Der Write WAR erfolgreich -> APPLIED mit ref-Fallback, KEIN Crash, KEIN Retry
+    # (ein Wiederholungslauf wuerde den Block sonst doppelt voranstellen).
+    assert result.status is DeployStatus.APPLIED
+    assert result.dry_run is False
+    assert result.applied_patch_ids == ("px-a",)
+    assert result.artifact_ref == "wp:post/7@unbekannt"
+    assert len(_posts(log)) == 1
+    assert (tmp_path / "run-1" / "backups" / "px-a.json").exists()
+
+
+def test_non_json_resolve_response_marks_failed_without_raising(tmp_path: Path) -> None:
+    log: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        log.append((request.method, request.url.path))
+        return httpx.Response(200, text="<html>Wartungsmodus</html>")
+
+    pub = _publisher(handler, tmp_path)
+    decisions = {"px-a": _decision("px-a", True)}
+    result = pub.publish(_plan(_proposal("px-a")), decisions, run_context=_ctx(), dry_run=False)
+    assert result.status is DeployStatus.FAILED
+    assert result.applied_patch_ids == ()
+    assert _posts(log) == []  # kein Write nach kaputtem Resolve
+    assert "kein JSON" in result.detail
+    # Derselbe Pfad ist auch im Dry-Run erreichbar und darf ebenfalls nicht werfen:
+    dry = pub.publish(_plan(_proposal("px-a")), decisions, run_context=_ctx(), dry_run=True)
+    assert dry.status is DeployStatus.DRY_RUN
+    assert dry.applied_patch_ids == ()
+
+
+def test_non_json_edit_context_marks_failed_without_backup_or_write(tmp_path: Path) -> None:
+    log: list[tuple[str, str]] = []
+    inner = _make_handler(log)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        response = inner(request)
+        if request.method == "GET" and request.url.path == "/wp-json/wp/v2/posts/7":
+            return httpx.Response(200, text="<b>Notice</b>: undefined index")
+        return response
+
+    pub = _publisher(handler, tmp_path)
+    decisions = {"px-a": _decision("px-a", True)}
+    result = pub.publish(_plan(_proposal("px-a")), decisions, run_context=_ctx(), dry_run=False)
+    assert result.status is DeployStatus.FAILED
+    assert result.applied_patch_ids == ()
+    assert _posts(log) == []  # ohne Backup kein Write
+    assert not (tmp_path / "run-1").exists()  # auch kein Backup-Artefakt
+    assert "kein Backup" in result.detail
+
+
 # --- Secrets -----------------------------------------------------------------
 
 

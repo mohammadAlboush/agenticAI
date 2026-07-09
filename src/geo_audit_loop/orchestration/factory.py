@@ -80,15 +80,21 @@ class RunAssembly:
     run_context: RunContext
 
 
-def build_publisher(settings: Settings) -> PublisherPort:
+def build_publisher(settings: Settings, *, offline: bool) -> PublisherPort:
     """Waehlt den Deploy-Publisher: ``mock`` (Default) | ``filesystem`` | ``wordpress`` (Gate).
 
-    ``wordpress`` steht hinter dem ``GEO_ALLOW_REMOTE``-Gate: ohne explizites Opt-in wirft
-    die Factory ``ConfigError`` — der Demo-/CLI-Pfad kann strukturell keinen echten externen
-    Write ausloesen (Projektregeln §6). Selbst mit Gate bleibt der Adapter im Dry-Run, bis
-    zusaetzlich das CLI-Flag ``--allow-remote`` gesetzt ist (Doppel-Gate in ``assemble_run``).
+    Offline wird ``wordpress`` IMMER auf den ``MockPublisher`` erzwungen (analog
+    ``build_indexer``/``build_serp``): schon der Dry-Run-Pfad des WP-Adapters macht echte
+    Slug-Resolve-GETs — kein Netz im Offline-Pfad (Projektregeln §5/§7), auch nicht mit
+    einer live-vorbereiteten ``.env``. ``wordpress`` steht zusaetzlich hinter dem
+    ``GEO_ALLOW_REMOTE``-Gate: ohne explizites Opt-in wirft die Factory ``ConfigError`` —
+    der Demo-/CLI-Pfad kann strukturell keinen echten externen Write ausloesen
+    (Projektregeln §6). Selbst mit Gate bleibt der Adapter im Dry-Run, bis zusaetzlich
+    das CLI-Flag ``--allow-remote`` gesetzt ist (Doppel-Gate in ``assemble_run``).
     """
     if settings.publisher == "wordpress":
+        if offline:
+            return MockPublisher()
         if not settings.allow_remote:
             raise ConfigError(
                 "GEO_PUBLISHER=wordpress erfordert GEO_ALLOW_REMOTE=true (Doppel-Gate, §6)"
@@ -309,7 +315,9 @@ def assemble_run(
     Live-Loop: ``notify_index`` ist das CLI-Opt-in fuer die Index-Einreichung
     (zusaetzlich zu ``GEO_NOTIFY_INDEX``); ``allow_remote`` ist die CLI-Haelfte des
     Doppel-Gates fuer echte Deploys — ``deploy_dry_run=False`` gilt NUR bei
-    ``GEO_ALLOW_REMOTE`` UND ``--allow-remote`` UND nicht offline (Projektregeln §6).
+    ``GEO_ALLOW_REMOTE`` UND ``--allow-remote`` UND nicht offline (Projektregeln §6)
+    UND einem interaktiven HITL-Gate: mit ``AutoApproveGate`` (``--approve-all``)
+    wirft die Factory ``ConfigError`` — kein Auto-Deploy ohne menschliche Review.
     """
     fix = fix or learn
     explain = explain or fix
@@ -448,10 +456,17 @@ def assemble_run(
     # Doppel-Gate (Projektregeln §6): ein echter (non-dry-run) Deploy braucht BEIDE Opt-ins
     # (GEO_ALLOW_REMOTE UND CLI --allow-remote) und ist offline strukturell unmoeglich.
     deploy_dry_run = not (settings.allow_remote and allow_remote and not offline)
+    if not deploy_dry_run and isinstance(gate, AutoApproveGate):
+        # HITL bleibt hart (Projektregeln §6): ein echter Remote-Deploy erfordert, dass
+        # ein Mensch jeden Patch sieht — Auto-Freigabe darf das Gate nie durchlaufen.
+        raise ConfigError(
+            "Echter Remote-Deploy erfordert eine interaktive HITL-Freigabe - "
+            "--approve-all ist nicht mit --allow-remote kombinierbar (Projektregeln §6)."
+        )
     sprint3 = Sprint3Pipeline(
         base=sprint2,
         fix_agent=fix_agent,
-        publisher=build_publisher(settings),
+        publisher=build_publisher(settings, offline=offline),
         approval_gate=gate,
         storage=storage,
         run_context=run_context,
