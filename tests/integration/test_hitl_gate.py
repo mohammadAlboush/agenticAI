@@ -62,6 +62,9 @@ def test_apply_without_approval_is_blocked(tmp_path: Path) -> None:
     assembly.storage.close()
     assert assembly.storage.load_deploy_result("hitl") is None  # kein Deploy-Ergebnis
     assert not (tmp_path / "runs" / "hitl").exists()  # kein Artefakt geschrieben
+    # Kein Deploy => strukturell auch keine Index-Einreichung (Live-Loop-Kette bleibt zu).
+    assert pipeline.index_result is None
+    assert assembly.storage.load_index_submission("hitl") is None
 
 
 def test_reject_all_applies_nothing_and_writes_no_files(tmp_path: Path) -> None:
@@ -79,3 +82,6 @@ def test_reject_all_applies_nothing_and_writes_no_files(tmp_path: Path) -> None:
     assembly.storage.close()
     # FilesystemPublisher hat NULL Dateien geschrieben (kein patches/-Ordner):
     assert not (tmp_path / "runs" / "hitl" / "patches").exists()
+    # Keine Freigabe => kein Apply => kein IndexNow (build_index_submission-Gate greift).
+    assert pipeline.index_result is None
+    assert assembly.storage.load_index_submission("hitl") is None

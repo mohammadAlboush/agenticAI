@@ -24,10 +24,14 @@ from geo_audit_loop.domain.effect import EffectHypothesis
 from geo_audit_loop.domain.errors import DeployBlocked, GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
+from geo_audit_loop.domain.indexing import IndexSubmissionResult, build_index_submission
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.run import RunContext, RunStatus
 from geo_audit_loop.domain.templates import PatternReport
+from geo_audit_loop.observability.logging import log_event
 from geo_audit_loop.orchestration.approval import ApprovalGate
 from geo_audit_loop.orchestration.sprint2_flow import Sprint2Pipeline
+from geo_audit_loop.ports.indexing import IndexingPort
 from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.storage import StoragePort
 
@@ -46,6 +50,8 @@ class Sprint3Pipeline:
         approval_gate: ApprovalGate,
         storage: StoragePort,
         run_context: RunContext,
+        indexer: IndexingPort | None = None,
+        deploy_dry_run: bool = True,
         logger: logging.Logger | None = None,
     ) -> None:
         self._base = base
@@ -54,10 +60,15 @@ class Sprint3Pipeline:
         self._approval_gate = approval_gate
         self._storage = storage
         self._run_context = run_context
+        # Live-Loop: Index-Kanal (None = kein Post-Deploy-Schritt) und Dry-Run-Steuerung.
+        # deploy_dry_run=False setzt NUR die Factory (Doppel-Gate GEO_ALLOW_REMOTE + CLI).
+        self._indexer = indexer
+        self._deploy_dry_run = deploy_dry_run
         self._log = logger if logger is not None else logging.getLogger(__name__)
         self._fix_plan: FixPlan | None = None
         self._decisions: dict[str, ApprovalDecision] | None = None
         self._deploy_result: DeployResult | None = None
+        self._index_result: IndexSubmissionResult | None = None
 
     # --- an die Sprint-2-Basis delegierte Properties ------------------------
     @property
@@ -69,6 +80,11 @@ class Sprint3Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der Top/Flop-Report (Sprint-1-Messung)."""
         return self._base.report
+
+    @property
+    def overlap_report(self) -> OverlapReport | None:
+        """Der SERP-Overlap-Report (Live-Loop, delegiert)."""
+        return self._base.overlap_report
 
     @property
     def pattern_report(self) -> PatternReport | None:
@@ -94,6 +110,11 @@ class Sprint3Pipeline:
     def deploy_result(self) -> DeployResult | None:
         """Das Deploy-Ergebnis aus Schritt 7 (``None`` vor Ausfuehrung)."""
         return self._deploy_result
+
+    @property
+    def index_result(self) -> IndexSubmissionResult | None:
+        """Das Index-Einreichungs-Ergebnis nach dem Deploy (``None`` ohne echten Apply)."""
+        return self._index_result
 
     def finalize_completed(self) -> None:
         """Schliesst den Run als COMPLETED ab (delegiert; Sprint 4 finalisiert spaeter)."""
@@ -155,12 +176,53 @@ class Sprint3Pipeline:
             raise DeployBlocked("HITL-Freigabe fehlt - await_approval zuerst ausfuehren")
         assert self._fix_plan is not None
         self._deploy_result = self._publisher.publish(
-            self._fix_plan, self._decisions, run_context=self._run_context, dry_run=True
+            self._fix_plan,
+            self._decisions,
+            run_context=self._run_context,
+            dry_run=self._deploy_dry_run,
         )
         self._storage.save_deploy_result(self._deploy_result)
+        self._notify_index()
         if finalize:
             self._base.finalize_completed()  # Kosten enthalten jetzt das Fix-Reasoning
         return self._deploy_result
+
+    def _notify_index(self) -> None:
+        """Post-Deploy: geaenderte URLs beim Such-Index einreichen (Live-Loop, best effort).
+
+        ``build_index_submission`` ist das harte Gate: nur ein echter ``APPLIED``-Deploy
+        ohne Dry-Run liefert eine Submission — offline/dry-run wird der ``IndexingPort``
+        strukturell NIE aufgerufen. Fehler beim Einreichen werden geloggt, killen aber
+        nie den Run (der Deploy ist bereits persistiert).
+        """
+        if self._indexer is None or self._fix_plan is None or self._deploy_result is None:
+            return
+        submission = build_index_submission(self._fix_plan, self._deploy_result)
+        if submission is None:
+            return
+        try:
+            self._index_result = self._indexer.submit(submission, run_context=self._run_context)
+            self._storage.save_index_submission(self._index_result)
+        except GeoAuditError as exc:
+            log_event(
+                self._log,
+                "index_submission.failed",
+                run_id=self.run_id,
+                level=logging.WARNING,
+                agent=_AGENT,
+                adapter=self._indexer.name,
+                error=str(exc),
+            )
+            return
+        log_event(
+            self._log,
+            "index_submission.done",
+            run_id=self.run_id,
+            agent=_AGENT,
+            adapter=self._indexer.name,
+            status=self._index_result.status.value,
+            n_urls=len(self._index_result.urls),
+        )
 
     def run(self) -> TopFlopReport:
         """Fuehrt alle sieben Schritte aus (framework-freier Komplettlauf)."""

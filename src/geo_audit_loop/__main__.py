@@ -25,6 +25,8 @@ from geo_audit_loop.cli.render import (
     render_fixplan,
     render_header,
     render_hitl,
+    render_index_submission,
+    render_overlap,
     render_patterns,
     render_summary,
     render_topflop,
@@ -71,6 +73,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--approve-all",
         action="store_true",
         help="Alle Patches automatisch freigeben (nicht-interaktive Demo); sonst wird gefragt",
+    )
+    parser.add_argument(
+        "--notify-index",
+        action="store_true",
+        help="Live-Loop: nach echtem Deploy geaenderte URLs per IndexNow einreichen "
+        "(braucht INDEXNOW_KEY; offline wirkungslos)",
+    )
+    parser.add_argument(
+        "--allow-remote",
+        action="store_true",
+        help="Live-Loop: CLI-Haelfte des Doppel-Gates fuer echte Deploys — wirkt NUR "
+        "zusammen mit GEO_ALLOW_REMOTE=true und --live (sonst bleibt alles Dry-Run)",
     )
     parser.add_argument("--log-level", default="INFO", help="Logging-Level")
     parser.add_argument(
@@ -195,6 +209,8 @@ def main(argv: list[str] | None = None) -> int:
         learn=learn,
         approval_gate=gate,
         live_crawl=args.live_crawl,
+        notify_index=args.notify_index,
+        allow_remote=args.allow_remote,
     )
 
     progress = build_progress(console)
@@ -221,6 +237,7 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(args.pace)
 
     report = assembly.pipeline.report
+    overlap = assembly.pipeline.overlap_report
     patterns = None
     audit = None
     fix_plan = None
@@ -228,6 +245,9 @@ def main(argv: list[str] | None = None) -> int:
     if report is not None:
         _pace()
         render_topflop(console, report)
+    if overlap is not None:
+        _pace()
+        render_overlap(console, overlap)
     if isinstance(assembly.pipeline, Sprint2Pipeline | Sprint3Pipeline | Sprint4Pipeline):
         patterns = assembly.pipeline.pattern_report
         audit = assembly.pipeline.audit_report
@@ -241,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
         fix_plan = assembly.pipeline.fix_plan
         decisions = assembly.pipeline.decisions
         deploy = assembly.pipeline.deploy_result
+        index_result = assembly.pipeline.index_result
         if fix_plan is not None:
             _pace()
             render_fixplan(console, fix_plan)
@@ -250,6 +271,9 @@ def main(argv: list[str] | None = None) -> int:
         if deploy is not None:
             _pace()
             render_deploy(console, deploy)
+        if index_result is not None:
+            _pace()
+            render_index_submission(console, index_result)
     if isinstance(assembly.pipeline, Sprint4Pipeline):
         effect = assembly.pipeline.effect_report
         if effect is not None:
@@ -260,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
         render_summary(
             console,
             snapshot=assembly.cost_tracker.snapshot(),
-            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect),
+            fingerprint=report_fingerprint(report, patterns, audit, fix_plan, effect, overlap),
             seed=settings.run_seed,
             duration_s=duration,
         )

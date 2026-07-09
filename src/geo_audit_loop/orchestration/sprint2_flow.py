@@ -19,6 +19,7 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.errors import GeoAuditError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import PageInventory
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.run import RunContext, RunStatus
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.orchestration.sprint1_flow import Sprint1Pipeline
@@ -59,6 +60,11 @@ class Sprint2Pipeline:
     def report(self) -> TopFlopReport | None:
         """Der Top/Flop-Report aus Schritt 2 (Sprint-1-Messung)."""
         return self._base.report
+
+    @property
+    def overlap_report(self) -> OverlapReport | None:
+        """Der SERP-Overlap-Report (Live-Loop, delegiert an Sprint 1)."""
+        return self._base.overlap_report
 
     @property
     def pattern_report(self) -> PatternReport | None:

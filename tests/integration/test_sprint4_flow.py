@@ -54,6 +54,10 @@ def test_sprint4_closes_the_loop(tmp_path: Path) -> None:
     assert pipeline.deploy_result is not None
     assert pipeline.deploy_result.dry_run is True
     assert pipeline.deploy_result.status is DeployStatus.DRY_RUN
+    # Live-Loop-Delegation: offline gibt es weder Index-Einreichung noch Overlap-Report.
+    assert pipeline.index_result is None
+    assert pipeline.overlap_report is None
+    assert assembly.storage.load_index_submission("it-s4") is None
 
     effect = pipeline.effect_report
     assert effect is not None

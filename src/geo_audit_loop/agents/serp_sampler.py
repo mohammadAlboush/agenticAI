@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from geo_audit_loop.config.constants import SERP_TOP_K
 from geo_audit_loop.domain.errors import BudgetExceeded
 from geo_audit_loop.domain.run import RunContext
-from geo_audit_loop.domain.serp import SerpQuery, SerpRequest, SerpResult
+from geo_audit_loop.domain.serp import SerpProvider, SerpQuery, SerpRequest, SerpResult
 from geo_audit_loop.observability.cost import CostTracker
 from geo_audit_loop.observability.logging import log_event
 from geo_audit_loop.ports.serp import SerpPort
@@ -44,6 +44,11 @@ class SerpSamplerService:
         self._cost = cost_tracker
         self._top_k = top_k
         self._log = logger if logger is not None else logging.getLogger(__name__)
+
+    @property
+    def provider(self) -> SerpProvider:
+        """Identitaet der verdrahteten SERP-Quelle (fuer Overlap-Provenienz und Logs)."""
+        return self._serp.provider
 
     def run(self, run_context: RunContext, queries: Sequence[SerpQuery]) -> list[SerpResult]:
         """Fragt alle offenen Queries ab und liefert die persistierten Ergebnisse des Runs.

@@ -255,6 +255,9 @@ def test_probe_detail_and_results(tmp_path: Path) -> None:
     assert results["fix_plan"]["proposals"][0]["patch_id"] == "px-f1-add_schema"
     assert results["deploy"]["dry_run"] is True
     assert results["deploy"]["applied_patch_ids"] == ["px-f1-add_schema"]
+    # Live-Loop: der overlap-Key ist immer vorhanden (None ohne SERP-Provider).
+    assert "overlap" in results
+    assert results["overlap"] is None
 
 
 def test_state_surfaces_sprint3_counts(tmp_path: Path) -> None:
