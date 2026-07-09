@@ -72,3 +72,13 @@ DEFAULT_EMBEDDING_MODEL: Final = "BAAI/bge-m3"
 DEFAULT_MAX_PROBES: Final = EXPECTED_PROBES_PER_RUN
 DEFAULT_MAX_USD: Final = 2.0
 DEFAULT_MAX_TOKENS_BUDGET: Final = 2_000_000
+
+# --- Live-Loop: SERP-Sichtbarkeit (Serper.dev, Google-Top-10 vs. AI-Zitate) ---
+SERPER_ENDPOINT: Final = "https://google.serper.dev/search"
+SERP_TOP_K: Final = 10  # Google-Top-10 als Vergleichsmenge
+N_SERP_QUERIES: Final = 12  # 1:1 auf die 12 Probe-Prompts gemappt
+DEFAULT_SERP_QUERY_SET_VERSION: Final = "v1"
+SERP_GL: Final = "de"  # Geolokation der SERP-Abfrage (Land)
+SERP_HL: Final = "de"  # Interface-Sprache der SERP-Abfrage
+# Pro-Provider-Request-Quote: 12 Queries x 2 Phasen = 24 Requests/Run reichen.
+DEFAULT_MAX_SERP_REQUESTS: Final = 24

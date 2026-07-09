@@ -19,6 +19,7 @@ from geo_audit_loop.domain.memory import MemoryQuery
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeRequest, ProbeResult
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
 from geo_audit_loop.domain.run import RunContext, RunRecord
+from geo_audit_loop.domain.serp import SerpProvider, SerpRequest, SerpResult
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
@@ -27,6 +28,7 @@ from geo_audit_loop.ports.memory import MemoryPort
 from geo_audit_loop.ports.proxy import ProxyPort
 from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.reasoning import ReasoningPort
+from geo_audit_loop.ports.serp import SerpPort
 from geo_audit_loop.ports.storage import StoragePort
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -177,6 +179,20 @@ class _StubIndexing:
         )
 
 
+class _StubSerp:
+    provider = SerpProvider.MOCK
+
+    def search(self, request: SerpRequest) -> SerpResult:
+        return SerpResult(
+            run_id=request.run_id,
+            provider=self.provider,
+            query_id=request.query.query_id,
+            prompt_id=request.query.prompt_id,
+            query_text=request.query.text,
+            fetched_at=FIXED,
+        )
+
+
 def test_engine_port_conformance() -> None:
     engine: EnginePort = _StubEngine()
     assert isinstance(engine, EnginePort)
@@ -230,3 +246,9 @@ def test_indexing_port_conformance() -> None:
     indexer: IndexingPort = _StubIndexing()
     assert isinstance(indexer, IndexingPort)
     assert indexer.name == "stub"
+
+
+def test_serp_port_conformance() -> None:
+    serp: SerpPort = _StubSerp()
+    assert isinstance(serp, SerpPort)
+    assert serp.provider is SerpProvider.MOCK

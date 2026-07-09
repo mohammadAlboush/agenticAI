@@ -1,0 +1,66 @@
+# Versioniertes SERP-Query-Set (Projektregeln §3.3). 12 deutsche KEYWORD-Queries
+# (keine Fragesaetze — so sucht man bei Google), thematisch 1:1 auf die 12
+# Probe-Prompts aus probe_set.v1.toml gemappt: prompt_id ist der Topic-Join fuer
+# den Overlap-Vergleich (Google-Top-10 vs. AI-Zitate). Jede Aenderung erhoeht die
+# Version -> neue Datei.
+version = "v1"
+
+[[queries]]
+id = "q01"
+prompt_id = "p01"
+text = "NIS2 Richtlinie Anforderungen Unternehmen"
+
+[[queries]]
+id = "q02"
+prompt_id = "p02"
+text = "Ransomware Schutz technische Massnahmen"
+
+[[queries]]
+id = "q03"
+prompt_id = "p03"
+text = "Zero Trust Architektur Aufbau"
+
+[[queries]]
+id = "q04"
+prompt_id = "p04"
+text = "Phishing Mails erkennen Merkmale"
+
+[[queries]]
+id = "q05"
+prompt_id = "p05"
+text = "DSGVO Checkliste KMU"
+
+[[queries]]
+id = "q06"
+prompt_id = "p06"
+text = "Passwort Manager Unternehmen Vergleich"
+
+[[queries]]
+id = "q07"
+prompt_id = "p07"
+text = "Firewall Funktionsweise Konfiguration"
+
+[[queries]]
+id = "q08"
+prompt_id = "p08"
+text = "Security Awareness Training Konzept"
+
+[[queries]]
+id = "q09"
+prompt_id = "p09"
+text = "ISO 27001 Zertifizierung Ablauf"
+
+[[queries]]
+id = "q10"
+prompt_id = "p10"
+text = "Backup Strategie 3-2-1 Regel"
+
+[[queries]]
+id = "q11"
+prompt_id = "p11"
+text = "Multi-Faktor-Authentifizierung Einfuehrung"
+
+[[queries]]
+id = "q12"
+prompt_id = "p12"
+text = "Incident Response Plan Cyberangriff"
