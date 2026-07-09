@@ -215,7 +215,9 @@ FLOP (selten/nie zitiert):
 Läufe **starten, stoppen, verwalten und live beobachten** — „Neuer Lauf"-Formular (Domain,
 Offline/Live, Engine-/Reasoning-Auswahl je nach hinterlegten Keys, Top-N, Seed, Proxy-IPs),
 Lauf-Verlauf mit Ansehen/Löschen, Probe-Matrix mit klickbaren Zellen (Antwort & Quellen),
-Inventar, Top/Flop, Templates, Findings, Fingerprint:
+Inventar, Top/Flop, Templates, Findings, Fix/Deploy, **Effekt-Panel** (Vorher→Nachher-
+Zitationsrate je gepatchter URL), **SERP-Overlap-Panel** (sobald ein Lauf mit
+`GEO_SERP_PROVIDER≠off` einen OverlapReport liefert), Fingerprint:
 
 ```bash
 uv run python -m geo_audit_loop --serve            # http://127.0.0.1:8042
@@ -239,6 +241,83 @@ Ein gestarteter Lauf läuft als eigener Prozess (exakt der CLI-Code-Pfad, vorab 
 - **Crawl im Live-Modus:** Standardmäßig nutzen auch Live-Läufe das schnelle, deterministische
   Sample-Inventar der Domain (der echte advertools-Crawl ist langsam und kann in den
   5-Minuten-Timeout laufen). Für einen echten Crawl der Zieldomain: `--live-crawl` ergänzen.
+
+## Live-Betrieb & API-Onboarding
+
+Der volle Live-Regelkreis — echte Zitations-Messung → SERP-Vergleich → WordPress-Deploy →
+IndexNow-Ping → Re-Probe — braucht wenige Keys (~30 Min Onboarding). **Alles ist opt-in:**
+ohne Keys und mit den Defaults (`GEO_SERP_PROVIDER=off`, `GEO_PUBLISHER=mock`,
+`GEO_ALLOW_REMOTE=false`) bleibt jeder Lauf offline-deterministisch und byte-identisch
+reproduzierbar. Alle Variablen stehen kommentiert in `.env.example`.
+
+| Dienst | Zweck | Kosten | Variablen |
+|---|---|---|---|
+| Perplexity | Live-Zitations-Engine | Pay-as-you-go (~10 €-Limit setzen) | `PERPLEXITY_API_KEY` |
+| Gemini | Live-Zitate mit Google-Grounding | kostenlos (Free Tier) | `GOOGLE_API_KEY` |
+| Serper.dev | Google-Top-10 für den SERP-Overlap | 2.500 Queries/Monat frei | `SERPER_API_KEY` |
+| IndexNow | Re-Indexierung nach echtem Deploy | kostenlos, keine Registrierung | `INDEXNOW_KEY` |
+| WordPress | echter Deploy auf die Test-Site | — | `GEO_WP_BASE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` |
+| Webshare | Proxy-Pool (optional) | Free Tier reicht | `GEO_PROXY_FILE` |
+
+**Perplexity** — auf [perplexity.ai](https://www.perplexity.ai) ein API-Konto anlegen,
+Zahlungsmittel hinterlegen und im Dashboard ein **Kostenlimit** (~10 €/Monat) setzen; den Key
+als `PERPLEXITY_API_KEY` eintragen und die Engine per `GEO_LIVE_ENGINES=perplexity` (oder im
+Dashboard) aktivieren. Der harte Budget-Cap (`GEO_MAX_USD`) greift zusätzlich pro Lauf.
+
+**Gemini** — kostenloser Key (keine Kreditkarte) von
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) als `GOOGLE_API_KEY`;
+mehrere Keys aus verschiedenen Google-Projekten per Komma = höheres Tageskontingent (der
+Adapter rotiert automatisch). Hinweis aus dem Verifikations-Protokoll: Google schaltet
+Gemini-Modelle nach fester Frist ab (`gemini-2.5-flash` liefert inzwischen 404); das
+gepinnte Modell steht **allein** in der Engine-Registry (`config/engines.py`) und wird bei
+einer Abschaltung nur dort getauscht. Free-Tier-Quote pro Lauf zusätzlich über
+`GEO_MAX_REQUESTS_GEMINI` deckelbar.
+
+**Serper.dev (SERP-Overlap)** — Konto per E-Mail auf [serper.dev](https://serper.dev),
+API-Key aus dem Dashboard (2.500 Queries/Monat frei) als `SERPER_API_KEY`, dann
+`GEO_SERP_PROVIDER=serper`. Der Lauf misst die Google-Top-10 zu 12 versionierten
+Keyword-Queries (`prompts/serp_queries.v1.toml`, 1:1 auf die Probe-Prompts gemappt) und
+vergleicht sie mit den AI-Zitaten → **OverlapReport** (Jaccard, AI-in-SERP-Anteil,
+Ziel-Rang je Query). `GEO_MAX_REQUESTS_SERPER` (Default 24) schont das Freikontingent;
+SERP-Ergebnisse sind checkpointed — ein fortgesetzter Lauf wiederholt keine Queries.
+`GEO_SERP_PROVIDER=mock` liefert dieselbe Auswertung offline-deterministisch.
+
+**IndexNow** — Key generieren ([indexnow.org](https://www.indexnow.org) oder eine UUID),
+eine Datei `<key>.txt` mit dem Key als Inhalt ins **Webroot der Ziel-Site** legen
+(erreichbar unter `https://<host>/<key>.txt`), Key als `INDEXNOW_KEY` eintragen
+(abweichender Ablageort: `GEO_INDEXNOW_KEY_LOCATION`). Keine Registrierung nötig; erreicht
+Bing, Yandex, Naver und Seznam. Eingereicht wird **nur** nach einem echten (non-dry-run)
+Deploy und nur mit doppeltem Opt-in `GEO_NOTIFY_INDEX=true` **und** CLI `--notify-index`;
+ein 429 wird terminal behandelt (kein Retry-Spam). **Google unterstützt IndexNow nicht** —
+für Google die Sitemap in der Search Console einreichen.
+
+**WordPress-Test-Site** — im WP-Admin unter *Benutzer → Profil → Anwendungspasswörter* ein
+Application Password erzeugen; `GEO_WP_BASE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` in die
+`.env`. Echte Writes nur hinter dem **Doppel-Gate** `GEO_ALLOW_REMOTE=true` **und** CLI
+`--allow-remote` — und auch dann nur für Patches, die das **HITL-Gate** einzeln freigegeben
+hat (Projektregeln §6, nie umgangen). Vor jedem Write sichert der Publisher den Ist-Zustand
+des Posts nach `runs/<run_id>/backups/<patch_id>.json` (ohne Backup kein Write; Rollback =
+Backup-JSON zurückspielen). Es werden nur konservative Änderungstypen angewandt; unsichere
+Ersetzungen werden übersprungen statt geraten.
+
+**Webshare-Proxies (optional)** — Proxy-Liste im Format `ip:port:user:pass` als Datei,
+Pfad in `GEO_PROXY_FILE`. Leer lassen = kein Proxy-Pool, alle Anfragen gehen direkt
+(fürs Free-Tier-Setup völlig ausreichend).
+
+### Neue Live-Loop-Features
+
+- **SERP-Overlap:** `GEO_SERP_PROVIDER=mock|serper` misst pro Lauf, wie stark sich
+  Google-Top-10 und AI-Zitate überschneiden (Kernthese „die Überlappung sinkt" wird
+  messbar). Ergebnis als eigenes Panel im CLI-Report und im Dashboard; persistiert in
+  `overlap_reports` (SQLite). Default `off` = exakter No-Op.
+- **`--notify-index`:** reicht nach einem echten Deploy die geänderten URLs per IndexNow
+  ein (Status/HTTP-Code je Endpoint im Report; `index_submissions` in SQLite). Ein
+  Fehlschlag bricht den Lauf nie ab.
+- **`--allow-remote`:** zweite Hälfte des Doppel-Gates für echte WordPress-Writes —
+  ohne das Flag bleibt jeder Deploy Dry-Run, unabhängig von der `.env`.
+- **Pro-Provider-Quoten:** `GEO_MAX_REQUESTS_SERPER` / `GEO_MAX_REQUESTS_GEMINI` deckeln
+  einzelne Provider (Free-Tier-Schutz), ohne den restlichen Lauf abzubrechen; die globalen
+  Caps (`GEO_MAX_*`) bleiben hart.
 
 ## Eval
 

@@ -157,6 +157,18 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
 .find .fix{font-size:13px}
 .find .ev{font-size:12px;color:var(--faint)}
 
+/* Effekt- & Overlap-Panels */
+.statrow{display:flex;gap:13px;flex-wrap:wrap;margin:6px 0 12px}
+.stat{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:9px 16px;min-width:110px}
+.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.stat .v{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--acc-deep);margin-top:2px}
+.dir{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.05em;white-space:nowrap}
+.dir.improved{background:var(--acc-soft);color:var(--acc-deep)}
+.dir.regressed{background:var(--red-soft);color:var(--red)}
+.dir.unchanged{background:#eceae1;color:var(--mut)}
+td.num.pos{color:var(--acc-deep);font-weight:700}
+td.num.neg{color:var(--red);font-weight:700}
+
 .footer{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--mut)}
 .fp{font-family:var(--mono);font-weight:700;color:var(--acc-deep)}
 .hidden{display:none}
@@ -252,6 +264,24 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
       <div id="fixes"></div>
     </div>
 
+    <div id="sec-effect" class="hidden">
+      <h2 class="sec"><span class="n">SCHRITT 7</span>Effekt — Vorher → Nachher (Re-Probe)</h2>
+      <p class="sub">Zitationsrate je gepatchter URL vor und nach dem Deploy; Δ = Nachher − Vorher. Offline zeigt der deterministische Mock-Boost den Mechanismus, live die Realität.</p>
+      <div id="effectsummary"></div>
+      <table class="data"><thead><tr>
+        <th>URL</th><th class="num">Vorher</th><th class="num">Nachher</th><th class="num">Δ</th><th>Richtung</th><th class="num">Konfidenz</th>
+      </tr></thead><tbody id="effectbody"></tbody></table>
+    </div>
+
+    <div id="sec-overlap" class="hidden">
+      <h2 class="sec"><span class="n">SERP</span>Overlap — Google-Top-10 vs. AI-Zitate</h2>
+      <p class="sub">Wie stark überschneiden sich klassische Google-Treffer und AI-Engine-Zitate je Query? (Jaccard auf URL- und Domain-Ebene)</p>
+      <div id="overlapsummary"></div>
+      <table class="data"><thead><tr>
+        <th>Query · Prompt</th><th class="num">Jaccard</th><th class="num">AI-in-SERP</th><th class="num">Domain-Jaccard</th><th class="num">Ziel-Rang (SERP)</th><th class="num">Ziel-AI-Rate</th><th class="num">URLs (SERP/AI)</th>
+      </tr></thead><tbody id="overlapbody"></tbody></table>
+    </div>
+
     <div class="footer">
       <span id="fpwrap" class="hidden">Report-Fingerprint <span class="fp" id="fp"></span></span>
       <span style="margin-left:auto;font-family:var(--mono);font-size:11.5px" id="poll"></span>
@@ -278,6 +308,7 @@ const PYR = {access:"Zugang",extractability:"Extrahierbarkeit",substance:"Substa
 const ENGINE_NAME = {perplexity:"Perplexity",chatgpt:"ChatGPT",claude:"Claude",gemini:"Gemini"};
 const REASON_NAME = {mock:"Mock (Simulation)", saia:"SAIA · Hochschule (kostenlos)", claude:"Claude (Anthropic)"};
 const CHG = {insert_block:"Block +", rewrite_block:"Umschreiben", add_schema:"Schema +", add_heading:"Überschrift +", meta_update:"Meta"};
+const DIR_LABEL = {improved:"▲ VERBESSERT", regressed:"▼ VERSCHLECHTERT", unchanged:"· UNVERÄNDERT"};
 
 let targetDomain = "";
 let resultsLoaded = false;
@@ -296,7 +327,7 @@ async function getJSON(url){ const r = await fetch(url); return r.json(); }
 
 function resetForNewRun(){
   resultsLoaded = false;
-  for (const id of ["sec-pages","sec-topflop","sec-patterns","sec-findings","sec-fix","fpwrap"]) $(id).classList.add("hidden");
+  for (const id of ["sec-pages","sec-topflop","sec-patterns","sec-findings","sec-fix","sec-effect","sec-overlap","fpwrap"]) $(id).classList.add("hidden");
   closeDrawer();
 }
 
@@ -578,6 +609,54 @@ function renderResults(res){
       `<span class="lever">${esc(PYR[p.pyramid_level]||p.pyramid_level)} · ${esc(LEVER[p.lever]||p.lever)} · Konf. ${(p.confidence).toFixed(2)}</span></div>` +
       `<div class="fix">${esc(p.proposed_content)}</div><div class="ev">${esc(p.rationale)}</div></div>`).join("");
   }
+  renderEffect(res.effect);
+  renderOverlap(res.overlap);
+}
+
+function fmtPct(x){ return (100 * (Number(x) || 0)).toFixed(1) + "%"; }
+function fmtDelta(x){ const v = Number(x) || 0; return (v > 0 ? "+" : "") + fmtPct(v); }
+
+function renderEffect(effect){
+  // EffectReport aus /api/results (Sprint 4): Vorher/Nachher-Zitationsrate je gepatchter URL.
+  if (!effect || !Array.isArray(effect.hypotheses) || !effect.hypotheses.length) return;
+  $("sec-effect").classList.remove("hidden");
+  $("effectsummary").innerHTML =
+    `<div class="statrow">` +
+    `<div class="stat"><div class="k">Ø Delta</div><div class="v">${esc(fmtDelta(effect.mean_delta))}</div></div>` +
+    `<div class="stat"><div class="k">Verbessert</div><div class="v">${esc(effect.n_improved)} / ${esc(effect.hypotheses.length)}</div></div>` +
+    `<div class="stat"><div class="k">Re-Probes (OK)</div><div class="v">${esc(effect.reprobe_matrix_size)}</div></div>` +
+    `</div>`;
+  $("effectbody").innerHTML = effect.hypotheses.map(h => {
+    const cls = h.delta > 0 ? " pos" : (h.delta < 0 ? " neg" : "");
+    return `<tr><td class="mono">${esc(shortUrl(h.target_url))}</td>` +
+      `<td class="num">${esc(fmtPct(h.before_citation_rate))}</td>` +
+      `<td class="num">${esc(fmtPct(h.after_citation_rate))}</td>` +
+      `<td class="num${cls}">${esc(fmtDelta(h.delta))}</td>` +
+      `<td><span class="dir ${esc(h.direction)}">${esc(DIR_LABEL[h.direction] || h.direction)}</span></td>` +
+      `<td class="num">${esc(Number(h.confidence).toFixed(2))}</td></tr>`;
+  }).join("");
+}
+
+function renderOverlap(overlap){
+  // Defensiv: das overlap-Feld liefert erst die SERP-Integration (GEO_SERP_PROVIDER != off).
+  // Fehlt es (aeltere Laeufe, Provider off), bleibt die Sektion einfach ausgeblendet.
+  if (!overlap || !Array.isArray(overlap.stats) || !overlap.stats.length) return;
+  $("sec-overlap").classList.remove("hidden");
+  $("overlapsummary").innerHTML =
+    `<div class="statrow">` +
+    `<div class="stat"><div class="k">Ø Jaccard (URLs)</div><div class="v">${esc(Number(overlap.mean_jaccard).toFixed(3))}</div></div>` +
+    `<div class="stat"><div class="k">Ø AI-in-SERP</div><div class="v">${esc(fmtPct(overlap.mean_ai_in_serp_share))}</div></div>` +
+    `<div class="stat"><div class="k">Queries</div><div class="v">${esc(overlap.n_queries)}</div></div>` +
+    `<div class="stat"><div class="k">Provider</div><div class="v">${esc(overlap.provider)}</div></div>` +
+    `</div>`;
+  $("overlapbody").innerHTML = overlap.stats.map(s =>
+    `<tr><td class="mono">${esc(s.query_id)} · ${esc(s.prompt_id)}</td>` +
+    `<td class="num">${esc(Number(s.jaccard).toFixed(3))}</td>` +
+    `<td class="num">${esc(fmtPct(s.ai_in_serp_share))}</td>` +
+    `<td class="num">${esc(Number(s.domain_jaccard).toFixed(3))}</td>` +
+    `<td class="num">${s.target_serp_rank != null ? esc(s.target_serp_rank) : "—"}</td>` +
+    `<td class="num">${esc(fmtPct(s.target_ai_citation_rate))}</td>` +
+    `<td class="num">${esc(s.n_serp_urls)} / ${esc(s.n_ai_urls)}</td></tr>`).join("");
 }
 
 /* ---------- Poll-Schleife ---------- */
