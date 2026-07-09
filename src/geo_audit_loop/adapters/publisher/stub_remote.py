@@ -1,11 +1,11 @@
-"""Remote-Publisher-Stubs: WordPress & GitHub hinter demselben ``PublisherPort`` (opt-in).
+"""Remote-Publisher-Stub: GitHub hinter demselben ``PublisherPort`` (opt-in, blockiert).
 
-In Sprint 3 bewusst NICHT scharf geschaltet: Der echte Schreibzugriff auf eine Live-Seite
-oder ein Repo ist erst Teil eines spaeteren Meilensteins und braucht Credentials + erweiterte
-Sicherheits-Reviews. Diese Stubs beweisen die Erweiterbarkeit (eine fuenfte Senke ergaenzt man,
-ohne den Kern anzufassen), fuehren aber KEINEN externen Aufruf aus: Ohne ``allow_remote=True``
-werfen sie ``DeployBlocked``; auch mit Flag liefern sie nur ``status=BLOCKED`` (Projektregeln §6).
-Die echten SDK-Importe blieben — wenn sie spaeter kommen — in den Methoden (Lazy-Import).
+Der echte PR-Deploy auf ein Repo ist Teil eines spaeteren Meilensteins und braucht
+Credentials + erweiterte Sicherheits-Reviews. Dieser Stub beweist die Erweiterbarkeit
+(eine weitere Senke ergaenzt man, ohne den Kern anzufassen), fuehrt aber KEINEN externen
+Aufruf aus: Ohne ``allow_remote=True`` wirft er ``DeployBlocked``; auch mit Flag liefert
+er nur ``status=BLOCKED`` (Projektregeln §6). WordPress hat inzwischen einen echten
+Adapter (``adapters/publisher/wordpress.py``) und ist hier bewusst KEIN Stub mehr.
 """
 
 from __future__ import annotations
@@ -17,17 +17,17 @@ from geo_audit_loop.domain.errors import DeployBlocked
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, DeployStatus, FixPlan
 from geo_audit_loop.domain.run import RunContext
 
-_DISABLED_DETAIL = "Remote-Publishing in Sprint 3 deaktiviert (HITL-only-Meilenstein)."
+_DISABLED_DETAIL = "Remote-Publishing (GitHub-PR-Deploy) noch deaktiviert (spaeterer Meilenstein)."
 
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-class _BlockedRemotePublisher:
-    """Gemeinsame Basis: partitioniert wie die anderen Adapter, schreibt aber nie extern."""
+class GitHubPublisher:
+    """Opt-in-Stub fuer den GitHub-PR-Deploy: erfuellt den Port, schreibt aber nie extern."""
 
-    name = "remote"
+    name = "github"
 
     def __init__(
         self, *, allow_remote: bool = False, clock: Callable[[], datetime] | None = None
@@ -57,15 +57,3 @@ class _BlockedRemotePublisher:
             status=DeployStatus.BLOCKED,
             detail=_DISABLED_DETAIL,
         )
-
-
-class WordPressPublisher(_BlockedRemotePublisher):
-    """Opt-in-Stub fuer den WordPress-REST-Deploy (in Sprint 3 blockiert)."""
-
-    name = "wordpress"
-
-
-class GitHubPublisher(_BlockedRemotePublisher):
-    """Opt-in-Stub fuer den GitHub-PR-Deploy (in Sprint 3 blockiert)."""
-
-    name = "github"

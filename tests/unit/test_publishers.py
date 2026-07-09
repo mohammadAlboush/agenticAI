@@ -9,7 +9,7 @@ import pytest
 
 from geo_audit_loop.adapters.publisher.filesystem import FilesystemPublisher
 from geo_audit_loop.adapters.publisher.mock import MockPublisher
-from geo_audit_loop.adapters.publisher.stub_remote import GitHubPublisher, WordPressPublisher
+from geo_audit_loop.adapters.publisher.stub_remote import GitHubPublisher
 from geo_audit_loop.domain.errors import DeployBlocked
 from geo_audit_loop.domain.fix import (
     ApprovalDecision,
@@ -106,16 +106,15 @@ def test_filesystem_no_approval_writes_zero_files(tmp_path: Path) -> None:
     assert result.status is DeployStatus.DRY_RUN
 
 
-@pytest.mark.parametrize("publisher_cls", [WordPressPublisher, GitHubPublisher])
-def test_remote_stub_blocks_by_default(publisher_cls: type) -> None:
+def test_remote_stub_blocks_by_default() -> None:
     decisions = {"px-a": _decision("px-a", True)}
     with pytest.raises(DeployBlocked):
-        publisher_cls(clock=_clock).publish(_plan(), decisions, run_context=_ctx())
+        GitHubPublisher(clock=_clock).publish(_plan(), decisions, run_context=_ctx())
 
 
 def test_remote_stub_with_flag_still_applies_nothing() -> None:
     decisions = {"px-a": _decision("px-a", True)}
-    result = WordPressPublisher(allow_remote=True, clock=_clock).publish(
+    result = GitHubPublisher(allow_remote=True, clock=_clock).publish(
         _plan(), decisions, run_context=_ctx()
     )
     assert result.status is DeployStatus.BLOCKED

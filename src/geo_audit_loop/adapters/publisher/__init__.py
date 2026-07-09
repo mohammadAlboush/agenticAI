@@ -4,7 +4,8 @@ Alle Adapter erfuellen ``PublisherPort`` und teilen den HITL-Filter ``partition_
 nur Patches mit ``approved=True`` werden angewandt, der Rest landet in ``skipped_patch_ids``
 (Projektregeln §6). ``MockPublisher`` ist der Default fuer die Offline-Demo (reiner Dry-Run);
 ``FilesystemPublisher`` schreibt sichere Patch-Artefakte lokal (nie die Live-Domain);
-``stub_remote`` haelt WordPress/GitHub hinter demselben Port (opt-in, in Sprint 3 blockiert).
+``wordpress`` deployt live ueber die WP-REST-API (Doppel-Gate + Backup-vor-Write);
+``stub_remote`` haelt GitHub hinter demselben Port (opt-in, blockiert).
 """
 
 from __future__ import annotations
