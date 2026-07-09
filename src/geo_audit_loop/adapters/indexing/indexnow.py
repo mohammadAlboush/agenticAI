@@ -105,7 +105,9 @@ class IndexNowAdapter:
 
     def _resolve_key_location(self, host: str) -> str:
         """Explizite Key-Location oder Protokoll-Default ``https://<host>/<key>.txt``."""
-        if self._key_location is not None:
+        if (
+            self._key_location
+        ):  # leerer String (GEO_INDEXNOW_KEY_LOCATION=) zaehlt als nicht gesetzt
             return self._key_location
         return f"https://{host}/{self._key}.txt"
 

@@ -263,5 +263,8 @@ def test_mock_is_deterministic_skipped_dry_run() -> None:
 
 
 def test_adapters_satisfy_indexing_port() -> None:
+    def offline_client() -> httpx.Client:
+        return httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200)))
+
     assert isinstance(MockIndexingAdapter(), IndexingPort)
-    assert isinstance(IndexNowAdapter(key=KEY, client_factory=lambda: httpx.Client()), IndexingPort)
+    assert isinstance(IndexNowAdapter(key=KEY, client_factory=offline_client), IndexingPort)

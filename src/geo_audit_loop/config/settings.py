@@ -185,6 +185,8 @@ class Settings(BaseSettings):
             # (analog memory_provider); das Query-Set bestimmt die Vergleichsmenge.
             "serp_provider": self.serp_provider,
             "serp_query_set_version": self.serp_query_set_version,
+            # top_k bestimmt die SERP-Vergleichsmenge und damit die Overlap-Werte.
+            "serp_top_k": self.serp_top_k,
             "models": {
                 eid.value: cfg.model
                 for eid, cfg in sorted(ENGINE_REGISTRY.items(), key=lambda kv: kv[0].value)

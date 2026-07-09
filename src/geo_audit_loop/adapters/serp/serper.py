@@ -105,7 +105,11 @@ class SerperSerpAdapter:
             )
         except (httpx.HTTPError, _RetryableStatus) as exc:
             return self._error_result(request, str(exc), started)
-        return self._success_result(request, response.json(), started)
+        try:
+            data = response.json()
+        except ValueError as exc:
+            return self._error_result(request, f"non-JSON response: {exc}", started)
+        return self._success_result(request, data, started)
 
     def _success_result(
         self, request: SerpRequest, data: dict[str, Any], started: float
