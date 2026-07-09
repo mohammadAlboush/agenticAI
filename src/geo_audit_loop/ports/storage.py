@@ -13,9 +13,12 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
+from geo_audit_loop.domain.indexing import IndexSubmissionResult
 from geo_audit_loop.domain.inventory import PageInventory
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
+from geo_audit_loop.domain.serp import SerpProvider, SerpResult
 from geo_audit_loop.domain.templates import PatternReport
 
 
@@ -141,4 +144,35 @@ class StoragePort(Protocol):
 
     def load_effect_report(self, run_id: str) -> EffectReport | None:
         """Laedt den EffectReport eines Runs oder ``None``."""
+        ...
+
+    # --- Live-Loop-Artefakte (IndexNow / SERP / Overlap) ---
+    def save_index_submission(self, result: IndexSubmissionResult) -> None:
+        """Persistiert das Index-Einreichungs-Ergebnis eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_index_submission(self, run_id: str) -> IndexSubmissionResult | None:
+        """Laedt das Index-Einreichungs-Ergebnis eines Runs oder ``None``."""
+        ...
+
+    def save_serp_result(self, result: SerpResult) -> None:
+        """Persistiert ein SERP-Ergebnis idempotent (UNIQUE run_id/provider/query_id)."""
+        ...
+
+    def has_serp_result(self, run_id: str, provider: SerpProvider, query_id: str) -> bool:
+        """Prueft, ob diese SERP-Zelle bereits erledigt ist (Checkpoint-Resume, §6)."""
+        ...
+
+    def load_serp_results(
+        self, run_id: str, provider: SerpProvider | None = None
+    ) -> list[SerpResult]:
+        """Laedt die SERP-Ergebnisse eines Runs (optional auf einen Provider gefiltert)."""
+        ...
+
+    def save_overlap_report(self, report: OverlapReport) -> None:
+        """Persistiert den Overlap-Report eines Runs (Upsert ueber run_id)."""
+        ...
+
+    def load_overlap_report(self, run_id: str) -> OverlapReport | None:
+        """Laedt den OverlapReport eines Runs oder ``None``."""
         ...

@@ -70,3 +70,61 @@ def test_zero_budget_blocks_immediately() -> None:
     tracker = CostTracker(max_probes=5, max_usd=0.0, max_tokens=0)
     with pytest.raises(BudgetExceeded):
         tracker.ensure_can_probe()
+
+
+def _tracker(request_limits: dict[str, int] | None = None) -> CostTracker:
+    return CostTracker(
+        max_probes=100, max_usd=10.0, max_tokens=10**9, request_limits=request_limits
+    )
+
+
+def test_provider_quota_blocks_at_limit_with_provider_attr() -> None:
+    tracker = _tracker({"serper": 2})
+    tracker.ensure_can_request("serper")
+    tracker.record_request("serper")
+    tracker.ensure_can_request("serper")
+    tracker.record_request("serper")
+    with pytest.raises(BudgetExceeded) as exc:
+        tracker.ensure_can_request("serper")
+    assert exc.value.limit_name == "max_requests_serper"
+    assert exc.value.provider == "serper"
+    assert exc.value.limit == 2
+    assert exc.value.used == 2
+
+
+def test_provider_without_limit_is_unrestricted() -> None:
+    tracker = _tracker({"serper": 1})
+    for _ in range(5):
+        tracker.ensure_can_request("gemini")  # keine Quote konfiguriert -> kein Fehler
+        tracker.record_request("gemini")
+    assert tracker.snapshot().requests_by_provider == {"gemini": 5}
+
+
+def test_zero_provider_quota_blocks_immediately() -> None:
+    tracker = _tracker({"gemini": 0})
+    with pytest.raises(BudgetExceeded) as exc:
+        tracker.ensure_can_request("gemini")
+    assert exc.value.provider == "gemini"
+
+
+def test_ensure_can_probe_with_provider_checks_quota() -> None:
+    tracker = _tracker({"gemini": 1})
+    tracker.ensure_can_probe("gemini")  # 0 < 1 -> ok
+    tracker.record_request("gemini")
+    with pytest.raises(BudgetExceeded) as exc:
+        tracker.ensure_can_probe("gemini")
+    assert exc.value.limit_name == "max_requests_gemini"
+    tracker.ensure_can_probe()  # ohne Provider gelten nur die globalen Caps
+
+
+def test_global_cap_has_no_provider_attr() -> None:
+    tracker = CostTracker(max_probes=0, max_usd=1.0, max_tokens=10)
+    with pytest.raises(BudgetExceeded) as exc:
+        tracker.ensure_can_probe()
+    assert exc.value.provider is None  # globales Limit -> kein Provider-Bezug
+
+
+def test_snapshot_requests_by_provider_default_empty() -> None:
+    # Rueckwaertskompatibel: ohne Provider-Requests bleibt das Mapping leer.
+    snap = _tracker().snapshot()
+    assert snap.requests_by_provider == {}

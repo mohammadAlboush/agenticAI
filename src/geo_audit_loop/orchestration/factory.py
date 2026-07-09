@@ -93,8 +93,11 @@ def build_specs() -> dict[EngineId, EngineProbeSpec]:
 
 
 def build_proxy(settings: Settings, *, offline: bool) -> ProxyPort:
-    """Baut den Proxy-Pool (live aus der Webshare-Datei, sonst leer)."""
-    if offline or not settings.proxy_file.exists():
+    """Baut den Proxy-Pool (live aus der Webshare-Datei, sonst leer).
+
+    ``proxy_file=None`` (auch via leerem ``GEO_PROXY_FILE``) bedeutet: kein Pool.
+    """
+    if offline or settings.proxy_file is None or not settings.proxy_file.exists():
         return WebshareProxyPool([], seed=settings.run_seed)
     return WebshareProxyPool.from_file(settings.proxy_file, seed=settings.run_seed)
 

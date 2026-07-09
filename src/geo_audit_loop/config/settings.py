@@ -44,7 +44,10 @@ class Settings(BaseSettings):
     )
 
     # --- Proxies ---
-    proxy_file: Path = Field(
+    # None = kein Proxy-Pool. Ein leerer String in GEO_PROXY_FILE wirkt wie None
+    # (sonst wuerde Path("") zum Arbeitsverzeichnis '.' und der Live-Modus scheitert
+    # mit PermissionError beim Oeffnen eines Verzeichnisses).
+    proxy_file: Path | None = Field(
         default=Path("Webshare 20 proxies (8).txt"), validation_alias="GEO_PROXY_FILE"
     )
 
@@ -72,9 +75,10 @@ class Settings(BaseSettings):
     db_path: Path = Field(default=Path("runs/geo_audit.db"), validation_alias="GEO_DB_PATH")
     runs_dir: Path = Field(default=Path("runs"), validation_alias="GEO_RUNS_DIR")
 
-    # --- Sprint 3: Deploy-Ziel (sicher; wordpress/github bewusst NICHT waehlbar) ---
-    # mock (Default, Dry-Run, kein Write) | filesystem (Patch-Artefakte nach runs/<id>/patches/).
-    publisher: Literal["mock", "filesystem"] = Field(
+    # --- Sprint 3: Deploy-Ziel (sicher; github bewusst NICHT waehlbar) ---
+    # mock (Default, Dry-Run, kein Write) | filesystem (Patch-Artefakte nach runs/<id>/patches/)
+    # | wordpress (echte Site — nur hinter dem allow_remote-Gate, sonst ConfigError).
+    publisher: Literal["mock", "filesystem", "wordpress"] = Field(
         default="mock", validation_alias="GEO_PUBLISHER"
     )
 
@@ -87,6 +91,50 @@ class Settings(BaseSettings):
     embedding_model: str = Field(
         default=c.DEFAULT_EMBEDDING_MODEL, validation_alias="GEO_EMBEDDING_MODEL"
     )
+
+    # --- Live-Loop: IndexNow (Einreichen geaenderter URLs nach echtem Deploy) ---
+    indexnow_key: str | None = Field(default=None, validation_alias="INDEXNOW_KEY")
+    # Abweichender Standort der Key-Datei (Default: https://<host>/<key>.txt).
+    indexnow_key_location: str | None = Field(
+        default=None, validation_alias="GEO_INDEXNOW_KEY_LOCATION"
+    )
+    # Opt-in: nur wenn True (UND non-dry-run-Deploy) wird ueberhaupt eingereicht.
+    notify_index: bool = Field(default=False, validation_alias="GEO_NOTIFY_INDEX")
+
+    # --- Live-Loop: SERP-Sichtbarkeit (Google-Top-10 vs. AI-Zitate) ---
+    serper_api_key: str | None = Field(default=None, validation_alias="SERPER_API_KEY")
+    # off (Default, exakter No-Op — Offline-Fingerprint bleibt unveraendert)
+    # | mock (seed-deterministisch) | serper (Live, google.serper.dev).
+    serp_provider: Literal["off", "mock", "serper"] = Field(
+        default="off", validation_alias="GEO_SERP_PROVIDER"
+    )
+    serp_top_k: int = Field(default=c.SERP_TOP_K, ge=1, validation_alias="GEO_SERP_TOP_K")
+    serp_query_set_version: str = Field(
+        default=c.DEFAULT_SERP_QUERY_SET_VERSION, validation_alias="GEO_SERP_QUERY_SET_VERSION"
+    )
+
+    # --- Live-Loop: Remote-Deploy (WordPress; Doppel-Gate mit CLI --allow-remote) ---
+    allow_remote: bool = Field(default=False, validation_alias="GEO_ALLOW_REMOTE")
+    wp_base_url: str | None = Field(default=None, validation_alias="GEO_WP_BASE_URL")
+    wp_username: str | None = Field(default=None, validation_alias="WP_USERNAME")
+    wp_app_password: str | None = Field(default=None, validation_alias="WP_APP_PASSWORD")
+
+    # --- Live-Loop: Pro-Provider-Request-Quoten (zusaetzlich zu den globalen Caps) ---
+    max_requests_serper: int = Field(
+        default=c.DEFAULT_MAX_SERP_REQUESTS, ge=0, validation_alias="GEO_MAX_REQUESTS_SERPER"
+    )
+    # None = keine Provider-Quote (nur globale Caps); fuer das Gemini-Free-Tier setzbar.
+    max_requests_gemini: int | None = Field(
+        default=None, ge=0, validation_alias="GEO_MAX_REQUESTS_GEMINI"
+    )
+
+    @field_validator("proxy_file", mode="before")
+    @classmethod
+    def _empty_proxy_file_is_none(cls, value: object) -> object:
+        """``GEO_PROXY_FILE=`` (leer) bedeutet: kein Proxy-Pool — wie ``None``."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("live_engines", mode="before")
     @classmethod
@@ -133,6 +181,10 @@ class Settings(BaseSettings):
             # Sprint 4: Mock (deterministisch) vs. Chroma (semantisch) sind unterschiedliche
             # Reproduzierbarkeits-Klassen; chroma_path/embedding_model bleiben irrelevant.
             "memory_provider": self.memory_provider,
+            # Live-Loop: off/mock/serper sind unterschiedliche Reproduzierbarkeits-Klassen
+            # (analog memory_provider); das Query-Set bestimmt die Vergleichsmenge.
+            "serp_provider": self.serp_provider,
+            "serp_query_set_version": self.serp_query_set_version,
             "models": {
                 eid.value: cfg.model
                 for eid, cfg in sorted(ENGINE_REGISTRY.items(), key=lambda kv: kv[0].value)

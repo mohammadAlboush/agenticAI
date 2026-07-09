@@ -16,6 +16,7 @@ from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
 from geo_audit_loop.domain.indexing import IndexSubmission, IndexSubmissionResult
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.memory import MemoryQuery
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeRequest, ProbeResult
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
 from geo_audit_loop.domain.run import RunContext, RunRecord
@@ -139,6 +140,26 @@ class _StubStorage:
     def save_effect_report(self, report: EffectReport) -> None: ...
 
     def load_effect_report(self, run_id: str) -> EffectReport | None:
+        return None
+
+    def save_index_submission(self, result: IndexSubmissionResult) -> None: ...
+
+    def load_index_submission(self, run_id: str) -> IndexSubmissionResult | None:
+        return None
+
+    def save_serp_result(self, result: SerpResult) -> None: ...
+
+    def has_serp_result(self, run_id: str, provider: SerpProvider, query_id: str) -> bool:
+        return False
+
+    def load_serp_results(
+        self, run_id: str, provider: SerpProvider | None = None
+    ) -> list[SerpResult]:
+        return []
+
+    def save_overlap_report(self, report: OverlapReport) -> None: ...
+
+    def load_overlap_report(self, run_id: str) -> OverlapReport | None:
         return None
 
 

@@ -36,10 +36,24 @@ class DeployBlocked(GeoAuditError):
 
 
 class BudgetExceeded(GeoAuditError):
-    """Hartes Run-Limit ueberschritten (Projektregeln §6: sauber abbrechen, nicht weiterlaufen)."""
+    """Hartes Run-Limit ueberschritten (Projektregeln §6: sauber abbrechen, nicht weiterlaufen).
 
-    def __init__(self, message: str, *, limit_name: str, limit: float, used: float) -> None:
+    ``provider`` ist nur bei Pro-Provider-Request-Quoten gesetzt (z.B. ``"serper"``,
+    ``"gemini"``): der Aufrufer kann dann gezielt NUR diesen Provider ueberspringen,
+    waehrend globale Limits (``provider=None``) den Run weiterhin hart abbrechen.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        limit_name: str,
+        limit: float,
+        used: float,
+        provider: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.limit_name = limit_name
         self.limit = limit
         self.used = used
+        self.provider = provider

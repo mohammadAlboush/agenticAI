@@ -39,6 +39,22 @@ _PROJECT_ENV = (
     "GEO_MAX_TOKENS",
     "GEO_DB_PATH",
     "GEO_PROXY_FILE",
+    # Live-Loop (IndexNow / SERP / WordPress): eine lokale .env darf Tests nie
+    # in den Live-Pfad schieben (Projektregeln §5: keine externen Calls in Tests).
+    "INDEXNOW_KEY",
+    "GEO_INDEXNOW_KEY_LOCATION",
+    "GEO_NOTIFY_INDEX",
+    "SERPER_API_KEY",
+    "GEO_SERP_PROVIDER",
+    "GEO_SERP_TOP_K",
+    "GEO_SERP_QUERY_SET_VERSION",
+    "GEO_ALLOW_REMOTE",
+    "GEO_WP_BASE_URL",
+    "WP_USERNAME",
+    "WP_APP_PASSWORD",
+    "GEO_MAX_REQUESTS_SERPER",
+    "GEO_MAX_REQUESTS_GEMINI",
+    "GEO_PUBLISHER",
 )
 
 

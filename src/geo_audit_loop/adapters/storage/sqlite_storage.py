@@ -20,9 +20,12 @@ from geo_audit_loop.domain.effect import EffectReport
 from geo_audit_loop.domain.errors import StorageError
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
+from geo_audit_loop.domain.indexing import IndexSubmissionResult
 from geo_audit_loop.domain.inventory import PageInventory
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeResult
 from geo_audit_loop.domain.run import RunRecord
+from geo_audit_loop.domain.serp import SerpProvider, SerpResult
 from geo_audit_loop.domain.templates import PatternReport
 
 _SCHEMA = """
@@ -85,6 +88,21 @@ CREATE TABLE IF NOT EXISTS deploy_results (
     payload TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS effect_reports (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS index_submissions (
+    run_id  TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS serp_results (
+    run_id   TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    query_id TEXT NOT NULL,
+    payload  TEXT NOT NULL,
+    PRIMARY KEY (run_id, provider, query_id)
+);
+CREATE TABLE IF NOT EXISTS overlap_reports (
     run_id  TEXT PRIMARY KEY,
     payload TEXT NOT NULL
 );
@@ -239,6 +257,9 @@ class SqliteStorage:
             "approvals",
             "deploy_results",
             "effect_reports",
+            "index_submissions",
+            "serp_results",
+            "overlap_reports",
         )
         conn = self._connection()
         try:
@@ -443,3 +464,63 @@ class SqliteStorage:
         """Laedt den EffectReport eines Runs oder ``None``."""
         row = self._fetchone("SELECT payload FROM effect_reports WHERE run_id = ?", (run_id,))
         return EffectReport.model_validate_json(row["payload"]) if row is not None else None
+
+    # --- Live-Loop-Artefakte (IndexNow / SERP / Overlap) --------------------
+    def save_index_submission(self, result: IndexSubmissionResult) -> None:
+        """Persistiert das Index-Einreichungs-Ergebnis eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO index_submissions (run_id, payload) VALUES (?, ?)",
+            (result.run_id, result.model_dump_json()),
+        )
+
+    def load_index_submission(self, run_id: str) -> IndexSubmissionResult | None:
+        """Laedt das Index-Einreichungs-Ergebnis eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM index_submissions WHERE run_id = ?", (run_id,))
+        return (
+            IndexSubmissionResult.model_validate_json(row["payload"]) if row is not None else None
+        )
+
+    def save_serp_result(self, result: SerpResult) -> None:
+        """Persistiert ein SERP-Ergebnis idempotent (UNIQUE run_id/provider/query_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO serp_results (run_id, provider, query_id, payload) "
+            "VALUES (?, ?, ?, ?)",
+            (result.run_id, result.provider.value, result.query_id, result.model_dump_json()),
+        )
+
+    def has_serp_result(self, run_id: str, provider: SerpProvider, query_id: str) -> bool:
+        """Prueft, ob diese SERP-Zelle bereits erledigt ist (Checkpoint-Resume, §6)."""
+        row = self._fetchone(
+            "SELECT 1 FROM serp_results WHERE run_id = ? AND provider = ? AND query_id = ?",
+            (run_id, provider.value, query_id),
+        )
+        return row is not None
+
+    def load_serp_results(
+        self, run_id: str, provider: SerpProvider | None = None
+    ) -> list[SerpResult]:
+        """Laedt die SERP-Ergebnisse eines Runs (optional auf einen Provider gefiltert)."""
+        if provider is None:
+            rows = self._fetchall(
+                "SELECT payload FROM serp_results WHERE run_id = ? ORDER BY provider, query_id",
+                (run_id,),
+            )
+        else:
+            rows = self._fetchall(
+                "SELECT payload FROM serp_results WHERE run_id = ? AND provider = ? "
+                "ORDER BY query_id",
+                (run_id, provider.value),
+            )
+        return [SerpResult.model_validate_json(row["payload"]) for row in rows]
+
+    def save_overlap_report(self, report: OverlapReport) -> None:
+        """Persistiert den Overlap-Report eines Runs (Upsert ueber run_id)."""
+        self._execute(
+            "INSERT OR REPLACE INTO overlap_reports (run_id, payload) VALUES (?, ?)",
+            (report.run_id, report.model_dump_json()),
+        )
+
+    def load_overlap_report(self, run_id: str) -> OverlapReport | None:
+        """Laedt den OverlapReport eines Runs oder ``None``."""
+        row = self._fetchone("SELECT payload FROM overlap_reports WHERE run_id = ?", (run_id,))
+        return OverlapReport.model_validate_json(row["payload"]) if row is not None else None
