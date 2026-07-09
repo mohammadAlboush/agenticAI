@@ -25,6 +25,9 @@ CONTENT_EXCERPT_WORDS: Final = 300
 # --- Perplexity (Live-Engine seit Sprint 1) ---
 PERPLEXITY_ENDPOINT: Final = "https://api.perplexity.ai/chat/completions"
 
+# --- ChatGPT (Live-Engine ueber die OpenAI-Responses-API mit web_search-Tool) ---
+OPENAI_RESPONSES_ENDPOINT: Final = "https://api.openai.com/v1/responses"
+
 # --- Gemini (Live-Engine mit Google-Search-Grounding; Free Tier 500 Anfragen/Tag) ---
 GEMINI_ENDPOINT_TEMPLATE: Final = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"

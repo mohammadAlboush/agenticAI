@@ -26,8 +26,12 @@ PRICE_TABLE: dict[str, Price] = {
     "sonar-pro": Price(usd_per_1m_input=3.0, usd_per_1m_output=15.0),
     # Claude (Web-Search-Tool ~ $10/1000 Suchen)
     "claude-sonnet-4-6": Price(usd_per_1m_input=3.0, usd_per_1m_output=15.0, usd_per_search=0.01),
-    # ChatGPT (Naeherung; gemockt)
-    "gpt-4o": Price(usd_per_1m_input=2.5, usd_per_1m_output=10.0),
+    # ChatGPT via Responses-API: web_search-Tool kostet extra (~$25/1000 Suchen, Stand
+    # 2026-06 — vor Live-Nutzung gegen die aktuelle Preisseite verifizieren!). Achtung
+    # Budget: die volle 60-Zellen-Teilmatrix (5 IPs x 12 Prompts) liegt allein an
+    # Suchkosten bei ~$1.50 und kollidiert inkl. Tokens mit DEFAULT_MAX_USD=2.0 —
+    # Live nur mit bewusst erhoehtem Cap.
+    "gpt-4o": Price(usd_per_1m_input=2.5, usd_per_1m_output=10.0, usd_per_search=0.025),
     # Gemini 2.5 Flash: im AI-Studio-Free-Tier kostenlos inkl. 500 Grounding-Anfragen/Tag
     # (Stand 2026-06); Kosten-Tracking daher 0 — das Budget-Cap greift ueber max_probes.
     "gemini-2.5-flash": Price(),

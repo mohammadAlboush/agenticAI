@@ -36,6 +36,8 @@ ENGINE_REGISTRY: dict[EngineId, EngineConfig] = {
     ),
     EngineId.CHATGPT: EngineConfig(
         engine_id=EngineId.CHATGPT,
+        # gpt-4o: Responses-API-faehig inkl. web_search-Tool; der Modellname muss zum
+        # Preis-Eintrag in config/pricing.py passen (usd_per_search-Kostenwarnung dort).
         model="gpt-4o",
         api_key_env="OPENAI_API_KEY",
     ),
