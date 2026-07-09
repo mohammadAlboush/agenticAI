@@ -57,7 +57,10 @@ class RunParams:
 def _default_spawn(args: list[str], env_overlay: dict[str, str]) -> ProcessHandle:
     """Startet den CLI-Lauf als losgeloesten Subprozess (kein neues Konsolenfenster)."""
     env = {**os.environ, **env_overlay}
-    creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+    # mypy narrowt sys.platform nur im if-Statement, nicht im Ternary (CI laeuft auf Linux).
+    creationflags = 0
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NO_WINDOW
     return subprocess.Popen(
         args,
         env=env,
