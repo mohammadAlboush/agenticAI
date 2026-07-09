@@ -13,6 +13,7 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
+from geo_audit_loop.domain.indexing import IndexSubmission, IndexSubmissionResult
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.memory import MemoryQuery
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeRequest, ProbeResult
@@ -21,6 +22,7 @@ from geo_audit_loop.domain.run import RunContext, RunRecord
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
+from geo_audit_loop.ports.indexing import IndexingPort
 from geo_audit_loop.ports.memory import MemoryPort
 from geo_audit_loop.ports.proxy import ProxyPort
 from geo_audit_loop.ports.publisher import PublisherPort
@@ -164,6 +166,17 @@ class _StubPublisher:
         )
 
 
+class _StubIndexing:
+    name = "stub"
+
+    def submit(
+        self, submission: IndexSubmission, *, run_context: RunContext
+    ) -> IndexSubmissionResult:
+        return IndexSubmissionResult(
+            run_id=submission.run_id, host=submission.host, generated_at=FIXED
+        )
+
+
 def test_engine_port_conformance() -> None:
     engine: EnginePort = _StubEngine()
     assert isinstance(engine, EnginePort)
@@ -211,3 +224,9 @@ def test_memory_port_conformance() -> None:
     memory: MemoryPort = _StubMemory()
     assert isinstance(memory, MemoryPort)
     assert memory.retrieve(MemoryQuery(target_domain="it-sicherheit.de")) == []
+
+
+def test_indexing_port_conformance() -> None:
+    indexer: IndexingPort = _StubIndexing()
+    assert isinstance(indexer, IndexingPort)
+    assert indexer.name == "stub"

@@ -48,6 +48,9 @@ def report_fingerprint(
         audit: Optional der Audit-Report des Lern-Loops (Sprint 2).
         fix_plan: Optional der Fix-Plan (Sprint 3). ``ApprovalDecision``/``DeployResult``
             gehen bewusst NICHT ein — sie tragen laufvariable Zeitstempel/Reviewer.
+            Aus demselben Grund bleibt auch ``IndexSubmissionResult`` (Live-Loop)
+            ausgeschlossen: HTTP-Status und Zeitstempel echter Index-Einreichungen
+            sind laufvariabel und keine deterministische Ergebnisgroesse.
         effect: Optional der Effekt-Report des geschlossenen Loops (Sprint 4). Die
             Vorher/Nachher-Deltas sind deterministisch (Offline-Boost) und daher
             fingerprint-faehig; laufvariable Zeitstempel bleiben ausgeschlossen.
