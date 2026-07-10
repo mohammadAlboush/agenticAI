@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Lernen</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — NICHT ÄNDERN (Tokens + Basis + Engine).
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+
+/* ---- Kopf (einheitlich, kompakt) ---- */
+.head-wrap{flex:0 0 auto}
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--acc-deep);margin-bottom:8px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;color:var(--ink);white-space:nowrap}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:12px 0 0}
+.lead{font-size:clamp(13px,1.45vw,16.5px);color:var(--mut);line-height:1.45;margin-top:8px;max-width:72ch}
+
+/* ---- Körper ---- */
+.body{flex:1 1 auto;min-height:0;margin-top:clamp(10px,1.8vh,18px)}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* Karte */
+.card{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;
+  padding:clamp(18px,2.2vw,26px)}
+.card .ct{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:8px}
+
+.hint{position:fixed;left:0;right:0;bottom:6px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">07 / 12</span> &nbsp;·&nbsp; 02 · LIVE-DEMO · LERNEN</div>
+    <h2>Effekt messen → <span class="g">Gedächtnis</span> → besser fixen</h2>
+    <div class="rule"></div>
+    <p class="lead">Nach dem Deploy misst die Re-Probe denselben Matrix-Schnitt noch einmal.</p>
+  </div>
+
+  <div class="body">
+
+    <!-- LINKS: Δ-Hero + ehrliches Vorher/Nachher-Diagramm mit Achse -->
+    <div class="col-left">
+      <div class="stat" data-beat="1">
+        <div class="v"><span class="sym">Δ</span>&thinsp;<span id="dval">+0.00</span></div>
+        <div class="k">Zitationsrate&nbsp;&nbsp;/security-awareness-training</div>
+      </div>
+
+      <div class="chart-wrap" data-beat="1">
+        <svg class="chart" viewBox="0 0 460 262" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <marker id="arrDelta" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="7" markerHeight="7"
+                    markerUnits="userSpaceOnUse" orient="auto"><path d="M0.5,1 L9,5 L0.5,9 Z" fill="#4f7d1a"/></marker>
+          </defs>
+
+          <!-- Gridlines + Ticks -->
+          <g class="grid">
+            <line x1="181.4" y1="26" x2="181.4" y2="210"/>
+            <line x1="284.9" y1="26" x2="284.9" y2="210"/>
+            <line x1="388.3" y1="26" x2="388.3" y2="210"/>
+          </g>
+          <g class="ticks">
+            <line x1="181.4" y1="210" x2="181.4" y2="217"/>
+            <line x1="284.9" y1="210" x2="284.9" y2="217"/>
+            <line x1="388.3" y1="210" x2="388.3" y2="217"/>
+          </g>
+          <g class="tlab">
+            <text x="78"    y="234">0</text>
+            <text x="181.4" y="234">0.1</text>
+            <text x="284.9" y="234">0.2</text>
+            <text x="388.3" y="234">0.3</text>
+          </g>
+
+          <!-- Achse (zeichnet sich) -->
+          <path class="axis" d="M78,26 L78,210 L440,210" pathLength="100"/>
+
+          <!-- Balken -->
+          <text class="blab" x="68" y="75">vorher</text>
+          <rect class="bar before" x="78" y="54" width="31"    height="32" rx="2"/>
+          <text class="bval v1" x="120" y="75">0.03</text>
+
+          <text class="blab" x="68" y="149">nachher</text>
+          <rect class="bar after"  x="78" y="128" width="113.8" height="32" rx="2"/>
+          <text class="bval v2" x="202" y="149">0.11</text>
+
+          <!-- Delta-Klammer (gestrichelt) -->
+          <g class="dbrace">
+            <path d="M109,70 L109,107 L191.8,107 L191.8,122" marker-end="url(#arrDelta)"/>
+            <text x="152" y="101">+0.08</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RECHTS: EffectHypothesis-Karte + Fluss ins Gedächtnis -->
+    <div class="col-right">
+      <div class="card hypcard" data-beat="2">
+        <svg class="pulse-ic" viewBox="0 0 34 20" aria-hidden="true">
+          <polyline points="1,12 9,12 13,4 18,17 22,9 25,12 33,12"/>
+        </svg>
+        <div class="ct">EffectHypothesis</div>
+        <div class="hyp">
+          <div class="hyp-row" data-beat="2">
+            <span class="dim">before</span> <span class="num">0.03</span>
+            <span class="arr">→</span> <span class="dim">after</span> <span class="num">0.11</span>
+            <span class="pad">·</span> <span class="pos">Δ +0.08</span>
+          </div>
+          <div class="hyp-row" data-beat="2" style="transition-delay:.14s">
+            <span class="key">Ursache:</span> (Hebel: <span class="lev">Antwortblock</span>, <span class="op">ADD</span>)
+          </div>
+          <div class="hyp-row" data-beat="2" style="transition-delay:.28s">
+            <span class="key">confidence</span> <span class="num">0.63</span>
+            <span class="pad">=</span> <span class="frac">|Δ|·n/(n+k)</span>
+            <span class="note">(deterministisch, kein LLM)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Draht → Memory-Zylinder -->
+      <div class="flow-wrap" data-beat="3">
+        <svg class="flow" viewBox="0 0 560 132" xmlns="http://www.w3.org/2000/svg"
+             xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true">
+          <defs>
+            <marker id="arrWire" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8"
+                    markerUnits="userSpaceOnUse" orient="auto"><path d="M0.5,1 L9,5 L0.5,9 Z" fill="#71b127"/></marker>
+          </defs>
+
+          <!-- sichtbarer Draht -->
+          <path class="wire" id="wire" pathLength="100"
+                d="M22,10 C160,82 300,58 428,58" marker-end="url(#arrWire)"/>
+          <!-- unsichtbarer Motion-Pfad (führt in den Zylinder hinein) -->
+          <path id="pkpath" d="M22,10 C160,82 300,58 428,58 L472,58" fill="none" stroke="none"/>
+
+          <!-- Memory-Zylinder (reine Striche, kein Text) -->
+          <g class="cyl" id="cyl">
+            <ellipse cx="478" cy="30" rx="40" ry="11"/>
+            <path d="M438,30 V86 A40 11 0 0 0 518,86 V30"/>
+            <path class="cyl-mid" d="M438,56 A40 11 0 0 0 518,56"/>
+          </g>
+
+          <!-- Datenpaket -->
+          <circle class="pk" id="pk" r="4.5">
+            <animateMotion id="pkmove" dur="0.9s" begin="indefinite" fill="freeze">
+              <mpath xlink:href="#pkpath" href="#pkpath"/>
+            </animateMotion>
+          </circle>
+
+          <text class="storelab" x="478" y="124">MemoryPort.store()</text>
+        </svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- b4: folienbreites Akzentband -->
+  <div class="caption" data-beat="4">
+    <span class="kacc"></span>
+    <span class="tx">Nächster Lauf: <span class="mono">retrieve()</span> →
+      <span class="mono">apply_memory_prior()</span> — der Fix-Plan <b>reordnet sich messbar</b>.</span>
+  </div>
+
+  <div class="hint">Leertaste ▸ weiter</div>
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+/* Zwei-Spalten-Bühne */
+.body{display:grid;grid-template-columns:minmax(320px,40%) 1fr;
+  gap:clamp(26px,3.5vw,52px);align-items:center}
+
+/* ---- Hero-Stat mit Count-up ---- */
+.stat .v{font-size:clamp(44px,5.6vw,72px);font-weight:680;line-height:.95;
+  letter-spacing:-.035em;color:var(--acc-deep);font-variant-numeric:tabular-nums}
+.stat .k{font-family:var(--mono);font-size:clamp(11px,1.15vw,13.5px);color:var(--mut);
+  margin-top:9px;letter-spacing:.02em}
+
+/* ---- Vorher/Nachher-Chart ---- */
+.chart-wrap{margin-top:clamp(18px,3.4vh,34px)}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid line{stroke:var(--line-2);stroke-width:1;opacity:0;transition:opacity .5s ease .2s}
+.stage.b1 .chart .grid line{opacity:1}
+.chart .ticks line{stroke:var(--faint);stroke-width:1;opacity:0;transition:opacity .5s ease .25s}
+.stage.b1 .chart .ticks line{opacity:1}
+.chart .tlab text{font-family:var(--mono);font-size:11px;fill:var(--faint);text-anchor:middle;
+  opacity:0;transition:opacity .5s ease .3s}
+.stage.b1 .chart .tlab text{opacity:1}
+.chart .axis{fill:none;stroke:var(--faint);stroke-width:1.5;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset .7s var(--ease)}
+.stage.b1 .chart .axis{stroke-dashoffset:0}
+.chart .blab{font-family:var(--mono);font-size:13px;fill:var(--mut);text-anchor:end;
+  opacity:0;transition:opacity .45s ease .25s}
+.stage.b1 .chart .blab{opacity:1}
+.chart .bar{transform:scaleX(0);transform-box:fill-box;transform-origin:left center;
+  transition:transform .9s var(--ease) .15s}
+.chart .bar.before{fill:var(--metal)}
+.chart .bar.after{fill:var(--acc);transition-delay:.4s}       /* nachher +250ms */
+.stage.b1 .chart .bar{transform:scaleX(1)}
+.chart .bval{font-family:var(--mono);font-size:13.5px;font-weight:600;fill:var(--mut);
+  opacity:0;transition:opacity .4s ease}
+.chart .bval.v1{transition-delay:.85s}
+.chart .bval.v2{fill:var(--acc-deep);font-weight:700;transition-delay:1.1s}
+.stage.b1 .chart .bval{opacity:1}
+.chart .dbrace path{fill:none;stroke:var(--acc-deep);stroke-width:1.3;stroke-dasharray:4 4}
+.chart .dbrace text{font-family:var(--mono);font-size:14px;font-weight:700;fill:var(--acc-deep);
+  text-anchor:middle}
+.chart .dbrace{opacity:0;transition:opacity .5s ease 1.35s}
+.stage.b1 .chart .dbrace{opacity:1}
+
+/* ---- EffectHypothesis-Karte ---- */
+.hypcard{position:relative}
+.pulse-ic{position:absolute;top:16px;right:18px;width:36px;height:22px}
+.pulse-ic polyline{fill:none;stroke:#33352E;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hyp{font-family:var(--mono);display:flex;flex-direction:column;gap:11px}
+.hyp-row{font-size:clamp(13px,1.3vw,16px);line-height:1.55;color:var(--ink);letter-spacing:.005em}
+.hyp .dim{color:var(--mut)}
+.hyp .num{color:var(--ink);font-weight:700}
+.hyp .arr{color:var(--acc-deep);font-weight:700;margin:0 2px}
+.hyp .pad{color:var(--faint);margin:0 4px}
+.hyp .pos{color:var(--acc-deep);font-weight:700}
+.hyp .key{color:var(--mut)}
+.hyp .lev{color:var(--acc-deep);font-weight:600}
+.hyp .op{color:var(--acc-deep2);font-weight:700}
+.hyp .frac{color:var(--ink)}
+.hyp .note{color:var(--faint)}
+
+/* ---- Fluss ins Gedächtnis ---- */
+.flow-wrap{margin-top:clamp(8px,1.6vh,16px)}
+.flow{width:100%;height:auto;display:block;overflow:visible}
+.flow .wire{fill:none;stroke:var(--acc);stroke-width:2.4;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset .8s var(--ease) .1s}
+.stage.b3 .flow .wire{stroke-dashoffset:0;filter:drop-shadow(0 0 5px rgba(113,177,39,.5))}
+.flow .cyl ellipse,.flow .cyl path{fill:none;stroke:var(--acc-deep);stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.flow .cyl .cyl-mid{stroke:var(--metal);stroke-width:1.5}
+.flow .cyl{transition:filter .5s ease 1.5s}
+.stage.b3 .flow .cyl{filter:drop-shadow(0 0 9px rgba(113,177,39,.7))}
+.flow .pk{fill:var(--acc);opacity:0;transition:opacity .3s ease .55s;
+  filter:drop-shadow(0 0 4px rgba(113,177,39,.9))}
+.stage.b3 .flow .pk{opacity:1}
+.flow .storelab{font-family:var(--mono);font-size:14px;font-weight:700;fill:var(--acc-deep);
+  text-anchor:middle;opacity:0;transition:opacity .5s ease 1.45s}
+.stage.b3 .flow .storelab{opacity:1}
+
+/* ---- b4: folienbreites Akzentband ---- */
+.caption{flex:0 0 auto;margin-top:clamp(8px,1.4vh,14px);display:flex;align-items:center;
+  justify-content:center;gap:13px;background:var(--acc-soft);border-radius:14px;
+  padding:13px 20px;box-shadow:0 6px 22px rgba(60,80,30,.08)}
+.caption .kacc{flex:0 0 auto;width:4px;align-self:stretch;background:var(--acc);border-radius:3px}
+.caption .tx{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink);line-height:1.4}
+.caption .tx .mono{font-family:var(--mono);color:var(--acc-deep);font-weight:700;font-size:.93em}
+.caption .tx b{color:var(--acc-deep);font-weight:700}
+
+@media (prefers-reduced-motion:reduce){
+  .stage *{transition-delay:0s!important}
+  .flow .pk{display:none}
+}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=4;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+
+<script>
+/* ===== Beat-Hooks: Δ-Count-up (b1) + Paket-Start (b3) ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const dval=document.getElementById('dval');
+  const pk=document.getElementById('pk');
+  const pkmove=document.getElementById('pkmove');
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+  let counted=false, fired=false;
+
+  function runCounter(){
+    if(counted) return; counted=true;
+    const dur=1400, t0=performance.now();
+    function tick(now){
+      const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3);   // easeOutCubic
+      dval.textContent='+'+(e*0.08).toFixed(2);
+      if(p<1) requestAnimationFrame(tick); else dval.textContent='+0.08';
+    }
+    requestAnimationFrame(tick);
+  }
+  function firePacket(){
+    if(fired) return; fired=true;
+    setTimeout(()=>{ try{pkmove.beginElement();}catch(e){} }, 600);
+    setTimeout(()=>{ pk.style.opacity='0'; }, 1600);            // Paket "verschwindet" im Zylinder
+  }
+  function sync(){
+    if(stage.classList.contains('b1')) runCounter();
+    if(stage.classList.contains('b3')) firePacket();
+  }
+
+  if(reduced||forceFinal){
+    counted=true; fired=true;
+    dval.textContent='+0.08';
+    if(pk) pk.style.display='none';
+  }
+  new MutationObserver(sync).observe(stage,{attributes:true,attributeFilter:['class']});
+  sync();
+})();
+</script>
+</body>
+</html>
