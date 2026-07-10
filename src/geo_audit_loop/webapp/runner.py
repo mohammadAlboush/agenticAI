@@ -52,6 +52,10 @@ class RunParams:
     n_proxy_ips: int = 5
     live_engines: tuple[str, ...] = ()
     reasoning_provider: str = "mock"
+    # Versioniertes Themen-Set (Probe-Fragen + SERP-Keywords) — z. B. "v1" (IT-Sicherheit)
+    # oder "pm1" (Medizin/Lab-Equipment). Bestimmt, WELCHE Fragen die Engines beantworten.
+    prompt_set_version: str = "v1"
+    live_crawl: bool = False  # echte Seiten crawlen (statt Mock-Inventar) — noetig fuer reale Sites
 
 
 def _default_spawn(args: list[str], env_overlay: dict[str, str]) -> ProcessHandle:
@@ -105,10 +109,16 @@ class RunManager:
         elif params.fix:
             # Dashboard-Lauf gibt automatisch frei (nicht-interaktiv); Deploy bleibt Dry-Run.
             args += ["--fix", "--approve-all"]
+        if params.live_crawl and not params.offline:
+            # Echte Seiten crawlen (nur live sinnvoll; offline nutzt Mock-Inventar).
+            args.append("--live-crawl")
         env_overlay = {
             "GEO_N_PROXY_IPS": str(params.n_proxy_ips),
             "GEO_REASONING_PROVIDER": params.reasoning_provider,
             "GEO_LIVE_ENGINES": ",".join(params.live_engines),
+            # Themen-Set steuert Probe-Fragen UND die dazu gemappten SERP-Keywords.
+            "GEO_PROMPT_SET_VERSION": params.prompt_set_version,
+            "GEO_SERP_QUERY_SET_VERSION": params.prompt_set_version,
         }
         spawn = self.spawn if self.spawn is not None else _default_spawn
         self._procs[run_id] = spawn(args, env_overlay)

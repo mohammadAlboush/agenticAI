@@ -90,6 +90,11 @@ h2.sec .n{font-family:var(--mono);font-size:12px;color:var(--acc-deep);font-weig
 .engine .nm{font-family:var(--mono);font-weight:700;font-size:14px}
 .engine .nm .lv{font-size:9.5px;color:#fff;background:var(--acc-deep);border-radius:5px;padding:1px 6px;vertical-align:2px;margin-left:6px}
 .engine .rate{font-family:var(--mono);font-size:12px;color:var(--acc-deep);font-weight:600}
+/* Live-Lauf: echt geprobte Engine vs. Simulation (Mock) klar unterscheiden. */
+.livebadge{font-size:9.5px;color:#fff;background:var(--acc-deep);border-radius:5px;padding:1px 7px;vertical-align:2px;margin-left:7px;font-weight:700;letter-spacing:.03em}
+.simbadge{font-family:var(--sans);font-size:9.5px;color:#8a6d1a;background:#f6edd4;border:1px solid #e3d29a;border-radius:5px;padding:1px 7px;vertical-align:2px;margin-left:7px;font-weight:700;letter-spacing:.03em}
+.engine.simulated{opacity:.5;background:repeating-linear-gradient(135deg,var(--surface-2),var(--surface-2) 9px,#f2f0e8 9px,#f2f0e8 18px)}
+.engine .rate.sim{color:#a08320;font-weight:600}
 .grid{display:grid;gap:3px}
 .grid .hcell{font-family:var(--mono);font-size:9px;color:var(--faint);text-align:center;align-self:end}
 .grid .pcell{font-family:var(--mono);font-size:10px;color:var(--mut);padding-right:5px;text-align:right;align-self:center;cursor:help}
@@ -196,10 +201,12 @@ td.num.neg{color:var(--red);font-weight:700}
       <div class="field"><label>Seed</label><input type="number" id="f-seed" value="42"></div>
       <div class="field"><label>Proxy-IPs</label><input type="number" id="f-ips" value="5" min="1" max="5"></div>
       <div class="field"><label>Reasoning (Warum/Was tun)</label><select id="f-reason"></select></div>
+      <div class="field" style="grid-column:span 2"><label>Themen-Set (Fragen an die Engines)</label><select id="f-promptset"></select></div>
     </div>
     <div class="toggles">
       <label><input type="checkbox" id="f-explain" checked> Lern-Loop (Pattern-Miner + GEO-Auditor)</label>
       <label><input type="checkbox" id="f-fix"> Fix &amp; Deploy (Fix-Agent + HITL-Freigabe + Dry-Run)</label>
+      <label id="crawl-wrap" style="display:none"><input type="checkbox" id="f-crawl"> Echte Seiten crawlen (Live)</label>
       <span id="engine-toggles" class="hidden"></span>
     </div>
     <div class="startrow">
@@ -351,6 +358,9 @@ function syncModeUI(){
   const live = $("f-mode").value === "live";
   $("engine-toggles").classList.toggle("hidden", !live);
   $("livehint").style.display = live ? "block" : "none";
+  // Echt-Crawl nur im Live-Modus anbieten (offline nutzt deterministisches Mock-Inventar).
+  $("crawl-wrap").style.display = live ? "inline-flex" : "none";
+  if (!live) $("f-crawl").checked = false;
 }
 
 async function loadConfig(){
@@ -361,6 +371,14 @@ async function loadConfig(){
   $("f-topn").value = c.defaults.top_n;
   $("f-seed").value = c.defaults.seed;
   $("f-ips").value = c.defaults.n_proxy_ips;
+  const ps = $("f-promptset");
+  ps.innerHTML = "";
+  for (const s of (c.prompt_sets || [])){
+    const opt = document.createElement("option");
+    opt.value = s.version; opt.textContent = s.label + " · " + s.version;
+    if (s.version === c.defaults.prompt_set_version) opt.selected = true;
+    ps.appendChild(opt);
+  }
   const sel = $("f-reason");
   sel.innerHTML = "";
   for (const r of ["mock","saia","claude"]){
@@ -400,6 +418,8 @@ $("startbtn").addEventListener("click", async () => {
       n_proxy_ips: parseInt($("f-ips").value, 10),
       live_engines: live ? engines : [],
       reasoning_provider: $("f-reason").value,
+      prompt_set_version: $("f-promptset").value,
+      live_crawl: $("f-crawl").checked,
     })});
     const data = await r.json();
     if (!r.ok){ msg.className = "startmsg err"; msg.textContent = data.error || "Start fehlgeschlagen"; }
@@ -494,13 +514,20 @@ function renderMatrix(m){
   for (const c of m.cells) byKey[c.engine+"|"+c.prompt+"|"+c.proxy] = c;
   const host = $("engines");
   host.innerHTML = "";
+  // War dies ein Live-Lauf? Dann sind Engines AUSSERHALB von m.live_engines nur Simulation
+  // (deterministischer Mock) — ihre Rate ist irrefuehrend und wird als solche markiert.
+  const liveRun = (m.live_engines || []).length > 0;
   for (const eng of m.engines){
+    const engLive = (m.live_engines || []).includes(eng);
+    const simulated = liveRun && !engLive;
     const card = document.createElement("div");
-    card.className = "engine";
+    card.className = "engine" + (simulated ? " simulated" : "");
     const rate = m.engine_rates[eng];
-    const liveTag = liveEngines.includes(eng) ? "" : "";
-    card.innerHTML = `<div class="hd"><span class="nm">${ENGINE_NAME[eng]||eng}${liveTag}</span>` +
-      `<span class="rate">Rate ${(rate*100).toFixed(0)}%</span></div>`;
+    let badge = "", rateHtml = `<span class="rate">Rate ${(rate*100).toFixed(0)}%</span>`;
+    if (liveRun && engLive){ badge = ' <span class="livebadge">● live</span>'; }
+    else if (simulated){ badge = ' <span class="simbadge">Simulation</span>'; rateHtml = `<span class="rate sim">nicht live</span>`; }
+    card.innerHTML = `<div class="hd"><span class="nm">${ENGINE_NAME[eng]||eng}${badge}</span>` +
+      rateHtml + `</div>`;
     const grid = document.createElement("div");
     grid.className = "grid";
     grid.style.gridTemplateColumns = `44px repeat(${m.proxies.length},1fr)`;

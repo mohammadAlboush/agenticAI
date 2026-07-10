@@ -178,6 +178,7 @@ class Sprint1Pipeline:
             seed=self._run_context.seed,
             prompt_set_version=self._run_context.prompt_set_version,
             config_hash=self._run_context.config_hash,
+            live_engines=self._run_context.live_engines,
             total_probes=snapshot.probes,
             total_tokens=snapshot.total_tokens,
             total_cost_usd=snapshot.total_usd,

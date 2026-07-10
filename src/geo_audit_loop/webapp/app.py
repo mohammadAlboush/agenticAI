@@ -10,6 +10,7 @@ Engine-/Reasoning-Live-Optionen erscheinen nur, wenn der jeweilige API-Key in de
 from __future__ import annotations
 
 import re
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,20 @@ _ALLOWED_LIVE_ENGINES = frozenset({EngineId.PERPLEXITY.value, EngineId.GEMINI.va
 _ALLOWED_REASONING = frozenset({"mock", "saia", "claude"})
 # Nur echte Hostnamen zulassen (keine Sonderzeichen -> kein Argument-Schmuggel/XSS-Vektor).
 _DOMAIN_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9-]{1,63})+$")
+_PROMPT_SET_RE = re.compile(r"^probe_set\.([A-Za-z0-9_-]+)\.toml$")
+# Sprechende Labels fuer bekannte Themen-Sets (Fallback: die Version selbst).
+_PROMPT_SET_LABELS = {"v1": "IT-Sicherheit (it-sicherheit.de)", "pm1": "Medizin & Laborausruestung"}
+
+
+def _available_prompt_sets() -> list[dict[str, str]]:
+    """Alle versionierten Probe-Sets aus dem prompts-Paket (probe_set.<version>.toml)."""
+    root = files("geo_audit_loop.prompts")
+    versions: list[str] = []
+    for entry in root.iterdir():
+        match = _PROMPT_SET_RE.match(entry.name)
+        if match is not None:
+            versions.append(match.group(1))
+    return [{"version": v, "label": _PROMPT_SET_LABELS.get(v, v)} for v in sorted(versions)]
 
 
 def _prompt_texts(version: str) -> dict[str, str]:
@@ -86,11 +101,13 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             {
                 "live_engines_available": engines,
                 "reasoning_available": reasoning,
+                "prompt_sets": _available_prompt_sets(),
                 "defaults": {
                     "domain": "it-sicherheit.de",
                     "top_n": cfg.top_n,
                     "seed": cfg.run_seed,
                     "n_proxy_ips": cfg.n_proxy_ips,
+                    "prompt_set_version": cfg.prompt_set_version,
                 },
             }
         )
@@ -120,6 +137,9 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         reasoning = str(payload.get("reasoning_provider", "mock"))
         if reasoning not in _ALLOWED_REASONING:
             return JSONResponse({"error": "Unbekannter Reasoning-Provider"}, status_code=400)
+        prompt_set = str(payload.get("prompt_set_version", cfg.prompt_set_version))
+        if prompt_set not in {ps["version"] for ps in _available_prompt_sets()}:
+            return JSONResponse({"error": "Unbekanntes Themen-Set"}, status_code=400)
         try:
             params = RunParams(
                 domain=domain,
@@ -132,6 +152,8 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
                 n_proxy_ips=max(1, min(5, int(payload.get("n_proxy_ips", 5)))),
                 live_engines=() if offline else live_engines,
                 reasoning_provider=reasoning,
+                prompt_set_version=prompt_set,
+                live_crawl=bool(payload.get("live_crawl", False)),
             )
         except (TypeError, ValueError):
             return JSONResponse({"error": "Ungueltige Zahlenwerte"}, status_code=400)
@@ -193,6 +215,7 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             "mean_delta": effect.mean_delta if effect is not None else None,
             "has_report": report is not None,
             "fingerprint": fingerprint,
+            "live_engines": list(run.live_engines),
             "dashboard_alive": manager.is_alive(run.run_id),
         }
         return JSONResponse(payload)
@@ -226,6 +249,8 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             {
                 "run_id": run.run_id,
                 "engines": engines,
+                # Echt geprobte Engines (Rest = Simulation) — das Frontend markiert die Mocks.
+                "live_engines": list(run.live_engines),
                 "proxies": _proxy_labels(probes, cfg.n_proxy_ips),
                 "prompts": [{"id": pid, "text": text} for pid, text in sorted(prompts.items())],
                 "cells": cells,

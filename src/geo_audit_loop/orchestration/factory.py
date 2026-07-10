@@ -348,6 +348,10 @@ def assemble_run(
         storage=storage,
         logger=logger,
     )
+    # Offline => alle Engines simuliert; live => genau die konfigurierten sind echt.
+    run_live_engines: tuple[str, ...] = (
+        () if offline else tuple(sorted(engine.value for engine in settings.live_engines))
+    )
     run_context = RunContext(
         run_id=run_id,
         target_domain=domain,
@@ -355,6 +359,7 @@ def assemble_run(
         seed=settings.run_seed,
         prompt_set_version=prompt_version,
         config_hash=settings.run_fingerprint(),
+        live_engines=run_live_engines,
     )
     options = CrawlOptions(
         max_pages=c.DEFAULT_MAX_PAGES,
