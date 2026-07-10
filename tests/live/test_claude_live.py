@@ -12,7 +12,10 @@ import pytest
 
 pytestmark = pytest.mark.live
 
-_OPT_IN = bool(os.getenv("GEO_RUN_LIVE_TESTS")) and bool(os.getenv("ANTHROPIC_API_KEY"))
+# Key beim Modul-Import cachen: die autouse-Env-Scrub-Fixture (tests/conftest.py)
+# loescht projekteigene Variablen VOR dem Testkoerper (Muster test_serper_live.py).
+_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+_OPT_IN = bool(os.getenv("GEO_RUN_LIVE_TESTS")) and bool(_API_KEY)
 
 
 @pytest.mark.skipif(
@@ -22,9 +25,7 @@ def test_claude_live_smoke() -> None:
     from geo_audit_loop.adapters.reasoning.claude import ClaudeReasoningAdapter
     from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningStatus
 
-    adapter = ClaudeReasoningAdapter(
-        api_key=os.environ["ANTHROPIC_API_KEY"], model="claude-sonnet-4-6"
-    )
+    adapter = ClaudeReasoningAdapter(api_key=_API_KEY, model="claude-sonnet-4-6")
     result = adapter.reason(
         ReasoningRequest(
             run_id="live",

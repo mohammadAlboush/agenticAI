@@ -15,12 +15,15 @@ from geo_audit_loop.domain.probe import EngineId, ProbeRequest, ProbeStatus
 
 pytestmark = pytest.mark.live
 
-_OPT_IN = bool(os.getenv("GEO_RUN_LIVE_TESTS")) and bool(os.getenv("GOOGLE_API_KEY"))
+# Key beim Modul-Import cachen: die autouse-Env-Scrub-Fixture (tests/conftest.py)
+# loescht projekteigene Variablen VOR dem Testkoerper (Muster test_serper_live.py).
+_API_KEY = os.getenv("GOOGLE_API_KEY")
+_OPT_IN = bool(os.getenv("GEO_RUN_LIVE_TESTS")) and bool(_API_KEY)
 
 
 @pytest.mark.skipif(not _OPT_IN, reason="Live-Tests nur mit GEO_RUN_LIVE_TESTS=1 + API-Key")
 def test_live_gemini_smoke() -> None:
-    adapter = GeminiEngineAdapter(api_key=os.environ["GOOGLE_API_KEY"])
+    adapter = GeminiEngineAdapter(api_key=_API_KEY)
     request = ProbeRequest(
         run_id="live-smoke",
         engine_id=EngineId.GEMINI,
