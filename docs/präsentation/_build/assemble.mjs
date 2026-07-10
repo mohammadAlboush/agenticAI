@@ -186,6 +186,16 @@ html,body{height:100%;background:#12140d;overflow:hidden;
 #scripthead button{appearance:none;border:0;background:transparent;color:#9aa88a;cursor:pointer;font-size:16px;line-height:1}
 #scripttext{font-size:clamp(15px,1.85vw,22px);line-height:1.55;color:#e8eddb;overflow:auto;
   font-family:"Inter","Segoe UI",system-ui,sans-serif;max-width:1100px}
+#videobox{position:fixed;inset:0;z-index:45;background:rgba(8,9,6,.94);
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+  display:flex;align-items:center;justify-content:center;padding:clamp(20px,3vw,48px)}
+#videobox.open{opacity:1;pointer-events:auto}
+#videobox video{width:100%;max-width:min(96vw,calc(92vh*16/9));max-height:92vh;
+  border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.6);background:#000}
+#vidClose{position:fixed;top:18px;right:22px;z-index:46;appearance:none;border:1px solid rgba(255,255,255,.18);
+  background:rgba(20,23,15,.8);color:#e9ecdf;font-size:20px;line-height:1;cursor:pointer;
+  width:40px;height:40px;border-radius:50%;transition:all .2s}
+#vidClose:hover{background:rgba(113,177,39,.2);border-color:rgba(143,212,127,.5)}
 </style>
 </head>
 <body>
@@ -200,10 +210,11 @@ html,body{height:100%;background:#12140d;overflow:hidden;
     <button id="next" title="Weiter (Leertaste)">›</button>
     <button id="scriptBtn" title="Skript (S)">≡</button>
     <button id="presBtn" title="Presenter · 2. Bildschirm (P)">⧉</button>
+    <button id="vidBtn" title="Demo-Video (V)">⏵</button>
     <button id="ovBtn" title="Übersicht (O)">▦</button>
     <button id="fsBtn" title="Vollbild (F)">⤢</button>
   </div>
-  <div id="help" class="chrome"><b>Leertaste</b> weiter · <b>←</b> zurück · <b>S</b> Skript · <b>P</b> Presenter · <b>O</b> Übersicht · <b>F</b> Vollbild</div>
+  <div id="help" class="chrome"><b>Leertaste</b> weiter · <b>←</b> zurück · <b>S</b> Skript · <b>P</b> Presenter · <b>V</b> Demo-Video · <b>O</b> Übersicht · <b>F</b> Vollbild</div>
   <div id="overview">
     <div id="ovhead">Übersicht · ${N} Folien</div>
     <div id="ovlist"></div>
@@ -211,6 +222,10 @@ html,body{height:100%;background:#12140d;overflow:hidden;
   <div id="script">
     <div id="scripthead"><span id="scriptnum"></span><button id="scriptClose" title="Schließen (S)">✕</button></div>
     <div id="scripttext"></div>
+  </div>
+  <div id="videobox">
+    <button id="vidClose" title="Schließen (V / Esc)">✕</button>
+    <video id="dvid" src="live-demo.mp4" controls playsinline preload="metadata"></video>
   </div>
 </div>
 <script>
@@ -296,7 +311,8 @@ function navKey(e){
   if(k==='o'||k==='O'){ toggleOverview(); return true; }
   if(k==='s'||k==='S'){ toggleScript(); return true; }
   if(k==='p'||k==='P'){ openPresenter(); return true; }
-  if(k==='Escape'){ if(ovOpen){toggleOverview(false);return true;} if(scriptOpen){toggleScript(false);return true;} }
+  if(k==='v'||k==='V'){ toggleVideo(); return true; }
+  if(k==='Escape'){ if(videoOpen){toggleVideo(false);return true;} if(ovOpen){toggleOverview(false);return true;} if(scriptOpen){toggleScript(false);return true;} }
   return false;
 }
 function frameKey(e){ if(!e.isTrusted) return; if(navKey(e)){ e.preventDefault(); e.stopImmediatePropagation(); } }
@@ -308,6 +324,16 @@ document.getElementById('ovBtn').onclick=()=>toggleOverview();
 document.getElementById('scriptBtn').onclick=()=>toggleScript();
 document.getElementById('scriptClose').onclick=()=>toggleScript(false);
 document.getElementById('presBtn').onclick=()=>openPresenter();
+const videobox=document.getElementById('videobox'), dvid=document.getElementById('dvid');
+let videoOpen=false;
+function toggleVideo(force){
+  videoOpen=(force===undefined)?!videoOpen:force;
+  videobox.classList.toggle('open',videoOpen);
+  if(videoOpen){ deck.classList.remove('idle'); try{ dvid.currentTime=0; dvid.play(); }catch(e){} }
+  else { try{ dvid.pause(); }catch(e){} try{frame.contentWindow.focus();}catch(e){} }
+}
+document.getElementById('vidBtn').onclick=()=>toggleVideo();
+document.getElementById('vidClose').onclick=()=>toggleVideo(false);
 function toggleFs(){ try{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); } else { document.exitFullscreen(); } }catch(e){} }
 function toggleOverview(force){
   ovOpen=(force===undefined)?!ovOpen:force;
