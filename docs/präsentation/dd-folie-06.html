@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Messen</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — NICHT ÄNDERN (Tokens + Basis + Engine).
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(46px,6.4vh,72px) clamp(54px,7vw,112px)}
+
+/* ---- Kopf ---- */
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.15vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:12px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:700;font-size:clamp(28px,3.9vw,48px);line-height:1.04;
+  letter-spacing:-.022em;color:var(--ink);max-width:20ch}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:18px 0 0}
+.head-wrap{flex:0 0 auto}
+
+/* ---- Körper ---- */
+.body{flex:1 1 auto;display:flex;min-height:0;gap:clamp(28px,4vw,64px);
+  align-items:center;margin-top:clamp(22px,3.4vh,40px)}
+.col{flex:1 1 0;min-width:0}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ===== Wiederverwendbare Komponenten ===== */
+/* Aufzählung mit grünem Marker */
+.points{list-style:none;display:flex;flex-direction:column;gap:clamp(12px,1.9vh,20px)}
+.points li{display:flex;gap:14px;align-items:flex-start;font-size:clamp(16px,1.72vw,21px);
+  line-height:1.42;color:var(--ink)}
+.points .mk{flex:0 0 auto;width:11px;height:11px;border-radius:3px;background:var(--acc);margin-top:.42em}
+.points b{font-weight:680}
+.points .s{display:block;font-size:.82em;color:var(--mut);margin-top:2px;font-weight:400}
+
+/* Karte */
+.card{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;
+  padding:clamp(18px,2.2vw,26px)}
+.card .ct{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:8px}
+
+/* Terminal-/Output-Panel (dunkel) — für Demo-Folien */
+.term{background:#14170f;border:1px solid #2b3120;border-radius:14px;overflow:hidden;
+  font-family:var(--mono);color:#e6ead9;box-shadow:0 14px 40px rgba(20,23,15,.22)}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 15px;background:#1b2013;
+  border-bottom:1px solid #2b3120}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term-bar .r{background:#CC352B}.term-bar .y{background:#E39B12}.term-bar .g{background:#3fae4a}
+.term-bar span{margin-left:8px;font-size:12px;color:#9aa88a;letter-spacing:.02em}
+.term-body{padding:16px 20px;font-size:clamp(12.5px,1.28vw,15.5px);line-height:1.62}
+.term .dim{color:#8b9678}.term .ac{color:#8fd47f}.term .am{color:#e6b24d}.term .rd{color:#e8756b}
+.term .hl{color:#fff;font-weight:600}
+
+/* Horizontaler Balken (z. B. Zitationsrate) */
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;
+  font-size:14px}
+.bar-row .lab{font-family:var(--mono);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{grid-column:1/-1;height:12px;background:var(--surface);border:1px solid var(--line-2);
+  border-radius:7px;overflow:hidden}
+.bar-fill{height:100%;background:var(--acc);border-radius:7px;width:0;
+  transition:width .9s var(--ease)}
+.bar-fill.flop{background:var(--metal)}
+[data-beat].show .bar-fill{width:var(--w,50%)}
+
+/* Kennzahl */
+.stat{font-family:var(--sans)}
+.stat .v{font-size:clamp(34px,5vw,60px);font-weight:720;line-height:1;letter-spacing:-.03em;color:var(--acc-deep)}
+.stat .k{font-size:14px;color:var(--mut);margin-top:6px;font-family:var(--mono);letter-spacing:.02em}
+
+/* dezenter Fußtext / Quelle */
+.foot{position:fixed;left:clamp(54px,7vw,112px);bottom:22px;font-family:var(--mono);
+  font-size:11px;color:var(--faint);letter-spacing:.02em}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">06 / 13</span> &nbsp;·&nbsp; 02 · LIVE-DEMO · MESSEN</div>
+    <h2>240 Probes → <span class="g">Top/Flop-Sichtbarkeit</span></h2>
+    <div class="rule"></div>
+    <p class="lead">4 Engine-Formate, 5 Proxy-IPs — Median statt personalisierter Sicht.</p>
+  </div>
+
+  <div class="body">
+
+    <!-- LINKS · Methodik: 4 Formate -> 1 Citation-Modell -> Median über 5 IPs -->
+    <div class="method-col">
+      <div class="m-lbl" data-beat="1">Mess-Methodik · Normalisierung</div>
+      <svg class="method" viewBox="0 0 320 300" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="mArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+            <path d="M0.5,1 L9,5 L0.5,9 Z"/>
+          </marker>
+        </defs>
+
+        <!-- Kanten: 4 Formate konvergieren auf 1 Modell -->
+        <g data-beat="1" class="sd4">
+          <path class="m-edge" d="M126,29 C152,29 148,112 176,112"/>
+          <path class="m-edge" d="M126,89 C152,89 148,118 176,118"/>
+          <path class="m-edge" d="M126,149 C152,149 148,126 176,126"/>
+          <path class="m-edge" d="M126,209 C152,209 148,132 176,132"/>
+        </g>
+
+        <!-- Engine-Chips -->
+        <g data-beat="1" class="sd0">
+          <rect class="m-chip" x="4" y="14" width="120" height="30" rx="8"/>
+          <g class="ic" transform="translate(14,22)"><rect x="0" y="0" width="13" height="13" rx="3"/><rect x="4" y="4" width="5" height="5" rx="1"/></g>
+          <text class="m-etxt" x="34" y="33">ENGINE 1</text>
+          <text class="m-fmt" x="116" y="33" text-anchor="end">{…}</text>
+        </g>
+        <g data-beat="1" class="sd1">
+          <rect class="m-chip" x="4" y="74" width="120" height="30" rx="8"/>
+          <g class="ic" transform="translate(14,82)"><rect x="0" y="0" width="13" height="13" rx="3"/><rect x="4" y="4" width="5" height="5" rx="1"/></g>
+          <text class="m-etxt" x="34" y="93">ENGINE 2</text>
+          <text class="m-fmt" x="116" y="93" text-anchor="end">[1]</text>
+        </g>
+        <g data-beat="1" class="sd2">
+          <rect class="m-chip" x="4" y="134" width="120" height="30" rx="8"/>
+          <g class="ic" transform="translate(14,142)"><rect x="0" y="0" width="13" height="13" rx="3"/><rect x="4" y="4" width="5" height="5" rx="1"/></g>
+          <text class="m-etxt" x="34" y="153">ENGINE 3</text>
+          <text class="m-fmt" x="116" y="153" text-anchor="end">&lt;a&gt;</text>
+        </g>
+        <g data-beat="1" class="sd3">
+          <rect class="m-chip" x="4" y="194" width="120" height="30" rx="8"/>
+          <g class="ic" transform="translate(14,202)"><rect x="0" y="0" width="13" height="13" rx="3"/><rect x="4" y="4" width="5" height="5" rx="1"/></g>
+          <text class="m-etxt" x="34" y="213">ENGINE 4</text>
+          <text class="m-fmt" x="116" y="213" text-anchor="end">"…"</text>
+        </g>
+
+        <!-- Citation-Modell -->
+        <g data-beat="1" class="sd5">
+          <rect class="m-cit" x="182" y="97" width="136" height="50" rx="10"/>
+          <g class="ic" transform="translate(193,110)"><rect x="0" y="0" width="11" height="13" rx="2"/><path d="M3,4 h5 M3,7 h5 M3,10 h3.5"/></g>
+          <text class="m-ctxt" x="211" y="118">Citation-Modell</text>
+          <text class="m-csub" x="211" y="133">1 SCHEMA</text>
+        </g>
+
+        <!-- Median über 5 IPs -->
+        <g data-beat="2">
+          <path class="m-conn" d="M253,149 C253,195 160,210 160,256"/>
+          <rect class="m-med" x="70" y="258" width="180" height="34" rx="9"/>
+          <g class="ic" transform="translate(88,275)">
+            <circle cx="0" cy="0" r="2.1"/><circle cx="9" cy="0" r="2.1"/>
+            <circle class="mid" cx="18" cy="0" r="2.6"/>
+            <circle cx="27" cy="0" r="2.1"/><circle cx="36" cy="0" r="2.1"/>
+          </g>
+          <text class="m-mtxt" x="140" y="280">5 IPs → Median</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- RECHTS · Terminal-Report mit In-Terminal-Balken -->
+    <div class="term-col">
+      <div class="term">
+        <div class="term-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>GEO-Sichtbarkeit</span></div>
+        <div class="term-body">
+          <div class="t-head" data-beat="1">
+            <div class="dim">=== GEO-Sichtbarkeit: it-sicherheit.de (run 9bd9b4a1) ===</div>
+            <div class="dim">Probes: 240 | Seiten: 8</div>
+          </div>
+
+          <div class="t-block top" data-beat="1">
+            <div class="t-label ac">TOP · am häufigsten zitiert</div>
+            <div class="t-row"><span class="idx dim">1.</span><span class="cnt hl">71×</span><span class="rate">rate <span class="hl">0.30</span></span><span class="bar"><i style="--w:100%;--d:.25s"></i></span><span class="path ac">/nis2-richtlinie</span></div>
+            <div class="t-row"><span class="idx dim">2.</span><span class="cnt hl">42×</span><span class="rate">rate <span class="hl">0.17</span></span><span class="bar"><i style="--w:56.7%;--d:.37s"></i></span><span class="path ac">/ransomware-schutz</span></div>
+            <div class="t-row"><span class="idx dim">3.</span><span class="cnt hl">39×</span><span class="rate">rate <span class="hl">0.16</span></span><span class="bar"><i style="--w:53.3%;--d:.49s"></i></span><span class="path ac">/zero-trust-architektur</span></div>
+          </div>
+
+          <div class="t-block flop" data-beat="2">
+            <div class="t-label am">FLOP · selten/nie zitiert</div>
+            <div class="t-row"><span class="idx dim">1.</span><span class="cnt hl">7×</span><span class="rate">rate <span class="hl">0.03</span></span><span class="bar"><i style="--w:10%;--d:.25s"></i></span><span class="path am">/security-awareness-training</span></div>
+            <div class="t-row"><span class="idx dim">2.</span><span class="cnt hl">17×</span><span class="rate">rate <span class="hl">0.07</span></span><span class="bar"><i style="--w:23.3%;--d:.37s"></i></span><span class="path am">/passwort-manager-vergleich</span></div>
+          </div>
+
+          <div class="t-foot dim" data-beat="2">rate = Anteil der 240 Antworten mit Zitat · Median über 5 IPs</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom-Caption -->
+  <div class="caption" data-beat="2">
+    <span class="dash"></span>
+    <span class="ct">30 % vs. 3 % — die <b>Flop-Seiten</b> sind der Arbeitsvorrat des nächsten Schritts.</span>
+  </div>
+
+  <div class="hint">Leertaste ▸ nächster Schritt</div>
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+/* Kanten-Token: Alias auf bestehende Metall-Farbe (kein neuer Hex-Wert) */
+:root{--node:var(--metal)}
+
+/* Einheitlicher kompakter Kopf */
+.stage{padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+.kicker{font-size:clamp(11px,1.1vw,13px);margin-bottom:8px}
+h2{font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;letter-spacing:-.018em;max-width:none}
+.rule{margin:12px 0 0}
+.lead{font-size:clamp(13px,1.45vw,16.5px);color:var(--mut);line-height:1.45;margin-top:8px;max-width:72ch}
+
+/* Bühne */
+.body{display:grid;grid-template-columns:minmax(280px,32%) 1fr;gap:clamp(26px,3.5vw,48px);
+  align-items:start;margin-top:clamp(10px,1.8vh,18px);min-height:0}
+.method-col,.term-col{min-width:0;align-self:center}
+
+/* ---- Methodik-Diagramm links ---- */
+.m-lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:10px}
+.method{width:100%;max-width:400px;height:auto;display:block}
+.m-chip{fill:var(--surface-2);stroke:var(--metal);stroke-width:1.25}
+.m-etxt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;fill:var(--mut);font-weight:600}
+.m-fmt{font-family:var(--mono);font-size:9.5px;fill:var(--faint)}
+.m-edge{fill:none;stroke:var(--node);stroke-width:1.6;marker-end:url(#mArrow)}
+#mArrow path{fill:var(--node)}
+.m-cit{fill:var(--surface-2);stroke:var(--acc-deep);stroke-width:2}
+.m-ctxt{font-family:var(--sans);font-weight:660;font-size:13px;letter-spacing:-.01em;fill:var(--ink)}
+.m-csub{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;fill:var(--mut)}
+.m-med{fill:var(--acc-soft)}
+.m-mtxt{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.04em;fill:var(--acc-deep2)}
+.m-conn{fill:none;stroke:var(--metal);stroke-width:1.4;stroke-dasharray:4 3}
+.ic{stroke:#33352E;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ic .mid{fill:var(--acc-deep);stroke:none}
+
+/* Stagger innerhalb Beat 1 (Muster folie-09: 250 + k*140) */
+.sd0{transition-delay:0s}
+.sd1{transition-delay:.1s}
+.sd2{transition-delay:.2s}
+.sd3{transition-delay:.3s}
+.sd4{transition-delay:.42s}
+.sd5{transition-delay:.56s}
+
+/* ---- Terminal-Report rechts ---- */
+.term-body{padding:20px 24px;line-height:1.8}
+.t-head{padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid #2b3120}
+.t-head .dim{line-height:1.55}
+.t-block + .t-block{margin-top:20px}
+.t-label{font-size:.82em;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+
+/* Zeilen-Grid: idx · count · rate · Balken · Pfad */
+.t-row{display:grid;grid-template-columns:2.2ch 4.5ch 8.5ch minmax(90px,1fr) 28ch;
+  column-gap:14px;align-items:baseline;line-height:1.88;white-space:nowrap}
+.t-row .idx{text-align:right}
+.t-row .cnt{text-align:right}
+.t-row .rate{color:#8b9678}
+.t-row .path{overflow:hidden;text-overflow:ellipsis}
+
+/* In-Terminal-Balken: Kluft 0.30 vs. 0.03 körperlich sichtbar */
+.t-row .bar{align-self:center;display:block;height:8px;border-radius:5px;
+  background:rgba(255,255,255,.07);overflow:hidden}
+.t-row .bar i{display:block;height:100%;width:0;border-radius:5px;
+  transition:width .9s var(--ease) var(--d,0s)}
+.t-block.top .bar i{background:#8fd47f;box-shadow:0 0 8px rgba(143,212,127,.35)}
+.t-block.flop .bar i{background:#e6b24d;box-shadow:0 0 8px rgba(230,178,77,.3)}
+[data-beat].show .bar i{width:var(--w,0%)}
+
+/* Legende im Terminal */
+.t-foot{margin-top:16px;padding-top:12px;border-top:1px solid #2b3120;font-size:.82em}
+
+/* ---- Bottom-Caption ---- */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px)}
+.caption .dash{flex:0 0 auto;width:26px;height:3px;background:var(--acc);border-radius:2px}
+.caption .ct{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink)}
+.caption .ct b{color:#9a6a16;font-weight:700}
+
+/* ---- Hint ---- */
+.hint{position:fixed;left:0;right:0;bottom:6px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=2;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+</body>
+</html>

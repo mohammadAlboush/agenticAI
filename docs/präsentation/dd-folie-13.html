@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Danke</title>
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+.stage{position:fixed;inset:0;display:grid;place-items:center}
+
+/* ---- Bühne: Loop-Reprise (Bookend zu Folie 01) ---- */
+.scene-wrap{width:min(520px,52vh);transition:transform .85s var(--ease);will-change:transform}
+.stage.b3 .scene-wrap{transform:translateX(-45%) scale(.97)}
+.scene{display:block;width:100%;height:auto;overflow:visible}
+
+/* Ring zeichnet sich (Beat 1) */
+.ring{fill:none;stroke:var(--acc);stroke-width:3;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset 1.2s var(--ease)}
+.stage.b1 .ring{stroke-dashoffset:0}
+
+/* Haken im Zentrum: Bounding-Box exakt um (240,240) konstruiert, zeichnet nach dem Ring */
+.core-check{fill:none;stroke:var(--acc-deep);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset .6s var(--ease) .6s}
+.stage.b1 .core-check{stroke-dashoffset:0}
+
+/* Knoten poppen mit Wort-Labels (Beat 2, Stagger 90ms) */
+.node{opacity:0;transform:scale(.5);transform-box:fill-box;transform-origin:center;
+  transition:opacity .4s ease,transform .5s var(--ease)}
+.stage.b2 .node{opacity:1;transform:none}
+.stage.b2 .n1{transition-delay:0s}.stage.b2 .n2{transition-delay:.09s}
+.stage.b2 .n3{transition-delay:.18s}.stage.b2 .n4{transition-delay:.27s}
+.stage.b2 .n5{transition-delay:.36s}
+.node-disc{fill:var(--acc-soft);stroke:var(--acc);stroke-width:2;transition:stroke .35s ease}
+.node-num{font-family:var(--mono);font-size:17px;font-weight:700;fill:var(--acc-deep);
+  text-anchor:middle;dominant-baseline:central}
+.node-word{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.04em;fill:var(--acc-deep)}
+
+/* Belohnung (Beat 3): Lock-Welle im Uhrzeigersinn, Disc-Stroke rastet auf Tiefgrün */
+@keyframes lock{0%{transform:scale(1)}30%{transform:scale(1.14)}100%{transform:scale(1)}}
+.stage.b3 .node{animation:lock .5s var(--ease) both}
+.stage.b3 .n1{animation-delay:0s}.stage.b3 .n2{animation-delay:.09s}
+.stage.b3 .n3{animation-delay:.18s}.stage.b3 .n4{animation-delay:.27s}
+.stage.b3 .n5{animation-delay:.36s}
+.stage.b3 .node-disc{stroke:var(--acc-deep)}
+.stage.b3 .n1 .node-disc{transition-delay:.05s}.stage.b3 .n2 .node-disc{transition-delay:.14s}
+.stage.b3 .n3 .node-disc{transition-delay:.23s}.stage.b3 .n4 .node-disc{transition-delay:.32s}
+.stage.b3 .n5 .node-disc{transition-delay:.41s}
+
+/* Pulse läuft die Runde */
+.pulse{fill:var(--acc);opacity:0;filter:drop-shadow(0 0 6px rgba(113,177,39,.9))}
+.stage.b2 .pulse{opacity:1;transition:opacity .3s ease .4s}
+
+/* ---- Danke-Block: schwebt rechts ein, spiegelbildlich zur Titelfolie ---- */
+.title-block{position:absolute;right:5vw;top:50%;width:min(46vw,540px);text-align:left;
+  opacity:0;transform:translateY(-50%) translateX(16px);
+  transition:opacity .7s var(--ease) .12s,transform .7s var(--ease) .12s}
+.stage.b3 .title-block{opacity:1;transform:translateY(-50%) translateX(0)}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:14px}
+h1{font-weight:700;font-size:clamp(38px,5vw,64px);line-height:1.02;letter-spacing:-.03em;white-space:nowrap}
+h1 .g{color:var(--acc-deep)}
+.accent-rule{width:60px;height:4px;background:var(--acc);border-radius:3px;margin:18px 0 16px}
+.lead{font-size:clamp(15px,1.6vw,19px);color:var(--mut);line-height:1.5;margin-bottom:20px;max-width:52ch}
+.contact{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;
+  font-family:var(--mono);font-size:12px;color:var(--faint)}
+.contact b{color:var(--mut);font-weight:600}
+.contact .pill{background:var(--surface);border-radius:999px;padding:4px 12px;color:var(--mut)}
+.contact .grp{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+
+.hint{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none}
+.stage.b3 .hint{opacity:0}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="scene-wrap">
+    <!-- Leitmotiv-Reprise: derselbe Orbit wie Folie 01, jetzt mit zurückgekehrten Wort-Labels
+         und einem konstruierten, optisch zentrierten Haken (BBox exakt um 240,240) -->
+    <svg class="scene" viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <circle class="ring" cx="240" cy="240" r="150" pathLength="100" transform="rotate(-90 240 240)"/>
+      <path id="orbit12" d="M 240 90 A 150 150 0 1 1 239.9 90" fill="none" stroke="none"/>
+      <circle class="pulse" r="6"><animateMotion dur="3.6s" repeatCount="indefinite" begin="indefinite" rotate="auto"><mpath xlink:href="#orbit12"/></animateMotion></circle>
+      <!-- Haken im Zentrum: M172,244 L218,290 L308,190 → BBox 172..308 / 190..290, Mitte (240,240) -->
+      <path class="core-check" d="M172,244 L218,290 L308,190" pathLength="100"/>
+      <!-- 5 Knoten auf r=150, alle 72° ab 12 Uhr, mit radialen Wort-Labels -->
+      <g class="node n1">
+        <circle class="node-disc" cx="240" cy="90" r="24"/>
+        <text class="node-num" x="240" y="90">1</text>
+        <text class="node-word" x="240" y="54" text-anchor="middle">MESSEN</text>
+      </g>
+      <g class="node n2">
+        <circle class="node-disc" cx="382.7" cy="193.6" r="24"/>
+        <text class="node-num" x="382.7" y="193.6">2</text>
+        <text class="node-word" x="414" y="190" text-anchor="start">AUDITIEREN</text>
+      </g>
+      <g class="node n3">
+        <circle class="node-disc" cx="328.2" cy="361.4" r="24"/>
+        <text class="node-num" x="328.2" y="361.4">3</text>
+        <text class="node-word" x="350" y="392" text-anchor="start">FIXEN</text>
+      </g>
+      <g class="node n4">
+        <circle class="node-disc" cx="151.8" cy="361.4" r="24"/>
+        <text class="node-num" x="151.8" y="361.4">4</text>
+        <text class="node-word" x="130" y="392" text-anchor="end">RE-PROBE</text>
+      </g>
+      <g class="node n5">
+        <circle class="node-disc" cx="97.3" cy="193.6" r="24"/>
+        <text class="node-num" x="97.3" y="193.6">5</text>
+        <text class="node-word" x="66" y="190" text-anchor="end">LERNEN</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="title-block">
+    <div class="eyebrow">geo-audit-loop · der Regelkreis ist geschlossen</div>
+    <h1><span class="g">Danke.</span> Fragen?</h1>
+    <div class="accent-rule"></div>
+    <p class="lead">Messen · Auditieren · Fixen · Re-Probe · Lernen — jeder Lauf macht den nächsten besser.</p>
+    <div class="contact"><b>Mohammad Alboush</b><span class="grp"><span>·</span><span class="pill">kontakt@alboush-elektro.de</span></span><span class="grp"><span>·</span><span>Westfälische Hochschule</span></span></div>
+  </div>
+
+  <div class="hint">Leertaste ▸ Ende</div>
+</div>
+<script>
+(function(){
+  const stage=document.getElementById('stage'); const MAX=3; let beat=0, timer=null;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+  function startPulse(){const a=document.querySelector('animateMotion'); if(a){try{a.beginElement();}catch(e){}}}
+  function schedule(){clearTimeout(timer); const d={1:1350,2:1200}[beat]; if(beat<MAX&&d) timer=setTimeout(()=>go(beat+1),d);}
+  function go(n){ if(n<1||n>MAX||n<=beat) return; beat=n; stage.classList.add('b'+n); if(n===2) startPulse(); if(n>=MAX) stage.classList.add('finished'); schedule(); }
+  function advance(){ clearTimeout(timer); if(beat<MAX) go(beat+1); }
+  window.addEventListener('keydown',function(e){ if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){e.preventDefault();advance();} else if(e.key==='r'||e.key==='R'){location.reload();} });
+  window.addEventListener('click',advance);
+  if(reduced||forceFinal){ stage.classList.add('b1','b2','b3','finished'); const p=document.querySelector('.pulse'); if(p) p.style.display='none'; beat=MAX; } else { setTimeout(()=>go(1),450); }
+})();
+</script>
+</body>
+</html>

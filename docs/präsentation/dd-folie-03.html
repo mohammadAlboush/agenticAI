@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Lösung</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — NICHT ÄNDERN (Tokens + Basis + Engine).
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(46px,6.4vh,72px) clamp(54px,7vw,112px)}
+
+/* ---- Kopf ---- */
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.15vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:12px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:700;font-size:clamp(28px,3.9vw,48px);line-height:1.04;
+  letter-spacing:-.022em;color:var(--ink);max-width:20ch}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:18px 0 0}
+.head-wrap{flex:0 0 auto}
+
+/* ---- Körper ---- */
+.body{flex:1 1 auto;display:flex;min-height:0;gap:clamp(28px,4vw,64px);
+  align-items:center;margin-top:clamp(22px,3.4vh,40px)}
+.col{flex:1 1 0;min-width:0}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ===== Wiederverwendbare Komponenten ===== */
+/* Aufzählung mit grünem Marker */
+.points{list-style:none;display:flex;flex-direction:column;gap:clamp(12px,1.9vh,20px)}
+.points li{display:flex;gap:14px;align-items:flex-start;font-size:clamp(16px,1.72vw,21px);
+  line-height:1.42;color:var(--ink)}
+.points .mk{flex:0 0 auto;width:11px;height:11px;border-radius:3px;background:var(--acc);margin-top:.42em}
+.points b{font-weight:680}
+.points .s{display:block;font-size:.82em;color:var(--mut);margin-top:2px;font-weight:400}
+
+/* Karte */
+.card{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;
+  padding:clamp(18px,2.2vw,26px)}
+.card .ct{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:8px}
+
+/* Terminal-/Output-Panel (dunkel) — für Demo-Folien */
+.term{background:#14170f;border:1px solid #2b3120;border-radius:14px;overflow:hidden;
+  font-family:var(--mono);color:#e6ead9;box-shadow:0 14px 40px rgba(20,23,15,.22)}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 15px;background:#1b2013;
+  border-bottom:1px solid #2b3120}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term-bar .r{background:#CC352B}.term-bar .y{background:#E39B12}.term-bar .g{background:#3fae4a}
+.term-bar span{margin-left:8px;font-size:12px;color:#9aa88a;letter-spacing:.02em}
+.term-body{padding:16px 20px;font-size:clamp(12.5px,1.28vw,15.5px);line-height:1.62}
+.term .dim{color:#8b9678}.term .ac{color:#8fd47f}.term .am{color:#e6b24d}.term .rd{color:#e8756b}
+.term .hl{color:#fff;font-weight:600}
+
+/* Horizontaler Balken (z. B. Zitationsrate) */
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;
+  font-size:14px}
+.bar-row .lab{font-family:var(--mono);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{grid-column:1/-1;height:12px;background:var(--surface);border:1px solid var(--line-2);
+  border-radius:7px;overflow:hidden}
+.bar-fill{height:100%;background:var(--acc);border-radius:7px;width:0;
+  transition:width .9s var(--ease)}
+.bar-fill.flop{background:var(--metal)}
+[data-beat].show .bar-fill{width:var(--w,50%)}
+
+/* Kennzahl */
+.stat{font-family:var(--sans)}
+.stat .v{font-size:clamp(34px,5vw,60px);font-weight:720;line-height:1;letter-spacing:-.03em;color:var(--acc-deep)}
+.stat .k{font-size:14px;color:var(--mut);margin-top:6px;font-family:var(--mono);letter-spacing:.02em}
+
+/* dezenter Fußtext / Quelle */
+.foot{position:fixed;left:clamp(54px,7vw,112px);bottom:22px;font-family:var(--mono);
+  font-size:11px;color:var(--faint);letter-spacing:.02em}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">03 / 13</span> &nbsp;·&nbsp; 01 · PROBLEM &amp; LÖSUNG</div>
+    <h2>Ein geschlossener, selbstlernender <span class="g">Regelkreis</span></h2>
+    <div class="rule"></div>
+    <div class="lead">Fünf spezialisierte Agenten, ein Regelkreis — das zeige ich gleich live.</div>
+  </div>
+
+  <div class="body">
+    <!-- Zonen-Pipeline · viewBox 0 0 1160 470 -->
+    <svg class="loopsvg" viewBox="0 0 1160 470" preserveAspectRatio="xMidYMid meet"
+         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img"
+         aria-label="Fünf-Stationen-Regelkreis in vier Phasen: Messen, Verstehen, Handeln, Lernen — der Effekt fließt zurück ins Gedächtnis">
+
+      <defs>
+        <marker id="fa" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9"
+                markerUnits="userSpaceOnUse" orient="auto">
+          <path d="M0.5,0.8 L9,5 L0.5,9.2 Z" fill="var(--metal)"/>
+        </marker>
+      </defs>
+
+      <!-- ===== ZONEN-BÄNDER (Phasen) ===== -->
+      <g class="zb zb1" data-beat="1">
+        <rect x="2" y="12" width="224" height="280" rx="12" fill="var(--acc-deep)" fill-opacity="0.06" stroke="var(--line-2)" stroke-width="1"/>
+        <rect x="68" y="23" width="92" height="21" rx="10.5" fill="var(--surface-2)" stroke="var(--line-2)" stroke-width="1"/>
+        <text class="zlab" x="114" y="37.5">MESSEN</text>
+      </g>
+      <g class="zb zb2" data-beat="1">
+        <rect x="246" y="12" width="224" height="280" rx="12" fill="var(--surface)" stroke="var(--line-2)" stroke-width="1"/>
+        <rect x="302" y="23" width="112" height="21" rx="10.5" fill="var(--surface-2)" stroke="var(--line-2)" stroke-width="1"/>
+        <text class="zlab" x="358" y="37.5">VERSTEHEN</text>
+      </g>
+      <g class="zb zb3" data-beat="1">
+        <rect x="490" y="12" width="224" height="280" rx="12" fill="var(--surface)" stroke="var(--line-2)" stroke-width="1"/>
+        <rect x="552" y="23" width="100" height="21" rx="10.5" fill="var(--surface-2)" stroke="var(--line-2)" stroke-width="1"/>
+        <text class="zlab" x="602" y="37.5">HANDELN</text>
+      </g>
+      <g class="zb zb4" data-beat="1">
+        <rect x="734" y="12" width="424" height="280" rx="12" fill="var(--acc-deep)" fill-opacity="0.06" stroke="var(--line-2)" stroke-width="1"/>
+        <rect x="900" y="23" width="92" height="21" rx="10.5" fill="var(--surface-2)" stroke="var(--line-2)" stroke-width="1"/>
+        <text class="zlab" x="946" y="37.5">LERNEN</text>
+      </g>
+
+      <!-- ===== VORWÄRTS-KANTEN ===== -->
+      <g class="fedges" data-beat="1">
+        <line x1="202" y1="190" x2="266" y2="190" stroke="var(--metal)" stroke-width="2.2" stroke-linecap="round" marker-end="url(#fa)"/>
+        <line x1="446" y1="190" x2="510" y2="190" stroke="var(--metal)" stroke-width="2.2" stroke-linecap="round" marker-end="url(#fa)"/>
+        <line x1="690" y1="190" x2="746" y2="190" stroke="var(--metal)" stroke-width="2.2" stroke-linecap="round" marker-end="url(#fa)"/>
+        <line x1="926" y1="190" x2="962" y2="190" stroke="var(--metal)" stroke-width="2.2" stroke-linecap="round" marker-end="url(#fa)"/>
+      </g>
+
+      <!-- ===== RÜCKFÜHRUNG (Held der Folie) ===== -->
+      <g class="return" data-beat="2">
+        <path class="return-path" pathLength="100"
+              d="M1054,240 V400 Q1054,420 1034,420 H134 Q114,420 114,400 V256"/>
+        <path class="return-arrow" d="M114,242 L105.5,257 L122.5,257 Z"/>
+      </g>
+
+      <!-- ===== DATENPAKET (Endlos-Runde, unsichtbarer Gesamtpfad) ===== -->
+      <path id="looppath" fill="none" stroke="none"
+            d="M114,190 H1054 V400 Q1054,420 1034,420 H134 Q114,420 114,400 V190"/>
+      <circle class="loop-packet" id="pk" r="4.5">
+        <animateMotion id="pkm" dur="7s" begin="indefinite" repeatCount="indefinite">
+          <mpath xlink:href="#looppath"/>
+        </animateMotion>
+      </circle>
+
+      <!-- ===== STATIONEN (Baustein-Karten 176×100) ===== -->
+      <!-- 1 Messen -->
+      <g class="st s1" data-beat="1" data-title="Sampler" data-sub="ProbeResult"
+         data-desc="Feuert die 240 Probes ab — Median über fünf Proxy-IPs statt personalisierter Sicht.">
+        <rect x="26" y="142" width="176" height="100" rx="14" fill="var(--ink)" opacity="0.05"/>
+        <rect class="stbg" x="26" y="140" width="176" height="100" rx="14" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.4"/>
+        <text class="num" x="48" y="182">1</text>
+        <text class="ttl" x="48" y="208">Messen</text>
+        <text class="ssub" x="48" y="227">240 Probes</text>
+        <g class="mi" stroke="#33352E" fill="none" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="170" cy="163" r="7"/>
+          <path d="M170,152.5 V156 M170,170 V173.5 M159.5,163 H163 M177,163 H180.5" stroke-width="1.4"/>
+          <circle cx="170" cy="163" r="1.9" fill="#33352E" stroke="none"/>
+        </g>
+      </g>
+      <!-- 2 Auditieren -->
+      <g class="st s2" data-beat="1" data-title="GEO-Auditor" data-sub="AuditFinding"
+         data-desc="Hält die Flop-Seiten gegen Best-Practice-Templates und bewertet Schwachstellen.">
+        <rect x="270" y="142" width="176" height="100" rx="14" fill="var(--ink)" opacity="0.05"/>
+        <rect class="stbg" x="270" y="140" width="176" height="100" rx="14" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.4"/>
+        <text class="num" x="292" y="182">2</text>
+        <text class="ttl" x="292" y="208">Auditieren</text>
+        <text class="ssub" x="292" y="227">Findings</text>
+        <g class="mi" stroke="#33352E" fill="none" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="412" cy="161" r="6"/>
+          <path d="M409.5,159 H414.5 M409.5,162.5 H413" stroke-width="1.2"/>
+          <path d="M416.4,165.4 L421.8,170.8" stroke-width="1.75"/>
+        </g>
+      </g>
+      <!-- 3 Fixen -->
+      <g class="st s3" data-beat="1" data-title="Fix-Agent" data-sub="Patch"
+         data-desc="Schlägt konkrete Patches vor — deployt wird nur nach menschlicher Freigabe.">
+        <rect x="514" y="142" width="176" height="100" rx="14" fill="var(--ink)" opacity="0.05"/>
+        <rect class="stbg" x="514" y="140" width="176" height="100" rx="14" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.4"/>
+        <text class="num" x="536" y="182">3</text>
+        <text class="ttl" x="536" y="208">Fixen</text>
+        <text class="ssub" x="536" y="227">HITL-Gate</text>
+        <g class="mi" stroke="#33352E" fill="none" stroke-width="1.6" stroke-linecap="round">
+          <path d="M645.5,156 a4.8,4.8 0 1 0 6.8,6.8"/>
+          <path d="M645.5,156 l1.9,2 M652.3,162.8 l-2,-1.9" stroke-width="1.3"/>
+          <path d="M652.5,163 L659,169.5" stroke-width="2.1"/>
+        </g>
+      </g>
+      <!-- 4 Re-Probe -->
+      <g class="st s4" data-beat="1" data-title="Sampler / Re-Probe" data-sub="ProbeResult"
+         data-desc="Misst nach dem Deploy denselben Matrix-Schnitt erneut.">
+        <rect x="750" y="142" width="176" height="100" rx="14" fill="var(--ink)" opacity="0.05"/>
+        <rect class="stbg" x="750" y="140" width="176" height="100" rx="14" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.4"/>
+        <text class="num" x="772" y="182">4</text>
+        <text class="ttl" x="772" y="208">Re-Probe</text>
+        <text class="ssub" x="772" y="227">Effekt</text>
+        <g class="mi" stroke="#33352E" fill="none" stroke-width="1.6" stroke-linecap="round">
+          <path d="M893.5,161 a7,7 0 0 1 12.6,2.4"/>
+          <path d="M907.6,159.2 l-1.4,4.4 -4.3,-1.4" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M906.5,168 a7,7 0 0 1 -12.6,-2.4"/>
+          <path d="M892.4,169.8 l1.4,-4.4 4.3,1.4" stroke-width="1.3" stroke-linejoin="round"/>
+        </g>
+      </g>
+      <!-- 5 Lernen -->
+      <g class="st s5" data-beat="1" data-title="Effekt-Analyst" data-sub="EffectHypothesis"
+         data-desc="Baut aus Vorher/Nachher eine strukturierte Hypothese fürs Gedächtnis.">
+        <rect x="966" y="142" width="176" height="100" rx="14" fill="var(--ink)" opacity="0.05"/>
+        <rect class="stbg" x="966" y="140" width="176" height="100" rx="14" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.4"/>
+        <text class="num" x="988" y="182">5</text>
+        <text class="ttl" x="988" y="208">Lernen</text>
+        <text class="ssub" x="988" y="227">Gedächtnis</text>
+        <g class="mi" stroke="#33352E" fill="none" stroke-width="1.5" stroke-linecap="round">
+          <ellipse cx="1110" cy="156.5" rx="7" ry="2.7"/>
+          <path d="M1103,156.5 V169.5 M1117,156.5 V169.5"/>
+          <path d="M1103,169.5 a7,2.7 0 0 0 14,0"/>
+          <path d="M1103,163 a7,2.7 0 0 0 14,0" stroke-width="1.2"/>
+        </g>
+      </g>
+
+      <!-- ===== HITL-GATE-BADGE (Station 3, oben rechts) ===== -->
+      <g class="gate" data-beat="1">
+        <circle cx="690" cy="140" r="11" fill="var(--acc-soft)" stroke="var(--acc-deep)" stroke-width="2"/>
+        <g stroke="var(--acc-deep)" fill="none" stroke-linecap="round">
+          <path d="M686.6,140 V136.4 M689,139.6 V134.6 M691.4,139.6 V134.8 M693.6,140 V136.4" stroke-width="1.3"/>
+          <path d="M686.6,139.8 q0,4.2 3.6,4.2 q3.4,0 3.4,-4" stroke-width="1.3"/>
+        </g>
+        <text class="hitl" x="690" y="161.5">HITL</text>
+      </g>
+
+      <!-- ===== PILL AUF DER RÜCKFÜHRUNG ===== -->
+      <g class="rpill" data-beat="2">
+        <rect x="458" y="407" width="252" height="26" rx="8" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1"/>
+        <text class="rlab" x="584" y="424">EffectHypothesis → ins Gedächtnis</text>
+      </g>
+    </svg>
+
+    <div class="tip" id="tip"><div class="tt"></div><div class="ts"></div><div class="td"></div></div>
+  </div>
+
+  <div class="caption" data-beat="2">
+    <span class="cdash"></span>
+    <span class="ctxt">Schritt 5 schließt den Kreis: der Effekt fließt zurück — <b>jeder Lauf macht den nächsten besser</b>.</span>
+  </div>
+
+  <div class="hint">Leertaste / Klick ▸ nächster Schritt</div>
+
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+/* --- Einheitlicher Kopf (Demo-Day-Regel) --- */
+.stage{padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+.kicker{font-size:clamp(11px,1.1vw,13px);margin-bottom:8px}
+h2{font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;letter-spacing:-.018em;max-width:none}
+.rule{margin:12px 0 0}
+.lead{font-size:clamp(13px,1.45vw,16.5px);color:var(--mut);line-height:1.45;margin-top:8px;max-width:72ch}
+.body{margin-top:clamp(10px,1.8vh,18px);justify-content:center;position:relative}
+.loopsvg{width:100%;height:100%;display:block}
+
+/* --- SVG-Typo --- */
+.zlab{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.09em;fill:var(--mut);text-anchor:middle}
+.num{font-family:var(--mono);font-size:30px;font-weight:700;fill:var(--acc-deep)}
+.ttl{font-family:var(--sans);font-size:19px;font-weight:680;fill:var(--ink);letter-spacing:-.01em}
+.ssub{font-family:var(--mono);font-size:11.5px;fill:var(--mut);letter-spacing:.01em}
+.hitl{font-family:var(--mono);font-size:8.5px;font-weight:700;fill:var(--acc-deep);letter-spacing:.08em;text-anchor:middle}
+.rlab{font-family:var(--mono);font-size:11.5px;font-weight:600;fill:var(--acc-deep);text-anchor:middle}
+
+/* --- Beat 1: Bänder → Stationen → Kanten → Gate (Stagger) --- */
+.zb{transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.zb1{transition-delay:0s}.zb2{transition-delay:.09s}.zb3{transition-delay:.18s}.zb4{transition-delay:.27s}
+
+.st{transform:scale(.82);transform-box:fill-box;transform-origin:center;cursor:pointer;
+  transition:opacity .4s ease,transform .45s var(--ease)}
+.s1{transition-delay:.30s}.s2{transition-delay:.41s}.s3{transition-delay:.52s}
+.s4{transition-delay:.63s}.s5{transition-delay:.74s}
+.stbg{transition:stroke .2s ease,stroke-width .2s ease,filter .2s ease}
+.st.hl .stbg{stroke:var(--acc-deep);stroke-width:2.4;filter:drop-shadow(0 0 6px rgba(113,177,39,.4))}
+
+.fedges{transform:none;transition:opacity .6s ease 1.05s}
+.gate{transform:scale(.6);transform-box:fill-box;transform-origin:center;
+  transition:opacity .45s ease 1.25s,transform .5s var(--ease) 1.25s}
+
+/* --- Beat 2: Rückführung zeichnet sich dick von 5 nach 1 --- */
+.return{transform:none;transition:opacity .2s ease}
+.return-path{stroke:var(--acc);stroke-width:4.5;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset 1.3s var(--ease)}
+.return.show .return-path{stroke-dashoffset:0}
+.return-arrow{fill:var(--acc);opacity:0;transition:opacity .35s ease 1.12s}
+.return.show .return-arrow{opacity:1}
+.rpill{transform:none;transition-delay:.6s}
+
+/* --- Datenpaket (Start per Beat-Hook) --- */
+.loop-packet{opacity:0;fill:var(--acc);filter:drop-shadow(0 0 4px rgba(113,177,39,.85))}
+.loop-packet.show{opacity:1;transition:opacity .4s ease}
+
+/* --- Tooltip (Hover, Muster folie-05 — Farben aus der .term-Palette) --- */
+.tip{position:fixed;z-index:20;max-width:260px;pointer-events:none;
+  background:#14170f;color:#e6ead9;border:1px solid #2b3120;border-radius:11px;padding:10px 13px;
+  box-shadow:0 10px 30px rgba(20,23,15,.28);opacity:0;transform:translate(-50%,-100%) translateY(-8px);
+  transition:opacity .16s ease,transform .16s ease}
+.tip.on{opacity:1;transform:translate(-50%,-100%) translateY(-12px)}
+.tip .tt{font-family:var(--sans);font-weight:700;font-size:13.5px;margin-bottom:2px;color:#fff}
+.tip .ts{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:#8fd47f;margin-bottom:6px}
+.tip .td{font-size:12px;line-height:1.4;color:#9aa88a}
+.tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:#14170f}
+
+/* --- Bottom-Caption --- */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px);opacity:0;transform:translateY(10px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease);transition-delay:.25s}
+.cdash{flex:0 0 auto;width:26px;height:3px;background:var(--acc);border-radius:2px}
+.ctxt{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink)}
+.ctxt b{color:var(--acc-deep);font-weight:700}
+
+/* --- Hint --- */
+.hint{position:fixed;left:0;right:0;bottom:7px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  .loop-packet{display:none}
+}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=2;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+
+<script>
+/* ===== Folien-Zusatz: Paket-Hook (Beat 2) + Hover-Tooltips ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const tip=document.getElementById('tip');
+  const cards=[...document.querySelectorAll('.st')];
+  const pk=document.getElementById('pk');
+  const pkm=document.getElementById('pkm');
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  /* Datenpaket startet mit Beat 2 (nach dem Draw-on der Rückführung) */
+  let started=false, timer=null;
+  function syncPacket(){
+    const on=stage.classList.contains('b2');
+    if(on&&!started){
+      started=true;
+      if(reduced||forceFinal){ pk.style.display='none'; return; }
+      timer=setTimeout(function(){
+        pk.classList.add('show');
+        try{ pkm.beginElement(); }catch(e){}
+      },1200);
+    }else if(!on&&started){
+      started=false;
+      if(timer){ clearTimeout(timer); timer=null; }
+      pk.classList.remove('show');
+    }
+  }
+  new MutationObserver(syncPacket).observe(stage,{attributes:true,attributeFilter:['class']});
+  syncPacket();
+
+  /* Hover-Tooltips (nur hover, kein Pin) — Zusatzinfo für Q&A */
+  function showTip(card){
+    tip.querySelector('.tt').textContent=card.dataset.title;
+    tip.querySelector('.ts').textContent=card.dataset.sub;
+    tip.querySelector('.td').textContent=card.dataset.desc;
+    const r=card.getBoundingClientRect();
+    tip.style.left=(r.left+r.width/2)+'px';
+    tip.style.top=(r.top)+'px';
+    tip.classList.add('on');
+    card.classList.add('hl');
+  }
+  function hideTip(card){ tip.classList.remove('on'); if(card) card.classList.remove('hl'); }
+
+  cards.forEach(function(card){
+    card.addEventListener('mouseenter',function(){ if(card.classList.contains('show')) showTip(card); });
+    card.addEventListener('mouseleave',function(){ hideTip(card); });
+    /* Klick auf Karte schaltet NICHT weiter (Tooltip ist Zusatz) */
+    card.addEventListener('click',function(ev){
+      ev.stopPropagation();
+      if(card.classList.contains('show')) showTip(card);
+    });
+  });
+})();
+</script>
+</body>
+</html>

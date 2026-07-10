@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Lern-Hebel</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — Tokens + Basis + Engine.
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+
+/* ---- Kopf (einheitlich, kompakt) ---- */
+.head-wrap{flex:0 0 auto}
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--acc-deep);margin-bottom:8px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;color:var(--ink);white-space:nowrap}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:12px 0 0}
+
+/* ---- Körper ---- */
+.body{flex:1 1 auto;min-height:0;margin-top:clamp(10px,1.8vh,18px);
+  display:grid;grid-template-columns:minmax(300px,42%) 1fr;
+  gap:clamp(26px,3.5vw,48px);align-items:center}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ===== Wiederverwendbare Komponenten ===== */
+.points{list-style:none;display:flex;flex-direction:column;gap:clamp(12px,2vh,22px)}
+.points li{display:flex;gap:13px;align-items:flex-start;font-size:clamp(15px,1.6vw,19px);
+  line-height:1.42;color:var(--ink)}
+.points b{font-weight:680}
+.points .s{display:block;font-size:.84em;color:var(--mut);margin-top:3px;font-weight:400}
+.points .s .m{font-family:var(--mono);font-size:.92em;color:var(--acc-deep);font-weight:600}
+
+/* Bottom-Caption */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px)}
+.caption .dash{flex:0 0 auto;width:26px;height:3px;background:var(--acc);border-radius:2px}
+.caption .ct{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink)}
+.caption .ct b{color:var(--acc-deep);font-weight:700}
+
+.hint{position:fixed;left:0;right:0;bottom:6px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+  #pk-code,#pk-prompt{display:none}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">11 / 13</span> &nbsp;·&nbsp; 03 · ARCHITEKTUR · DIE INNOVATION</div>
+    <h2>Der Lern-Hebel — <span class="g">explizit in Code UND Prompt</span></h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="body">
+    <!-- LINKS: vier Schritte mit Mikro-Icons -->
+    <div class="colL">
+      <ul class="points">
+        <li data-beat="1">
+          <span class="ic" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><ellipse cx="7.6" cy="4.6" rx="5.2" ry="2.4"/>
+              <path d="M2.4 4.6 V13.2 a5.2 2.4 0 0 0 10.4 0 V4.6"/>
+              <path d="M2.4 8.9 a5.2 2.4 0 0 0 10.4 0"/>
+              <path d="M13.8 11.2 h4 m0 0 -2.1 -2.1 m2.1 2.1 -2.1 2.1"/></svg>
+          </span>
+          <div><b>Abrufen.</b><span class="s">Vor dem Fix ruft der Loop passende Hypothesen ab: <span class="m">memory.retrieve(context)</span>.</span></div>
+        </li>
+        <li data-beat="2">
+          <span class="ic" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="6.3"/>
+              <path d="M10 1.6v2.1M10 16.3v2.1M1.6 10h2.1M16.3 10h2.1M4.1 4.1l1.5 1.5M14.4 14.4l1.5 1.5M15.9 4.1l-1.5 1.5M5.6 14.4l-1.5 1.5"/></svg>
+          </span>
+          <div><b>Deterministisch (Code).</b><span class="s"><span class="m">apply_memory_prior()</span> verschiebt die Konfidenz → <span class="m">prioritize_proposals()</span> reordnet den Plan.</span></div>
+        </li>
+        <li data-beat="3">
+          <span class="ic" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><path d="M5 2.5h7l3.5 3.5v11.5H5z"/><path d="M12 2.5V6h3.5"/>
+              <path d="M7.6 9.6h5M7.6 12.1h5M7.6 14.6h3.2"/></svg>
+          </span>
+          <div><b>Im Prompt (LLM).</b><span class="s"><span class="m">fix_agent.v2.md</span> bekommt die abgerufenen Hypothesen explizit mitgegeben.</span></div>
+        </li>
+        <li data-beat="4">
+          <span class="ic" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><path d="M6.4 16.5v-12 m0 0 L3.4 7.5 m3 -3 3 3"/>
+              <path d="M13.6 3.5v12 m0 0 -3 -3 m3 3 3 -3"/></svg>
+          </span>
+          <div><b>Ergebnis.</b><span class="s">Der nächste Lauf fixt nachweislich anders — kein implizites „das LLM wird's schon nutzen".</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- RECHTS: Zwei Leitungen aus dem Gedächtnis -->
+    <div class="board">
+      <svg class="diagram" viewBox="0 0 560 470" preserveAspectRatio="xMidYMid meet"
+           xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <defs>
+          <marker id="arrA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8"
+                  markerUnits="userSpaceOnUse" orient="auto"><path d="M0.5,1 L9,5 L0.5,9 Z" fill="#71b127"/></marker>
+        </defs>
+
+        <!-- Zonen-Bänder: die zwei expliziten Wege -->
+        <g class="band band-l">
+          <rect x="16" y="112" width="252" height="190" rx="13"/>
+          <text class="band-t" x="32" y="134">WEG 1 · CODE · DETERMINISTISCH</text>
+        </g>
+        <g class="band band-r">
+          <rect x="312" y="112" width="232" height="190" rx="13"/>
+          <text class="band-t" x="328" y="134">WEG 2 · PROMPT · LLM</text>
+        </g>
+
+        <!-- Memory-Zylinder (Glyph wie Folie 07) + retrieve-Label -->
+        <g class="mem-label">
+          <rect x="185" y="6" width="190" height="22" rx="7"/>
+          <text x="280" y="21" text-anchor="middle">memory.retrieve(context)</text>
+        </g>
+        <g class="mem" transform="translate(248,36)">
+          <g class="mem-pop">
+            <g class="mem-glyph" transform="scale(1.39)">
+              <ellipse cx="23" cy="8" rx="17" ry="6"/>
+              <path d="M6 8 V32 A17 6 0 0 0 40 32 V8"/>
+              <path class="db-mid" d="M6 20 A17 6 0 0 0 40 20"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- Manhattan-Kanten (V→H→V): memory → CODE / PROMPT -->
+        <path id="e-code"   class="edge e-code"   pathLength="100" d="M262,96 V152 H140 V172" marker-end="url(#arrA)"/>
+        <path id="e-prompt" class="edge e-prompt" pathLength="100" d="M298,96 V152 H425 V182" marker-end="url(#arrA)"/>
+        <circle class="jd jd-code" cx="262" cy="96" r="3"/>
+        <circle class="jd jd-prompt" cx="298" cy="96" r="3"/>
+
+        <!-- Merge-Kanten: CODE / PROMPT → FIX-PLAN -->
+        <path class="edge e-merge m1" pathLength="100" d="M140,268 V306 H236 V326" marker-end="url(#arrA)"/>
+        <path class="edge e-merge m2" pathLength="100" d="M425,262 V306 H324 V326" marker-end="url(#arrA)"/>
+
+        <!-- Endlos-Pakete (Start per Beat-Hook) -->
+        <g id="pk-code">
+          <circle class="pkt" r="3.4"><animateMotion dur="2.2s" begin="indefinite" repeatCount="indefinite"><mpath xlink:href="#e-code"/></animateMotion></circle>
+          <circle class="pkt" r="3.4"><animateMotion dur="2.2s" begin="indefinite" repeatCount="indefinite"><mpath xlink:href="#e-code"/></animateMotion></circle>
+        </g>
+        <g id="pk-prompt">
+          <circle class="pkt" r="3.4"><animateMotion dur="2s" begin="indefinite" repeatCount="indefinite"><mpath xlink:href="#e-prompt"/></animateMotion></circle>
+          <circle class="pkt" r="3.4"><animateMotion dur="2s" begin="indefinite" repeatCount="indefinite"><mpath xlink:href="#e-prompt"/></animateMotion></circle>
+        </g>
+
+        <!-- CODE-Karte -->
+        <foreignObject x="28" y="176" width="224" height="92">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="ncard nc-code">
+            <span class="cic">
+              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3"/><circle cx="10" cy="10" r="6.3"/>
+                <path d="M10 1.6v2.1M10 16.3v2.1M1.6 10h2.1M16.3 10h2.1M4.1 4.1l1.5 1.5M14.4 14.4l1.5 1.5M15.9 4.1l-1.5 1.5M5.6 14.4l-1.5 1.5"/></svg>
+            </span>
+            <span class="ctx">
+              <span class="ntag">code</span>
+              <span class="ncode">apply_memory_prior()<br/>→ prioritize_proposals()</span>
+            </span>
+          </div>
+        </foreignObject>
+
+        <!-- PROMPT-Karte -->
+        <foreignObject x="330" y="186" width="190" height="76">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="ncard nc-prompt">
+            <span class="cic">
+              <svg viewBox="0 0 20 20"><path d="M5 2.5h7l3.5 3.5v11.5H5z"/><path d="M12 2.5V6h3.5"/>
+                <path d="M7.6 9.6h5M7.6 12.1h5M7.6 14.6h3.2"/></svg>
+            </span>
+            <span class="ctx">
+              <span class="ntag">prompt</span>
+              <span class="ncode">fix_agent.v2.md</span>
+            </span>
+          </div>
+        </foreignObject>
+
+        <!-- FIX-PLAN-Knoten mit Reorder-Liste -->
+        <foreignObject x="160" y="330" width="240" height="108">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="fpl">
+            <span class="ntag hi">fix-plan · reordnet sich</span>
+            <span class="plist">
+              <span class="prow rp1"><span class="pid">P1</span><span class="pbar b1"></span></span>
+              <span class="prow rp2"><span class="pid">P2</span><span class="pbar b2"></span></span>
+              <span class="prow rp3"><span class="pid">P3</span><span class="pbar b3"></span><span class="mbadge">memory</span></span>
+            </span>
+          </div>
+        </foreignObject>
+
+        <!-- Legende -->
+        <g class="lg lg1">
+          <circle cx="92" cy="456" r="3.4"/>
+          <text x="103" y="460">Paket = abgerufene Hypothese</text>
+        </g>
+        <g class="lg lg2">
+          <rect x="330" y="452" width="20" height="6" rx="3"/>
+          <text x="358" y="460">Balken = Priorität im Fix-Plan</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="caption" data-beat="4">
+    <span class="dash"></span>
+    <span class="ct">Kein implizites „das LLM wird's schon nutzen“ — der nächste Lauf fixt <b>nachweislich anders</b>.</span>
+  </div>
+
+  <div class="hint">Leertaste ▸ nächster Schritt</div>
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+/* Mikro-Icons der Punkteliste */
+.points .ic{flex:0 0 auto;width:20px;height:20px;margin-top:.18em}
+.points .ic svg{width:20px;height:20px;display:block}
+.points .ic svg *{fill:none;stroke:#33352E;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* Board / Diagramm */
+.board{height:100%;min-height:0;display:flex;align-items:center;justify-content:center}
+.diagram{width:100%;height:100%;display:block;overflow:visible}
+
+/* Zonen-Bänder der zwei Wege */
+.band rect{fill:var(--surface);stroke:var(--line-2);stroke-width:1.2}
+.band .band-t{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  fill:var(--mut)}
+.band{opacity:0;transition:opacity .55s var(--ease)}
+.stage.b2 .band-l{opacity:1}
+.stage.b3 .band-r{opacity:1}
+
+/* Memory-Zylinder */
+.mem-glyph ellipse,.mem-glyph path{fill:none;stroke:var(--acc-deep);stroke-width:1.45;
+  stroke-linejoin:round;stroke-linecap:round}
+.mem-glyph ellipse{fill:var(--acc-soft)}
+.mem-glyph .db-mid{stroke:var(--metal);stroke-width:1.1}
+.mem-pop{opacity:0;transform:scale(.6);transform-box:fill-box;transform-origin:center;
+  transition:opacity .4s var(--ease),transform .6s cubic-bezier(.34,1.56,.64,1)}
+.stage.b1 .mem-pop{opacity:1;transform:scale(1)}
+.stage.b1 .mem-glyph{animation:memglow 1.2s ease .35s 1}
+@keyframes memglow{
+  0%{filter:none}40%{filter:drop-shadow(0 0 10px rgba(113,177,39,.8))}100%{filter:none}}
+
+/* retrieve-Label */
+.mem-label{opacity:0;transform:translateY(8px);
+  transition:opacity .5s var(--ease) .2s,transform .5s var(--ease) .2s}
+.stage.b1 .mem-label{opacity:1;transform:none}
+.mem-label rect{fill:var(--surface-2);stroke:var(--line)}
+.mem-label text{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--acc-deep);
+  letter-spacing:.01em}
+
+/* Kanten: pathLength-Draw */
+.edge{fill:none;stroke:var(--acc);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:100;stroke-dashoffset:100;opacity:0}
+.stage.b2 .e-code{opacity:1;stroke-dashoffset:0;
+  filter:drop-shadow(0 0 4px rgba(113,177,39,.35));
+  transition:stroke-dashoffset .8s var(--ease) .1s,opacity .2s ease .1s}
+.stage.b3 .e-prompt{opacity:1;stroke-dashoffset:0;
+  filter:drop-shadow(0 0 4px rgba(113,177,39,.35));
+  transition:stroke-dashoffset .8s var(--ease) .1s,opacity .2s ease .1s}
+.stage.b4 .e-merge{opacity:1;stroke-dashoffset:0;
+  transition:stroke-dashoffset .75s var(--ease),opacity .2s ease}
+.stage.b4 .e-merge.m2{transition-delay:.12s}
+
+/* Anschluss-Punkte am Zylinder */
+.jd{opacity:0;fill:var(--acc);transition:opacity .3s ease .1s}
+.stage.b2 .jd-code{opacity:1}
+.stage.b3 .jd-prompt{opacity:1}
+
+/* Pakete */
+#pk-code,#pk-prompt{opacity:0;transition:opacity .3s ease}
+.stage.b2 #pk-code{opacity:1}
+.stage.b3 #pk-prompt{opacity:1}
+.pkt{opacity:0;fill:var(--acc)}
+.pkt.go{opacity:1;filter:drop-shadow(0 0 4px rgba(113,177,39,.9));transition:opacity .3s ease}
+.stage.static #pk-code,.stage.static #pk-prompt{display:none}
+
+/* foreignObject-Karten */
+.ncard{height:100%;display:flex;align-items:center;gap:11px;padding:10px 14px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+  font-family:var(--sans);opacity:0;transform:translateY(10px);
+  transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.stage.b2 .nc-code{opacity:1;transform:none;transition-delay:.3s}
+.stage.b3 .nc-prompt{opacity:1;transform:none;transition-delay:.3s}
+.ncard .cic{flex:0 0 auto;width:24px;height:24px}
+.ncard .cic svg{width:24px;height:24px;display:block}
+.ncard .cic svg *{fill:none;stroke:#33352E;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.ncard .ctx{display:flex;flex-direction:column;min-width:0}
+.ntag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:3px;display:block}
+.ncode{font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--ink);white-space:nowrap}
+
+/* FIX-PLAN-Knoten */
+.fpl{height:100%;padding:10px 14px;background:var(--acc-soft);
+  border:1.5px solid var(--acc);border-radius:14px;display:flex;flex-direction:column;
+  opacity:0;transform:translateY(10px) scale(.92);
+  transition:opacity .5s var(--ease),transform .55s cubic-bezier(.34,1.56,.64,1)}
+.stage.b4 .fpl{opacity:1;transform:none;transition-delay:.25s}
+.fpl .ntag.hi{color:var(--acc-deep2)}
+.plist{display:block;margin-top:5px}
+.prow{display:flex;align-items:center;gap:8px;height:20px;margin-bottom:2px;
+  font-family:var(--mono);font-size:11px;
+  transition:transform .6s cubic-bezier(.3,1.5,.55,1) .85s}
+.pid{width:18px;font-weight:700;color:var(--ink)}
+.pbar{height:6px;border-radius:3px;background:var(--metal);
+  transition:width .6s var(--ease) .85s,background-color .6s ease .85s}
+.pbar.b1{width:84px}
+.pbar.b2{width:52px}
+.pbar.b3{width:34px;background:var(--acc)}
+.mbadge{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;
+  padding:1px 6px;border-radius:999px;background:var(--acc-deep);color:#fff}
+/* Reorder: P3 (memory) und P1 tauschen sichtbar die Plätze */
+.stage.b4 .rp1{transform:translateY(44px)}
+.stage.b4 .rp3{transform:translateY(-44px)}
+.stage.b4 .pbar.b1{width:44px}
+.stage.b4 .pbar.b3{width:96px}
+
+/* Legende */
+.lg{opacity:0;transition:opacity .5s var(--ease) .4s}
+.stage.b2 .lg1{opacity:1}
+.stage.b4 .lg2{opacity:1}
+.lg circle{fill:var(--acc)}
+.lg rect{fill:var(--metal)}
+.lg text{font-family:var(--mono);font-size:10px;fill:var(--mut);letter-spacing:.02em}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=4;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+
+<script>
+/* ===== Paket-Hooks: animateMotion pro Beat starten (Muster folie-05) ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+  if(reduced||forceFinal){ stage.classList.add('static'); return; }
+  const started={};
+  function startGroup(sel){
+    document.querySelectorAll(sel+' .pkt').forEach(function(p,i){
+      setTimeout(function(){
+        p.classList.add('go');
+        const a=p.querySelector('animateMotion');
+        try{ a.beginElement(); }catch(e){}
+      }, 620+i*1050);
+    });
+  }
+  new MutationObserver(function(){
+    if(stage.classList.contains('b2')&&!started.b2){ started.b2=1; startGroup('#pk-code'); }
+    if(stage.classList.contains('b3')&&!started.b3){ started.b3=1; startGroup('#pk-prompt'); }
+  }).observe(stage,{attributes:true,attributeFilter:['class']});
+})();
+</script>
+</body>
+</html>

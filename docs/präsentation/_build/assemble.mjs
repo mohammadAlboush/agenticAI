@@ -1,11 +1,11 @@
 // Assembliert den Single-File-Präsenter demo-day.html aus dd-folie-01..12.html.
 // Wiederverwendetes Viewer-Framework (Design/Interaktivität) aus Vortrag.html;
 // FONTCSS (eingebettete Inter/Cascadia-Fonts) wird aus Vortrag.html extrahiert.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const DIR = process.argv[2] || 'C:/Users/moham/Desktop/Projekte/SEO - GEO/seogeo/ProjektPitch/docs/präsentation'
-const N = 12
+const N = 13
 
 // --- Folien einlesen ---
 const FOLIES = []
@@ -15,7 +15,11 @@ for (let i = 1; i <= N; i++) {
 }
 
 // --- FONTCSS aus Vortrag.html extrahieren (const FONTCSS="....";) ---
-const vortrag = readFileSync(join(DIR, 'Vortrag.html'), 'utf8')
+// Vortrag.html kann in docs/präsentation/ ODER eine Ebene höher in docs/ liegen.
+const vortragCandidates = [join(DIR, 'Vortrag.html'), join(DIR, '..', 'Vortrag.html')]
+const vortragPath = vortragCandidates.find((p) => existsSync(p))
+if (!vortragPath) throw new Error('Vortrag.html nicht gefunden (docs/präsentation/ oder docs/)')
+const vortrag = readFileSync(vortragPath, 'utf8')
 const m = vortrag.match(/const FONTCSS=("(?:\\.|[^"\\])*");/)
 if (!m) throw new Error('FONTCSS in Vortrag.html nicht gefunden')
 const FONTCSS_LITERAL = m[1] // bereits ein gültiges JS-String-Literal
@@ -25,6 +29,7 @@ const TITLES = [
   'geo-audit-loop · Titel',
   'Problem · Sichtbarkeit = zitiert werden',
   'Lösung · geschlossener Regelkreis',
+  'Live-Demo · Steuerzentrale',
   'Live-Demo · Setup',
   'Live-Demo · Messen (Top/Flop)',
   'Live-Demo · Verstehen & Fixen',
@@ -36,10 +41,10 @@ const TITLES = [
   'Danke · Fragen?',
 ]
 const SHORTS = [
-  'Titel', 'Problem', 'Lösung', 'Demo-Setup', 'Messen', 'Verstehen & Fixen',
+  'Titel', 'Problem', 'Lösung', 'Live-Demo', 'Demo-Setup', 'Messen', 'Verstehen & Fixen',
   'Lernen', 'Architektur', 'Entscheidungen', 'Lern-Hebel', 'Reflexion', 'Danke',
 ]
-const MAXBEATS = [4, 3, 2, 3, 2, 4, 4, 3, 2, 4, 2, 3]
+const MAXBEATS = [4, 3, 2, 3, 3, 2, 4, 4, 3, 2, 4, 2, 3]
 const NOTES = [
   // 01 Titel
   `Guten Tag. Ich stelle geo-audit-loop vor — einen selbstlernenden agentischen Regelkreis für GEO, \
@@ -58,7 +63,12 @@ welche Seiten zitiert werden. Dann auditieren wir die Schwachstellen gegen Best-
 Fix-Agent schlägt konkrete Patches vor — die ein Mensch freigibt. Nach dem Deploy messen wir den Effekt \
 erneut und schreiben ihn als Hypothese ins Gedächtnis. Dieser letzte Schritt schließt den Kreis: der Effekt \
 fließt zurück und macht den nächsten Lauf besser. Das zeige ich jetzt live.`,
-  // 04 Demo-Setup
+  // 04 Live-Demo · Steuerzentrale
+  `Und zwar nicht auf Folien, sondern in einer echten Weboberfläche. Ein Klick startet den Lauf gegen echte \
+AI-Engines — die Probe-Matrix füllt sich vor Ihren Augen. Ehrlich dabei: nur die tatsächlich live geprobten \
+Engines sind grün markiert, simulierte klar als solche. Von hier laufen alle Schritte durch — messen, \
+verstehen, fixen, lernen — und genau das gehen wir jetzt gemeinsam durch.`,
+  // 05 Demo-Setup
   `Das komplette System läuft mit einem einzigen Befehl. Eine Domain, ein fester Seed, eine feste Prompt-Version \
 — damit ist jeder Lauf über run_id und Fingerprint voll nachvollziehbar. In diesem Lauf: 240 Probes über vier \
 Engines, zwölf Prompts und fünf Proxy-IPs. Der Median über die IPs eliminiert Personalisierungs-Effekte. Das \
@@ -189,10 +199,11 @@ html,body{height:100%;background:#12140d;overflow:hidden;
     <span id="label"></span>
     <button id="next" title="Weiter (Leertaste)">›</button>
     <button id="scriptBtn" title="Skript (S)">≡</button>
+    <button id="presBtn" title="Presenter · 2. Bildschirm (P)">⧉</button>
     <button id="ovBtn" title="Übersicht (O)">▦</button>
     <button id="fsBtn" title="Vollbild (F)">⤢</button>
   </div>
-  <div id="help" class="chrome"><b>Leertaste</b> weiter · <b>←</b> zurück · <b>S</b> Skript · <b>O</b> Übersicht · <b>F</b> Vollbild</div>
+  <div id="help" class="chrome"><b>Leertaste</b> weiter · <b>←</b> zurück · <b>S</b> Skript · <b>P</b> Presenter · <b>O</b> Übersicht · <b>F</b> Vollbild</div>
   <div id="overview">
     <div id="ovhead">Übersicht · ${N} Folien</div>
     <div id="ovlist"></div>
@@ -245,7 +256,7 @@ function go(i){
   cur=Math.max(0,Math.min(N-1,i));
   beatCount=0;
   frame.srcdoc=FOLIES[cur];
-  updateChrome(); updateScript(); activity();
+  updateChrome(); updateScript(); activity(); broadcast();
 }
 function domFinished(){
   try{ const d=frame.contentDocument;
@@ -262,7 +273,7 @@ function forward(){
     try{ const w=frame.contentWindow;
       w.dispatchEvent(new w.KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
     }catch(e){}
-    activity();
+    activity(); broadcast();
   }
 }
 frame.addEventListener('load',()=>{
@@ -284,6 +295,7 @@ function navKey(e){
   if(k==='f'||k==='F'){ toggleFs(); return true; }
   if(k==='o'||k==='O'){ toggleOverview(); return true; }
   if(k==='s'||k==='S'){ toggleScript(); return true; }
+  if(k==='p'||k==='P'){ openPresenter(); return true; }
   if(k==='Escape'){ if(ovOpen){toggleOverview(false);return true;} if(scriptOpen){toggleScript(false);return true;} }
   return false;
 }
@@ -295,6 +307,7 @@ document.getElementById('fsBtn').onclick=toggleFs;
 document.getElementById('ovBtn').onclick=()=>toggleOverview();
 document.getElementById('scriptBtn').onclick=()=>toggleScript();
 document.getElementById('scriptClose').onclick=()=>toggleScript(false);
+document.getElementById('presBtn').onclick=()=>openPresenter();
 function toggleFs(){ try{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); } else { document.exitFullscreen(); } }catch(e){} }
 function toggleOverview(force){
   ovOpen=(force===undefined)?!ovOpen:force;
@@ -309,6 +322,87 @@ function toggleScript(force){
 let idleT; function activity(){ deck.classList.remove('idle'); clearTimeout(idleT);
   idleT=setTimeout(()=>{ if(!ovOpen && !scriptOpen) deck.classList.add('idle'); },2800); }
 window.addEventListener('mousemove',activity); window.addEventListener('mousedown',activity);
+
+/* ===== Presenter-Ansicht auf zweitem Bildschirm (Taste P) =====
+   Oeffnet ein eigenes Fenster (auf den 2. Monitor ziehen). Bei jedem Schritt schickt
+   das Deck Folie, Sprechertext (Satz fuer Satz), Beats und naechste Folie per postMessage.
+   Steuerung funktioniert in beide Richtungen. */
+let presenterWin=null;
+function noteChunks(i){
+  var t=(NOTES[i]||'').trim(); if(!t) return [''];
+  var parts=t.split('. ');
+  return parts.map(function(p,k){ return (k<parts.length-1)?p+'.':p; });
+}
+function presenterState(){
+  var chunks=noteChunks(cur); var mb=(MAXBEATS[cur]||0);
+  var active = mb>0 ? Math.round(beatCount/mb*(chunks.length-1)) : 0;
+  active=Math.max(0,Math.min(active,chunks.length-1));
+  return { type:'state', num:cur+1, total:N, short:SHORTS[cur], chunks:chunks, active:active,
+    beat:beatCount, maxbeat:mb, nextShort:(cur<N-1?SHORTS[cur+1]:''), done:slideDone() };
+}
+function broadcast(){ if(presenterWin && !presenterWin.closed){ try{ presenterWin.postMessage(presenterState(),'*'); }catch(e){} } }
+const PRESENTER_HTML='<!doctype html><html lang="de"><head><meta charset="utf-8">'
++'<meta name="viewport" content="width=device-width,initial-scale=1">'
++'<title>Presenter · geo-audit-loop</title><style>'
++'*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}'
++'body{background:#12140d;color:#eef1e6;font-family:"Inter","Segoe UI",system-ui,sans-serif;'
++'display:flex;flex-direction:column;padding:clamp(20px,3.4vw,46px);gap:16px;overflow:hidden}'
++'#top{display:flex;justify-content:space-between;align-items:center;'
++'font-family:"Cascadia Code","Consolas",monospace;font-size:13px;letter-spacing:.14em;'
++'text-transform:uppercase;color:#8fd47f}'
++'#top .r{display:flex;gap:22px;align-items:center;color:#aeb6a0;letter-spacing:.05em}#timer{color:#eef1e6}'
++'#folie{font-family:"Cascadia Code","Consolas",monospace;font-size:15px;color:#aeb6a0;letter-spacing:.03em}'
++'#folie b{color:#8fd47f}'
++'#beats{display:flex;gap:8px;align-items:center;min-height:8px}'
++'.pill{width:36px;height:8px;border-radius:4px;background:#3a4130;transition:background .2s}'
++'.pill.on{background:#71b127;box-shadow:0 0 8px rgba(113,177,39,.5)}'
++'#note{flex:1;overflow:auto;padding-right:10px;display:flex;flex-direction:column;gap:14px}'
++'.chunk{font-size:clamp(20px,2.7vw,34px);line-height:1.45;padding-left:16px;border-left:4px solid transparent;transition:color .2s,opacity .2s,border-color .2s}'
++'.chunk.done{color:#7f8a72;opacity:.5}.chunk.cur{color:#f2f5ec;border-left-color:#71b127}.chunk.next{color:#9aa48c;opacity:.5}'
++'#bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;border-top:1px solid rgba(255,255,255,.1);padding-top:14px}'
++'#step{font-family:"Cascadia Code","Consolas",monospace;font-size:14px;color:#aeb6a0;margin-bottom:5px}'
++'#next{font-size:18px;color:#cfd6c4}#next b{color:#8fd47f}'
++'#hint{font-family:"Cascadia Code","Consolas",monospace;font-size:11px;color:rgba(233,236,223,.45);text-align:right;line-height:1.8}#hint b{color:rgba(233,236,223,.75)}'
++'</style></head><body>'
++'<div id="top"><span>Presenter · geo-audit-loop</span>'
++'<span class="r"><span id="clock">--:--</span><span id="timer">00:00</span></span></div>'
++'<div id="folie"></div><div id="beats"></div>'
++'<div id="note">Warte auf das Deck …</div>'
++'<div id="bottom"><div><div id="step"></div><div id="next"></div></div>'
++'<div id="hint"><b>Leertaste</b> weiter · <b>&larr;</b> zurueck · <b>R</b> Timer 0 · <b>F</b> Vollbild</div></div>'
++'<scr'+'ipt>(function(){'
++'function pad(n){return String(n).padStart(2,"0");}var startT=Date.now();'
++'function tick(){var d=new Date();document.getElementById("clock").textContent=pad(d.getHours())+":"+pad(d.getMinutes());'
++'var s=Math.floor((Date.now()-startT)/1000);document.getElementById("timer").textContent=pad(Math.floor(s/60))+":"+pad(s%60);}'
++'setInterval(tick,1000);tick();'
++'function render(s){document.getElementById("folie").innerHTML="Folie <b>"+s.num+"</b> / "+s.total+" · "+s.short;'
++'var note=document.getElementById("note");note.innerHTML="";var chunks=s.chunks||[];var act=(typeof s.active==="number"?s.active:0);var curEl=null;'
++'for(var j=0;j<chunks.length;j++){var c=document.createElement("div");c.className="chunk "+(j<act?"done":(j===act?"cur":"next"));c.textContent=chunks[j];note.appendChild(c);if(j===act)curEl=c;}'
++'if(curEl){curEl.scrollIntoView({block:"center"});}'
++'document.getElementById("step").textContent=s.maxbeat>0?("Schritt "+Math.min(s.beat,s.maxbeat)+" / "+s.maxbeat):"—";'
++'document.getElementById("next").innerHTML=s.nextShort?("Als Naechstes &rarr; <b>"+s.nextShort+"</b>"):"<b>Ende der Praesentation</b>";'
++'var b=document.getElementById("beats");b.innerHTML="";for(var i=0;i<s.maxbeat;i++){var p=document.createElement("div");p.className="pill"+(i<s.beat?" on":"");b.appendChild(p);}}'
++'window.addEventListener("message",function(e){var d=e.data||{};if(d.type==="state")render(d);});'
++'window.addEventListener("keydown",function(e){var k=e.key;'
++'if(k==="r"||k==="R"){startT=Date.now();tick();e.preventDefault();return;}'
++'if(k==="f"||k==="F"){try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}catch(_){}e.preventDefault();return;}'
++'if(window.opener&&!window.opener.closed){window.opener.postMessage({type:"key",key:k,code:e.code},"*");e.preventDefault();}});'
++'if(window.opener&&!window.opener.closed){window.opener.postMessage({type:"ready"},"*");}'
++'})();<\/scr'+'ipt></body></html>';
+function openPresenter(){
+  if(presenterWin && !presenterWin.closed){ presenterWin.focus(); broadcast(); return; }
+  presenterWin=window.open('','geoPresenter','width=1024,height=700');
+  if(!presenterWin){ alert('Bitte Pop-ups fuer diese Seite erlauben — dann oeffnet sich der Presenter in einem zweiten Fenster, das Sie auf den 2. Bildschirm ziehen koennen.'); return; }
+  presenterWin.document.open(); presenterWin.document.write(PRESENTER_HTML); presenterWin.document.close();
+  try{ frame.contentWindow.focus(); }catch(e){}
+}
+window.addEventListener('message',function(e){
+  const d=e.data||{};
+  if(d.type==='ready'){ broadcast(); return; }
+  if(d.type==='key'){ navKey({key:d.key,code:d.code,preventDefault:function(){}}); }
+});
+window.addEventListener('beforeunload',function(){ try{ if(presenterWin && !presenterWin.closed) presenterWin.close(); }catch(e){} });
+
 go(0); activity();
 </script>
 </body>

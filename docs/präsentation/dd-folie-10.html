@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Entscheidungen</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — NICHT ÄNDERN (Tokens + Basis + Engine).
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+
+/* ---- Kopf (einheitlicher kompakter Kopf) ---- */
+.head-wrap{flex:0 0 auto}
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:8px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;color:var(--ink);white-space:nowrap}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:12px 0 0}
+
+/* ---- Körper ---- */
+.body{flex:1 1 auto;min-height:0;margin-top:clamp(10px,1.8vh,18px);
+  display:flex;align-items:center;justify-content:center}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ---- Bottom-Caption ---- */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px)}
+.caption .dash{flex:0 0 auto;width:26px;height:3px;background:var(--acc);border-radius:2px}
+.caption .ctxt{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink)}
+
+.hint{position:fixed;left:0;right:0;bottom:6px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">10 / 13</span> &nbsp;·&nbsp; 03 · ARCHITEKTUR · ENTSCHEIDUNGEN</div>
+    <h2>Vier Entscheidungen für <span class="g">wissenschaftliche Aussagekraft</span></h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="body">
+    <div class="temple">
+
+      <!-- Giebel: das HITL-Gate senkt sich als Dach auf den Tempel (Beat 2) -->
+      <div class="roof" data-beat="2">
+        <div class="pediment">
+          <div class="pfl">
+            <svg viewBox="0 0 18 18" aria-hidden="true">
+              <circle cx="9" cy="9" r="6.9" fill="none" stroke="#f2f7e8" stroke-width="1.75"/>
+              <path d="M4.4,13.6 L13.6,4.4" stroke="#f2f7e8" stroke-width="1.75" stroke-linecap="round"/>
+            </svg>
+            <span class="ptxt">KEIN AUTO-DEPLOY · HITL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architrav: der getragene Balken (Beat 1) -->
+      <div class="architrave" data-beat="1"><span>Wissenschaftliche&nbsp;Aussagekraft</span></div>
+
+      <!-- Kolonnade: vier tragende Entscheidungen (Beat 1, gestaffelt) -->
+      <div class="colonnade">
+
+        <div class="pillar" data-beat="1" style="transition-delay:.12s">
+          <div class="capital"></div>
+          <div class="shaft">
+            <div class="prow">
+              <span class="num">01</span>
+              <svg class="picon" viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="4.5" y="2.5" width="11" height="13" rx="1.6" fill="none" stroke="#33352E" stroke-width="1.5"/>
+                <path d="M7.2,6 H12.8 M7.2,8.8 H12.8 M7.2,11.6 H10" stroke="#33352E" stroke-width="1.3" stroke-linecap="round"/>
+                <circle cx="13.2" cy="14.2" r="2.7" fill="var(--acc-soft)" stroke="#33352E" stroke-width="1.5"/>
+                <path d="M12,16.5 L11.2,18.8 M14.4,16.5 L15.2,18.8" stroke="#33352E" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="kick">Contracts</div>
+            <p class="ptext"><b>Pydantic-Modelle</b> zwischen Agenten, nie Freitext. Producer, Consumer &amp; Test im selben Commit.</p>
+            <div class="plinth">Contracts-first</div>
+          </div>
+          <div class="base"></div>
+        </div>
+
+        <div class="pillar" data-beat="1" style="transition-delay:.26s">
+          <div class="capital"></div>
+          <div class="shaft">
+            <div class="prow">
+              <span class="num">02</span>
+              <svg class="picon" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4,7 H14.6 M12.2,4.4 L15.2,7 L12.2,9.6" fill="none" stroke="#33352E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16,13 H5.4 M7.8,10.4 L4.8,13 L7.8,15.6" fill="none" stroke="#33352E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="kick">Mock / Live</div>
+            <p class="ptext">Jeder Port hat <b>Mock- und Live-Adapter</b> hinter demselben Interface — Tests ohne Netz.</p>
+            <div class="plinth">Mock-Live-Symmetrie</div>
+          </div>
+          <div class="base"></div>
+        </div>
+
+        <div class="pillar" data-beat="1" style="transition-delay:.4s">
+          <div class="capital"></div>
+          <div class="shaft">
+            <div class="prow">
+              <span class="num">03</span>
+              <svg class="picon" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4.6,9.4 C4.6,6.1 7,3.6 10,3.6 C13,3.6 15.4,6.1 15.4,9.4" fill="none" stroke="#33352E" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M7.1,16.4 C6.3,14.4 7,12.4 7,10 C7,8.3 8.3,7 10,7 C11.7,7 13,8.3 13,10 C13,12 12.7,14 11.8,15.9" fill="none" stroke="#33352E" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M10,10 C10,12.5 9.6,14.9 8.7,17" fill="none" stroke="#33352E" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="kick">Reproduzierbar</div>
+            <p class="ptext"><span class="m">run_id</span>, <span class="m">seed&nbsp;42</span>, <span class="m">config_hash</span>-Fingerprint; der gemessene Effekt fließt mit ein.</p>
+            <div class="plinth">run_id · seed · hash</div>
+          </div>
+          <div class="base"></div>
+        </div>
+
+        <div class="pillar" data-beat="1" style="transition-delay:.54s">
+          <div class="capital"></div>
+          <div class="shaft">
+            <div class="prow">
+              <span class="num">04</span>
+              <svg class="picon" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="7.6" fill="none" stroke="#33352E" stroke-width="1.4"/>
+                <path d="M6.4,8.2 H13.6 M6.4,11.8 H13.6" stroke="#33352E" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="kick">Determinismus</div>
+            <p class="ptext">Effekt-Analyst ist reine Mathematik, kein LLM → <b>bit-genau</b> reproduzierbar.</p>
+            <div class="plinth">Confidence deterministisch</div>
+          </div>
+          <div class="base"></div>
+        </div>
+
+      </div>
+
+      <!-- Stylobat: zwei Stufen (Beat 1) -->
+      <div class="stylobate" data-beat="1">
+        <div class="step1"></div>
+        <div class="step2"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="caption" data-beat="2" style="transition-delay:.3s">
+    <span class="dash"></span>
+    <span class="ctxt">Über allem: <b class="rd">kein Auto-Deploy</b> — aus einem <span class="m">FixPlan</span> wird nie direkt ein <span class="m">DeployResult</span>.</span>
+    <span class="dep">raise <b>DeployBlocked</b></span>
+  </div>
+
+  <div class="hint">Leertaste / Klick ▸ weiter</div>
+
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+.temple{width:min(1080px,100%);display:flex;flex-direction:column;align-items:stretch}
+
+/* ---- Giebel (Dach) ---- */
+.roof[data-beat]{transform:translateY(-42px);
+  transition:transform .75s cubic-bezier(.34,1.28,.5,1),opacity .5s ease}
+.roof[data-beat].show{transform:none}
+.pediment{height:clamp(46px,7vh,62px);width:calc(100% + 38px);margin-left:-19px;
+  background:var(--acc-deep2);clip-path:polygon(50% 0,100% 100%,0 100%);
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px}
+.pfl{display:flex;align-items:center;gap:9px}
+.pfl svg{width:17px;height:17px;display:block}
+.ptxt{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.13em;color:#f2f7e8}
+
+/* ---- Architrav ---- */
+.architrave{height:clamp(42px,5.8vh,54px);width:calc(100% + 16px);margin-left:-8px;
+  background:var(--acc-deep);border-top:2px solid var(--acc-deep2);
+  border-bottom:3px solid var(--acc-deep2);
+  box-shadow:0 3px 8px rgba(28,29,26,.16);
+  display:flex;align-items:center;justify-content:center}
+.architrave span{font-family:var(--sans);font-weight:700;font-size:clamp(15px,1.85vw,23px);
+  letter-spacing:.15em;text-transform:uppercase;color:#f2f7e8}
+
+/* ---- Kolonnade ---- */
+.colonnade{display:flex;gap:clamp(10px,1.5vw,22px);justify-content:center;align-items:flex-end;
+  padding:0 clamp(8px,1.2vw,16px)}
+.pillar{flex:1 1 0;max-width:252px;min-width:0;height:clamp(240px,44vh,320px);
+  display:flex;flex-direction:column}
+.pillar[data-beat]{transform:translateY(120px);
+  transition:transform .6s cubic-bezier(.2,.86,.3,1.06),opacity .45s ease}
+.pillar[data-beat].show{transform:none}
+.capital{flex:0 0 auto;height:14px;margin:0 -7px;border-radius:6px 6px 2px 2px;
+  background:var(--acc-soft);border:1px solid var(--acc-deep);border-bottom:none}
+.base{flex:0 0 auto;height:16px;margin:0 -11px;border-radius:2px 2px 7px 7px;
+  background:var(--acc-soft);border:1px solid var(--acc-deep);border-top:none;
+  box-shadow:0 3px 6px rgba(28,29,26,.12)}
+.shaft{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;
+  border-left:1.5px solid var(--acc-deep);border-right:1.5px solid var(--acc-deep);
+  padding:clamp(11px,1.8vh,16px) clamp(10px,1.2vw,14px);
+  background-image:repeating-linear-gradient(90deg,transparent 0 16px,rgba(79,125,26,.09) 16px 17px),
+    linear-gradient(180deg,var(--surface-2),var(--acc-soft))}
+.prow{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:clamp(8px,1.4vh,12px)}
+.num{width:24px;height:24px;border-radius:6px;background:var(--surface);border:1px solid var(--line);
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc-deep);
+  display:flex;align-items:center;justify-content:center}
+.picon{width:18px;height:18px;display:block;flex:0 0 auto}
+.kick{flex:0 0 auto;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:6px}
+.ptext{flex:0 0 auto;font-size:clamp(12.5px,1.15vw,14.5px);line-height:1.42;color:var(--mut)}
+.ptext b{color:var(--ink);font-weight:660}
+.m{font-family:var(--mono);font-size:.93em;color:var(--ink)}
+/* Plinthen-Inschrift: füllt den Säulenfuß, wie graviert */
+.plinth{flex:0 0 auto;margin-top:auto;padding-top:clamp(7px,1.2vh,10px);
+  border-top:1px dashed rgba(79,125,26,.42);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--acc-deep);
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---- Stylobat ---- */
+.stylobate{display:flex;flex-direction:column;align-items:center}
+.step1{height:13px;width:calc(100% + 26px);
+  background:var(--acc-soft);border:1px solid var(--acc-deep);border-radius:4px 4px 0 0}
+.step2{height:15px;width:calc(100% + 62px);
+  background:var(--surface);border:1px solid var(--acc-deep);border-radius:0 0 6px 6px;
+  box-shadow:0 4px 10px rgba(28,29,26,.10)}
+
+/* ---- Caption-Zusätze ---- */
+.ctxt .rd{color:#a8392c;font-weight:700}
+.dep{flex:0 0 auto;font-family:var(--mono);font-size:clamp(11px,1.05vw,13px);font-weight:600;
+  color:#f2f7e8;background:var(--ink);border-radius:8px;padding:4px 12px;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(28,29,26,.25)}
+.dep b{color:var(--sig-red);font-weight:700}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-delay:0s!important}
+}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=2;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+</body>
+</html>
