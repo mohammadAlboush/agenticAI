@@ -1,0 +1,54 @@
+# Versioniertes Probe-Set (Projektregeln §3.3). 12 englische GEO-Zielfragen fuer
+# pulse-medic.com (B2B-Lieferant medizinischer und Labor-Geraete fuer Kliniken,
+# Krankenhaeuser und Labore, Nahost-Fokus). Eigenstaendige Nutzerfragen gemaess
+# geo-strategy (Hebel 10: Frage-Deckung) — Themen, bei denen ein Fachlieferant
+# plausibel zitiert werden kann. Jede Aenderung erhoeht die Version -> neue Datei.
+version = "pm1"
+
+[[prompts]]
+id = "p01"
+text = "How do hospitals choose a reliable medical equipment supplier?"
+
+[[prompts]]
+id = "p02"
+text = "What should clinics consider when buying patient monitoring systems?"
+
+[[prompts]]
+id = "p03"
+text = "How do you select laboratory diagnostic equipment for a new lab?"
+
+[[prompts]]
+id = "p04"
+text = "What are the key factors in medical equipment procurement for hospitals?"
+
+[[prompts]]
+id = "p05"
+text = "How does medical equipment leasing compare to buying for clinics?"
+
+[[prompts]]
+id = "p06"
+text = "Which certifications should medical devices have for hospital use (CE, ISO 13485, FDA)?"
+
+[[prompts]]
+id = "p07"
+text = "How do you maintain and service hospital medical equipment effectively?"
+
+[[prompts]]
+id = "p08"
+text = "What diagnostic imaging equipment does a small clinic need?"
+
+[[prompts]]
+id = "p09"
+text = "How do you equip a new hospital or clinic from scratch?"
+
+[[prompts]]
+id = "p10"
+text = "What are the latest innovations in patient care and diagnostic technology?"
+
+[[prompts]]
+id = "p11"
+text = "How do you source medical equipment for hospitals in the Middle East and GCC?"
+
+[[prompts]]
+id = "p12"
+text = "What is the return on investment of modern medical equipment for a healthcare facility?"

@@ -1,0 +1,66 @@
+# Versioniertes SERP-Query-Set (Projektregeln §3.3). 12 englische KEYWORD-Queries
+# (keine Fragesaetze — so sucht man bei Google), thematisch 1:1 auf die 12
+# Probe-Prompts aus probe_set.pm1.toml gemappt: prompt_id ist der Topic-Join fuer
+# den Overlap-Vergleich (Google-Top-10 vs. AI-Zitate). Jede Aenderung erhoeht die
+# Version -> neue Datei.
+version = "pm1"
+
+[[queries]]
+id = "q01"
+prompt_id = "p01"
+text = "medical equipment supplier for hospitals"
+
+[[queries]]
+id = "q02"
+prompt_id = "p02"
+text = "patient monitoring systems for clinics"
+
+[[queries]]
+id = "q03"
+prompt_id = "p03"
+text = "laboratory diagnostic equipment selection"
+
+[[queries]]
+id = "q04"
+prompt_id = "p04"
+text = "medical equipment procurement hospitals"
+
+[[queries]]
+id = "q05"
+prompt_id = "p05"
+text = "medical equipment leasing vs buying"
+
+[[queries]]
+id = "q06"
+prompt_id = "p06"
+text = "medical device certifications CE ISO 13485"
+
+[[queries]]
+id = "q07"
+prompt_id = "p07"
+text = "hospital medical equipment maintenance service"
+
+[[queries]]
+id = "q08"
+prompt_id = "p08"
+text = "diagnostic imaging equipment small clinics"
+
+[[queries]]
+id = "q09"
+prompt_id = "p09"
+text = "equip new hospital clinic checklist"
+
+[[queries]]
+id = "q10"
+prompt_id = "p10"
+text = "patient care technology innovations"
+
+[[queries]]
+id = "q11"
+prompt_id = "p11"
+text = "medical equipment supplier Middle East GCC"
+
+[[queries]]
+id = "q12"
+prompt_id = "p12"
+text = "medical equipment ROI healthcare facility"
