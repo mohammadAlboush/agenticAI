@@ -120,8 +120,84 @@ End-to-End-Durchstich noch früher, und die kostenlosen Live-Engines früher eva
 nächsten besser. Vielen Dank für Ihre Aufmerksamkeit, ich freue mich auf Ihre Fragen.`,
 ]
 
-if ([TITLES, SHORTS, MAXBEATS, NOTES].some(a => a.length !== N))
+// --- Sprechertext, gechunkt: EIN Satz pro Beat (wie Vortrag.html). Der Presenter
+//     hebt den zum aktuellen Beat passenden Satz hervor. Einfache, gesprochene Sprache.
+//     Chunks je Folie = MAXBEATS + 1 (Chunk 0 = Anfang, dann je Beat einer). ---
+const SCRIPT = [
+  // 01 Titel (4 Beats)
+  [ 'Guten Tag. Ich stelle geo-audit-loop vor.',
+    'Ein System, das misst, ob eine Website in KI-Suchmaschinen zitiert wird.',
+    'Und das sich mit jedem Lauf selbst verbessert — ein geschlossener Kreis.',
+    'In sieben Minuten zeige ich: das Problem, meine Lösung und den Loop live.',
+    'Dann die Technik dahinter — und was ich dabei gelernt habe.' ],
+  // 02 Problem (3)
+  [ 'Früher hieß sichtbar sein: Platz eins bei Google.',
+    'Heute antworten KI-Engines direkt — und nennen nur wenige Quellen. Wer nicht dabei ist, ist unsichtbar.',
+    'Und jede Engine hat eigene Vorlieben — die alten Google-Treffer zählen kaum noch.',
+    'Das Problem: kaum jemand misst, ob und warum die eigene Seite zitiert wird. Genau da setzt mein System an.' ],
+  // 03 Lösung (2)
+  [ 'Meine Lösung ist ein Kreis aus fünf Agenten.',
+    'Messen, prüfen, fixen — nach Freigabe durch einen Menschen —, dann erneut messen und ins Gedächtnis schreiben.',
+    'Der letzte Schritt schließt den Kreis: Der Effekt fließt zurück und macht den nächsten Lauf besser. Das zeige ich jetzt live.' ],
+  // 04 Live-Demo (3)
+  [ 'Und zwar nicht auf Folien, sondern in einer echten Weboberfläche.',
+    'Ein Klick startet den Lauf gegen echte KI-Engines — die Matrix füllt sich live.',
+    'Ehrlich dabei: nur echt geprüfte Engines sind grün, simulierte klar markiert.',
+    'Von hier laufen alle Schritte durch: messen, verstehen, fixen, lernen. Gehen wir sie durch.' ],
+  // 05 Demo-Setup (3)
+  [ 'Das ganze System läuft mit einem einzigen Befehl.',
+    'Eine Domain, ein fester Seed — jeder Lauf ist voll nachvollziehbar.',
+    '240 Abfragen: vier Engines, zwölf Fragen, fünf Proxy-IPs. Der Median über die IPs entfernt persönliche Verzerrung.',
+    'Das läuft gegen echte Engines — mit hartem Budget-Limit, sicher und fortsetzbar.' ],
+  // 06 Messen (2)
+  [ 'Der Sampler feuert die 240 Abfragen ab.',
+    'Jede Engine nennt Quellen anders — wir bringen alles auf ein Modell und zählen.',
+    'Oben die Gewinner: die NIS2-Seite wird in dreißig Prozent der Antworten zitiert. Unten die Verlierer mit drei Prozent. Die nehmen wir uns vor.' ],
+  // 07 Verstehen & Fixen (4)
+  [ 'Jetzt wird der Loop schlau.',
+    'Der Pattern-Miner lernt von den Gewinnern ein Muster: ein kurzer Antwortblock direkt nach der Überschrift.',
+    'Der Auditor hält die Verlierer-Seite dagegen: genau dieser Block fehlt.',
+    'Der Fix-Agent macht daraus einen konkreten Patch — fertiger Text plus Schema.',
+    'Und die eiserne Regel: kein Deploy ohne menschliche Freigabe.' ],
+  // 08 Lernen (4)
+  [ 'Nach dem Deploy messen wir dieselben Fragen noch einmal — die Re-Probe.',
+    'Die Zitationsrate der gepatchten Seite steigt von drei auf elf Prozent.',
+    'Daraus baut das System eine Hypothese: vorher, nachher, Delta.',
+    'Die Confidence rechnet reine Mathematik — kein KI-Modell, also reproduzierbar.',
+    'Diese Hypothese wandert ins Gedächtnis. Beim nächsten Lauf fixt das System messbar besser. Der Kreis ist zu.' ],
+  // 09 Architektur (3)
+  [ 'Zur Technik — meine wichtigste Entscheidung.',
+    'Der Kern in der Mitte kennt keine Außenwelt — kein HTTP, kein WordPress.',
+    'Drumherum die Adapter: jede Engine live oder im Test austauschbar.',
+    'So kann ich jeden Aufruf im Test ersetzen — und eine fünfte Engine ergänzen, ohne den Kern anzufassen.' ],
+  // 10 Entscheidungen (2)
+  [ 'Weil das ein Forschungsprojekt ist, zählt Nachvollziehbarkeit.',
+    'Vier Entscheidungen tragen das: feste Datenverträge, Mock und Live hinter demselben Interface, volle Reproduzierbarkeit und alles deterministisch, wo es geht.',
+    'Über allem das harte Gate: kein automatischer Deploy.' ],
+  // 11 Lern-Hebel (4)
+  [ 'Das ist der spannendste — und heikelste — Teil.',
+    'Wie beeinflusst eine gespeicherte Hypothese den nächsten Fix? Nicht heimlich, sondern auf zwei klaren Wegen.',
+    'Erstens im Code: eine Funktion verschiebt die Konfidenz und ordnet den Plan neu.',
+    'Zweitens im Prompt: der Fix-Agent bekommt die Hypothesen direkt mitgegeben.',
+    'Beides sorgt dafür, dass der nächste Lauf nachweislich anders fixt.' ],
+  // 12 Reflexion (2)
+  [ 'Mein größtes Learning: klare Verträge von Anfang an zahlen sich aus.',
+    'Weil sie standen, war jeder Agent sofort testbar, und ich konnte Schritt für Schritt erweitern, ohne etwas zu brechen.',
+    'Und Reproduzierbarkeit ist kein Zwang, sondern ein Feature — sie hat mich zu sauberen Grenzen gezwungen.' ],
+  // 13 Danke (3)
+  [ 'Damit ist der Kreis geschlossen.',
+    'Messen, prüfen, fixen, erneut messen, lernen.',
+    'Jeder Lauf macht den nächsten besser.',
+    'Vielen Dank — ich freue mich auf Ihre Fragen.' ],
+]
+
+if ([TITLES, SHORTS, MAXBEATS, NOTES, SCRIPT].some(a => a.length !== N))
   throw new Error('Metadaten-Länge != ' + N)
+// Jeder SCRIPT-Eintrag braucht MAXBEATS+1 Chunks (Anfang + je Beat einer).
+SCRIPT.forEach((chunks, i) => {
+  if (chunks.length !== MAXBEATS[i] + 1)
+    throw new Error(`SCRIPT[${i}] hat ${chunks.length} Chunks, erwartet ${MAXBEATS[i] + 1}`)
+})
 
 // --- Viewer zusammenbauen ---
 const J = (x) => JSON.stringify(x)
@@ -186,16 +262,6 @@ html,body{height:100%;background:#12140d;overflow:hidden;
 #scripthead button{appearance:none;border:0;background:transparent;color:#9aa88a;cursor:pointer;font-size:16px;line-height:1}
 #scripttext{font-size:clamp(15px,1.85vw,22px);line-height:1.55;color:#e8eddb;overflow:auto;
   font-family:"Inter","Segoe UI",system-ui,sans-serif;max-width:1100px}
-#videobox{position:fixed;inset:0;z-index:45;background:rgba(8,9,6,.94);
-  opacity:0;pointer-events:none;transition:opacity .3s ease;
-  display:flex;align-items:center;justify-content:center;padding:clamp(20px,3vw,48px)}
-#videobox.open{opacity:1;pointer-events:auto}
-#videobox video{width:100%;max-width:min(96vw,calc(92vh*16/9));max-height:92vh;
-  border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.6);background:#000}
-#vidClose{position:fixed;top:18px;right:22px;z-index:46;appearance:none;border:1px solid rgba(255,255,255,.18);
-  background:rgba(20,23,15,.8);color:#e9ecdf;font-size:20px;line-height:1;cursor:pointer;
-  width:40px;height:40px;border-radius:50%;transition:all .2s}
-#vidClose:hover{background:rgba(113,177,39,.2);border-color:rgba(143,212,127,.5)}
 </style>
 </head>
 <body>
@@ -210,11 +276,10 @@ html,body{height:100%;background:#12140d;overflow:hidden;
     <button id="next" title="Weiter (Leertaste)">›</button>
     <button id="scriptBtn" title="Skript (S)">≡</button>
     <button id="presBtn" title="Presenter · 2. Bildschirm (P)">⧉</button>
-    <button id="vidBtn" title="Demo-Video (V)">⏵</button>
     <button id="ovBtn" title="Übersicht (O)">▦</button>
     <button id="fsBtn" title="Vollbild (F)">⤢</button>
   </div>
-  <div id="help" class="chrome"><b>Leertaste</b> weiter · <b>←</b> zurück · <b>S</b> Skript · <b>P</b> Presenter · <b>V</b> Demo-Video · <b>O</b> Übersicht · <b>F</b> Vollbild</div>
+  <div id="help" class="chrome"><b>Leertaste</b> weiter · <b>←</b> zurück · <b>S</b> Skript · <b>P</b> Presenter · <b>O</b> Übersicht · <b>F</b> Vollbild</div>
   <div id="overview">
     <div id="ovhead">Übersicht · ${N} Folien</div>
     <div id="ovlist"></div>
@@ -223,16 +288,13 @@ html,body{height:100%;background:#12140d;overflow:hidden;
     <div id="scripthead"><span id="scriptnum"></span><button id="scriptClose" title="Schließen (S)">✕</button></div>
     <div id="scripttext"></div>
   </div>
-  <div id="videobox">
-    <button id="vidClose" title="Schließen (V / Esc)">✕</button>
-    <video id="dvid" src="live-demo.mp4" controls playsinline preload="metadata"></video>
-  </div>
 </div>
 <script>
 const FOLIES=[${FOLIES.map(embed).join(',\n')}];
 const TITLES=${J(TITLES)};
 const SHORTS=${J(SHORTS)};
 const NOTES=${J(NOTES)};
+const SCRIPT=${J(SCRIPT)};
 const MAXBEATS=${J(MAXBEATS)};
 const FONTCSS=${FONTCSS_LITERAL};
 (function(){const s=document.createElement('style');s.textContent=FONTCSS;document.head.appendChild(s);})();
@@ -265,7 +327,8 @@ function updateChrome(){
 }
 function updateScript(){
   scriptNum.textContent='Skript · Folie '+(cur+1)+' / '+N+'  ·  '+SHORTS[cur];
-  scriptText.textContent=NOTES[cur];
+  var s=(typeof SCRIPT!=='undefined' && SCRIPT[cur] && SCRIPT[cur].length)?SCRIPT[cur].join(' '):NOTES[cur];
+  scriptText.textContent=s;
 }
 function go(i){
   cur=Math.max(0,Math.min(N-1,i));
@@ -311,8 +374,7 @@ function navKey(e){
   if(k==='o'||k==='O'){ toggleOverview(); return true; }
   if(k==='s'||k==='S'){ toggleScript(); return true; }
   if(k==='p'||k==='P'){ openPresenter(); return true; }
-  if(k==='v'||k==='V'){ toggleVideo(); return true; }
-  if(k==='Escape'){ if(videoOpen){toggleVideo(false);return true;} if(ovOpen){toggleOverview(false);return true;} if(scriptOpen){toggleScript(false);return true;} }
+  if(k==='Escape'){ if(ovOpen){toggleOverview(false);return true;} if(scriptOpen){toggleScript(false);return true;} }
   return false;
 }
 function frameKey(e){ if(!e.isTrusted) return; if(navKey(e)){ e.preventDefault(); e.stopImmediatePropagation(); } }
@@ -324,16 +386,6 @@ document.getElementById('ovBtn').onclick=()=>toggleOverview();
 document.getElementById('scriptBtn').onclick=()=>toggleScript();
 document.getElementById('scriptClose').onclick=()=>toggleScript(false);
 document.getElementById('presBtn').onclick=()=>openPresenter();
-const videobox=document.getElementById('videobox'), dvid=document.getElementById('dvid');
-let videoOpen=false;
-function toggleVideo(force){
-  videoOpen=(force===undefined)?!videoOpen:force;
-  videobox.classList.toggle('open',videoOpen);
-  if(videoOpen){ deck.classList.remove('idle'); try{ dvid.currentTime=0; dvid.play(); }catch(e){} }
-  else { try{ dvid.pause(); }catch(e){} try{frame.contentWindow.focus();}catch(e){} }
-}
-document.getElementById('vidBtn').onclick=()=>toggleVideo();
-document.getElementById('vidClose').onclick=()=>toggleVideo(false);
 function toggleFs(){ try{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); } else { document.exitFullscreen(); } }catch(e){} }
 function toggleOverview(force){
   ovOpen=(force===undefined)?!ovOpen:force;
@@ -360,11 +412,11 @@ function noteChunks(i){
   return parts.map(function(p,k){ return (k<parts.length-1)?p+'.':p; });
 }
 function presenterState(){
-  var chunks=noteChunks(cur); var mb=(MAXBEATS[cur]||0);
-  var active = mb>0 ? Math.round(beatCount/mb*(chunks.length-1)) : 0;
-  active=Math.max(0,Math.min(active,chunks.length-1));
+  // Wie Vortrag: gechunktes SCRIPT (ein Satz pro Beat) — aktiver Chunk = beatCount.
+  var chunks=(typeof SCRIPT!=='undefined' && SCRIPT[cur] && SCRIPT[cur].length)?SCRIPT[cur]:noteChunks(cur);
+  var active=Math.max(0,Math.min(beatCount,chunks.length-1));
   return { type:'state', num:cur+1, total:N, short:SHORTS[cur], chunks:chunks, active:active,
-    beat:beatCount, maxbeat:mb, nextShort:(cur<N-1?SHORTS[cur+1]:''), done:slideDone() };
+    beat:beatCount, maxbeat:(MAXBEATS[cur]||0), nextShort:(cur<N-1?SHORTS[cur+1]:''), done:slideDone() };
 }
 function broadcast(){ if(presenterWin && !presenterWin.closed){ try{ presenterWin.postMessage(presenterState(),'*'); }catch(e){} } }
 const PRESENTER_HTML='<!doctype html><html lang="de"><head><meta charset="utf-8">'
