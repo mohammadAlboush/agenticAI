@@ -47,7 +47,8 @@ code{font-family:var(--mono);font-size:.88em;background:#e9e7df;color:#33352e;pa
 .field input[type=text],.field input[type=number],.field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--mono);font-size:13px;background:#fff;color:var(--ink)}
 .field input:focus,.field select:focus{outline:2px solid var(--acc-soft);border-color:var(--acc)}
 .toggles{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:13.5px}
-.toggles label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.toggles label{display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:560}
+.toggles label small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--faint);margin-left:2px}
 .toggles input{accent-color:var(--acc-deep);width:16px;height:16px}
 .toggles .dim{color:var(--faint)}
 #engine-toggles{display:flex;gap:16px;flex-wrap:wrap}
@@ -151,6 +152,25 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
 .card .conf{height:7px;background:#e7e5dc;border-radius:4px;overflow:hidden;margin:7px 0 6px}
 .card .conf i{display:block;height:100%;background:var(--acc)}
 .card p{margin:0;font-size:12.5px;color:var(--mut)}
+/* Deploy-Karte (Schritt 6) — ruhige Karte mit Status-Pille statt hartem linken Rand */
+.deploycard{background:linear-gradient(180deg,var(--surface-2),#faf9f4);border:1px solid var(--line);
+  border-radius:14px;padding:15px 18px;margin-bottom:14px}
+.deploycard .dh{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.deploycard .dh .shield{width:17px;height:17px;flex:none;color:var(--acc-deep)}
+.deploycard .dh .ti{font-weight:660;font-size:14.5px;letter-spacing:-.01em}
+.deploycard .dh .ti small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--faint);margin-left:6px}
+.deploycard .dh .pill{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:700;
+  letter-spacing:.05em;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.deploycard .pill.dry{background:var(--acc-soft);color:var(--acc-deep)}
+.deploycard .pill.live{background:#f6dcd8;color:#a8392c}
+.deploycard .dstats{display:flex;gap:22px;font-size:13px;color:var(--ink);margin:2px 0 9px}
+.deploycard .dstats span{display:flex;flex-direction:column}
+.deploycard .dstats b{font-size:19px;font-weight:700;color:var(--acc-deep);line-height:1}
+.deploycard .dstats em{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--faint);margin-top:3px}
+.deploycard .dnote{font-size:12px;color:var(--mut);display:flex;align-items:flex-start;gap:7px;
+  border-top:1px solid var(--line-2,#eceae1);padding-top:9px}
+.deploycard .dnote .lock{width:13px;height:13px;flex:none;margin-top:1px;color:var(--acc-deep)}
 .find{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:11px 15px;margin-bottom:9px}
 .find .h{display:flex;gap:9px;align-items:center;font-size:12.5px;flex-wrap:wrap;margin-bottom:4px}
 .sev{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.05em}
@@ -204,9 +224,10 @@ td.num.neg{color:var(--red);font-weight:700}
       <div class="field" style="grid-column:span 2"><label>Themen-Set (Fragen an die Engines)</label><select id="f-promptset"></select></div>
     </div>
     <div class="toggles">
-      <label><input type="checkbox" id="f-explain" checked> Lern-Loop (Pattern-Miner + GEO-Auditor)</label>
-      <label><input type="checkbox" id="f-fix"> Fix &amp; Deploy (Fix-Agent + HITL-Freigabe + Dry-Run)</label>
-      <label id="crawl-wrap" style="display:none"><input type="checkbox" id="f-crawl"> Echte Seiten crawlen (Live)</label>
+      <label><input type="checkbox" id="f-explain" checked> Verstehen <small>· Pattern-Miner + GEO-Auditor (Schritt 4–5)</small></label>
+      <label><input type="checkbox" id="f-fix"> Fix &amp; Deploy <small>· Fix-Agent + HITL-Freigabe (Schritt 6)</small></label>
+      <label><input type="checkbox" id="f-learn"> Lern-Loop <small>· Re-Probe + Effekt (Schritt 7)</small></label>
+      <label id="crawl-wrap" style="display:none"><input type="checkbox" id="f-crawl"> Echte Seiten crawlen <small>· Live</small></label>
       <span id="engine-toggles" class="hidden"></span>
     </div>
     <div class="startrow">
@@ -411,8 +432,10 @@ $("startbtn").addEventListener("click", async () => {
     const r = await fetch("/api/runs", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
       domain: $("f-domain").value.trim(),
       offline: !live,
-      explain: $("f-explain").checked,
-      fix: $("f-fix").checked,
+      // Verschachtelung sicherstellen: Lernen ⇒ Fixen ⇒ Verstehen (CLI-Implikationen gespiegelt).
+      explain: $("f-explain").checked || $("f-fix").checked || $("f-learn").checked,
+      fix: $("f-fix").checked || $("f-learn").checked,
+      learn: $("f-learn").checked,
       top_n: parseInt($("f-topn").value, 10),
       seed: parseInt($("f-seed").value, 10),
       n_proxy_ips: parseInt($("f-ips").value, 10),
@@ -621,13 +644,17 @@ function renderResults(res){
     $("sec-fix").classList.remove("hidden");
     if (res.deploy){
       const d = res.deploy, safe = d.dry_run;
+      const shield = `<svg class="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`;
+      const lock = `<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
       $("deploybox").innerHTML =
-        `<div class="card" style="border-left:3px solid var(--acc)">` +
-        `<h4>Deploy · ${esc(d.publisher)} <span class="sev ${safe?"low":"high"}" style="margin-left:8px">` +
-        `${safe?"DRY-RUN · KEINE EXTERNEN WRITES":"LIVE"}</span></h4>` +
-        `<p><b>${d.applied_patch_ids.length}</b> angewandt · <b>${d.skipped_patch_ids.length}</b> übersprungen` +
-        ` · Status ${esc(d.status)}</p>` +
-        `<p style="margin-top:6px;color:var(--mut)">Kein Deploy ohne Freigabe — der Mensch entscheidet (Projektregeln §6).</p></div>`;
+        `<div class="deploycard">` +
+        `<div class="dh">${shield}<span class="ti">Deploy<small>${esc(d.publisher)}</small></span>` +
+        `<span class="pill ${safe?"dry":"live"}">${safe?"DRY-RUN · KEINE WRITES":"LIVE-DEPLOY"}</span></div>` +
+        `<div class="dstats">` +
+        `<span><b>${d.applied_patch_ids.length}</b><em>angewandt</em></span>` +
+        `<span><b>${d.skipped_patch_ids.length}</b><em>übersprungen</em></span>` +
+        `<span><b style="font-size:13px;color:var(--ink)">${esc(d.status)}</b><em>Status</em></span></div>` +
+        `<div class="dnote">${lock}<span>Kein Deploy ohne menschliche Freigabe — das HITL-Gate entscheidet (Projektregeln §6). Vor jedem Write wird die Originalseite gesichert (Rollback).</span></div></div>`;
     }
     $("fixes").innerHTML = res.fix_plan.proposals.map((p,i) =>
       `<div class="find"><div class="h"><b>${i+1}.</b>` +
@@ -716,6 +743,9 @@ async function tick(){
     schedule(3000);
   }
 }
+// Deep-Link: ?run=<id> in der URL waehlt diesen Lauf direkt an (sonst neuester).
+const _urlRun = new URLSearchParams(location.search).get("run");
+if (_urlRun) selectedRun = _urlRun;
 loadConfig().then(tick);
 </script>
 </body>
