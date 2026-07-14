@@ -28,6 +28,7 @@ from geo_audit_loop.cli.render import (
     render_patterns,
     render_summary,
     render_topflop,
+    render_trend,
 )
 from geo_audit_loop.config.settings import Settings
 from geo_audit_loop.domain.errors import BudgetExceeded, GeoAuditError
@@ -97,6 +98,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=None,
         help="Vorgegebene run_id (Dashboard-Start; Default: zufaellige ID)",
     )
+    parser.add_argument(
+        "--trend",
+        action="store_true",
+        help="Zitations-Trend der Domain ueber die Lauf-Historie zeigen (Monitoring, kein Lauf)",
+    )
     return parser.parse_args(argv)
 
 
@@ -131,6 +137,21 @@ def main(argv: list[str] | None = None) -> int:
             f"  ·  DB: {settings.db_path}  ·  Beenden: Strg+C"
         )
         uvicorn.run(create_app(settings), host="127.0.0.1", port=args.port, log_level="warning")
+        return 0
+
+    if args.trend:
+        # Monitoring: nur die persistierte Historie auswerten, keinen neuen Lauf starten.
+        from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+        from geo_audit_loop.agents.trend_monitor import TrendMonitorService
+
+        console = Console()
+        storage = SqliteStorage(settings.db_path)
+        storage.initialize()
+        try:
+            trend = TrendMonitorService(storage=storage).run(args.domain)
+        finally:
+            storage.close()
+        render_trend(console, trend)
         return 0
 
     version, prompts = load_probe_set(settings.prompt_set_version)

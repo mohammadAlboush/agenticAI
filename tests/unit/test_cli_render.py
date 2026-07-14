@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from rich.console import Console
 
@@ -16,6 +16,7 @@ from geo_audit_loop.cli.render import (
     render_patterns,
     render_summary,
     render_topflop,
+    render_trend,
 )
 from geo_audit_loop.domain.audit import AuditFinding, AuditReport, Severity
 from geo_audit_loop.domain.findings import TopFlopEntry, TopFlopReport
@@ -29,6 +30,7 @@ from geo_audit_loop.domain.fix import (
 )
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
 from geo_audit_loop.domain.templates import PatternReport, Template
+from geo_audit_loop.domain.trend import TrendPoint, compute_trend
 from geo_audit_loop.observability.cost import CostSnapshot
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -137,6 +139,34 @@ def test_findings_show_severity_and_fix() -> None:
     assert "/firewall-grundlagen" in text
     assert "FAQPage-Schema ergaenzen." in text
     assert "Beleg:" in text
+
+
+def test_trend_shows_series_and_alert() -> None:
+    console = _console()
+    points = [
+        TrendPoint(run_id="r1", observed_at=FIXED, overall_citation_rate=0.60, n_probes=48),
+        TrendPoint(
+            run_id="r2",
+            observed_at=FIXED + timedelta(days=1),
+            overall_citation_rate=0.40,
+            n_probes=48,
+        ),
+    ]
+    report = compute_trend(
+        points, target_domain="it-sicherheit.de", generated_at=FIXED, drift_threshold=0.10
+    )
+    render_trend(console, report)
+    text = console.export_text()
+    assert "r1" in text and "r2" in text  # Zeitreihe
+    assert "DRIFT-ALERT" in text  # Rueckgang ueber Schwelle
+    assert "2 Laeufe" in text  # Caption
+
+
+def test_trend_empty_history_does_not_crash() -> None:
+    console = _console()
+    report = compute_trend([], target_domain="it-sicherheit.de", generated_at=FIXED)
+    render_trend(console, report)
+    assert "Keine abgeschlossenen" in console.export_text()
 
 
 def test_summary_shows_cost_and_fingerprint() -> None:

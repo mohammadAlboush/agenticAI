@@ -203,7 +203,21 @@ def test_state_empty_db(tmp_path: Path) -> None:
     assert client.get("/api/state").json() == {"run": None}
     assert client.get("/api/matrix").json()["cells"] == []
     assert client.get("/api/pages").json() == {"pages": []}
+    assert client.get("/api/trend").json() == {"trend": None}
     assert client.get("/").status_code == 200
+
+
+def test_trend_endpoint_reports_history(tmp_path: Path) -> None:
+    _seed(tmp_path)  # ein abgeschlossener Lauf mit einer zitierten Probe (Rate 1.0)
+    client = TestClient(create_app(_settings(tmp_path)))
+    trend = client.get("/api/trend?domain=it-sicherheit.de").json()["trend"]
+    assert trend["n_runs"] == 1
+    assert trend["latest"]["overall_citation_rate"] == 1.0
+    assert trend["direction"] == "stable"  # nur ein Lauf
+    assert trend["alert"] is False
+    # Ohne domain-Param faellt der Endpoint auf die Domain des gewaehlten Laufs zurueck.
+    fallback = client.get("/api/trend").json()["trend"]
+    assert fallback["target_domain"] == "it-sicherheit.de"
 
 
 def test_state_with_completed_run(tmp_path: Path) -> None:

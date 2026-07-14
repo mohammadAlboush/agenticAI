@@ -27,6 +27,7 @@ from geo_audit_loop.domain.fix import (
 )
 from geo_audit_loop.domain.geo import LEVER_LABELS, PYRAMID_LABELS
 from geo_audit_loop.domain.templates import PatternReport
+from geo_audit_loop.domain.trend import TREND_DIRECTION_LABELS, TrendDirection, TrendReport
 from geo_audit_loop.observability.cost import CostSnapshot
 
 #: Markenfarben (an das Folien-Deck angelehnt, auf dunklem Terminal lesbar).
@@ -424,6 +425,63 @@ def render_effect(console: Console, report: EffectReport) -> None:
             confidence,
         )
     console.print(table)
+
+
+def render_trend(console: Console, report: TrendReport) -> None:
+    """Rendert das Monitoring (WANN — Zitations-Trend): Zeitreihe je Lauf + Drift-Alert.
+
+    Zeigt die Gesamt-Zitationsrate pro Lauf (aeltester -> neuester) und den Vergleich des
+    letzten mit dem vorherigen Lauf. Ein Rueckgang ueber der Schwelle wird als roter Alert
+    hervorgehoben — das Fruehwarnsignal.
+    """
+    console.print()
+    console.rule(
+        Text("WANN — Zitations-Trend (Monitoring)", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    if not report.points:
+        console.print(
+            Text(f"Keine abgeschlossenen Laeufe fuer {report.target_domain}.", style=GREY)
+        )
+        return
+    scale = max((point.overall_citation_rate for point in report.points), default=0.0)
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption=(
+            f"{report.n_runs} Laeufe · Mittel {report.mean_rate:.2f} · "
+            f"letzter Lauf {TREND_DIRECTION_LABELS[report.direction]} ({report.delta:+.2f})"
+        ),
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("#", justify="right", width=3)
+    table.add_column("Lauf", ratio=1, no_wrap=True)
+    table.add_column("Rate", justify="right", width=6)
+    table.add_column("", width=20)
+    for position, point in enumerate(report.points, start=1):
+        fraction = point.overall_citation_rate / scale if scale > 0 else 0.0
+        table.add_row(
+            str(position),
+            Text(point.run_id, style="bold"),
+            f"{point.overall_citation_rate:.2f}",
+            _bar(fraction, 20, ACCENT),
+        )
+    console.print(table)
+    if report.alert:
+        console.print(
+            Text(
+                f" ⚠ DRIFT-ALERT — Zitier-Anteil um {abs(report.delta):.2f} gesunken "
+                f"(Schwelle {report.drift_threshold:.2f}) ",
+                style="bold white on #a8392c",
+            )
+        )
+    elif report.direction is TrendDirection.IMPROVED:
+        console.print(
+            Text(f"▲ Zitier-Anteil gestiegen (+{report.delta:.2f})", style=f"bold {ACCENT}")
+        )
 
 
 def render_summary(

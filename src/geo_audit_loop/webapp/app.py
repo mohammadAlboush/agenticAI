@@ -19,6 +19,7 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Route
 
 from geo_audit_loop.adapters.storage.sqlite_storage import SqliteStorage
+from geo_audit_loop.agents.trend_monitor import TrendMonitorService
 from geo_audit_loop.config.settings import Settings
 from geo_audit_loop.domain.fingerprint import report_fingerprint
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeResult
@@ -299,6 +300,17 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
             }
         )
 
+    def trend(request: Request) -> JSONResponse:
+        # Zitations-Trend einer Domain ueber ihre Historie (Monitoring, read-only).
+        domain = request.query_params.get("domain")
+        if not domain:
+            run = _selected_run(storage, request)
+            if run is None:
+                return JSONResponse({"trend": None})
+            domain = run.target_domain
+        report = TrendMonitorService(storage=storage).run(domain)
+        return JSONResponse({"trend": report.model_dump(mode="json")})
+
     routes = [
         Route("/", index),
         Route("/api/config", config),
@@ -311,5 +323,6 @@ def create_app(settings: Settings | None = None, *, spawn: SpawnFn | None = None
         Route("/api/probe", probe_detail),
         Route("/api/pages", pages),
         Route("/api/results", results),
+        Route("/api/trend", trend),
     ]
     return Starlette(routes=routes)
