@@ -47,3 +47,7 @@ Thumbs.db
 
 # --- Plan-/Tooling-Artefakte ---
 _pitch_text.txt
+
+# --- Cloudflare/Wrangler-Reste + Code-Archiv (Deliverable, gehoert nicht ins Repo) ---
+.wrangler/
+*.zip

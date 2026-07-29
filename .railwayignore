@@ -1,0 +1,20 @@
+# Was NICHT zu Railway hochgeladen wird (der Build nutzt ohnehin den Dockerfile-Context).
+# Secrets sind bereits per .gitignore ausgeschlossen; hier nur zusaetzlich Ballast raus.
+.git/
+docs/
+runs/
+data/
+logs/
+node_modules/
+.venv/
+.wrangler/
+.claude/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.db
+*.sqlite*
+pitch.pdf
+pitch.md
+Webshare*proxies*.txt
