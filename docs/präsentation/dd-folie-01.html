@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Titel</title>
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --node:var(--metal);
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:grid;place-items:center}
+
+/* ---- Bühne mit Regelkreis (Leitmotiv) ----
+   b1–b3: Orbit zentriert. b4: Szene fährt nach links, Titelblock schwebt rechts ein
+   → Endzustand ist eine komponierte 2-Spalten-Titelfolie. */
+.scene-wrap{width:min(880px,78vw);transition:transform .8s var(--ease);will-change:transform}
+.stage.b4 .scene-wrap{transform:translateX(-26%) scale(.97)}
+.scene{display:block;width:100%;height:auto;overflow:visible}
+
+/* Ring zeichnet sich selbst (Sketch-in) */
+.ring{fill:none;stroke:var(--line);stroke-width:2.4;
+  stroke-dasharray:100;stroke-dashoffset:100;
+  transition:stroke-dashoffset 1.15s var(--ease)}
+.stage.b1 .ring{stroke-dashoffset:0}
+
+/* Richtungs-Chevrons auf dem Ring: Lesereihenfolge 1→5 */
+.chev{fill:var(--node);opacity:0;transition:opacity .6s ease .9s}
+.stage.b1 .chev{opacity:.9}
+.stage.b3 .chev{fill:var(--acc);opacity:.55;transition:fill .4s ease,opacity .4s ease}
+
+/* Fortschritts-Bogen (grün) legt sich über den Ring — der „geschlossene" Kreis */
+.ring-acc{fill:none;stroke:var(--acc);stroke-width:3;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;opacity:0;
+  transition:stroke-dashoffset 1.3s var(--ease) .25s,opacity .3s ease .25s}
+.stage.b3 .ring-acc{stroke-dashoffset:0;opacity:.9}
+
+/* Knoten ploppen im Uhrzeigersinn, Labels folgen je +80ms */
+.node-pop{opacity:0;transform:scale(.5);transform-box:fill-box;transform-origin:center;
+  transition:opacity .45s ease,transform .55s var(--ease)}
+.stage.b2 .node-pop{opacity:1;transform:none}
+.node-lbl{opacity:0;transform:translateY(5px);
+  transition:opacity .45s ease,transform .5s var(--ease)}
+.stage.b2 .node-lbl{opacity:1;transform:none}
+.stage.b2 .n1 .node-pop{transition-delay:0s}    .stage.b2 .n1 .node-lbl{transition-delay:.08s}
+.stage.b2 .n2 .node-pop{transition-delay:.11s}  .stage.b2 .n2 .node-lbl{transition-delay:.19s}
+.stage.b2 .n3 .node-pop{transition-delay:.22s}  .stage.b2 .n3 .node-lbl{transition-delay:.30s}
+.stage.b2 .n4 .node-pop{transition-delay:.33s}  .stage.b2 .n4 .node-lbl{transition-delay:.41s}
+.stage.b2 .n5 .node-pop{transition-delay:.44s}  .stage.b2 .n5 .node-lbl{transition-delay:.52s}
+.node-disc{fill:var(--surface-2);stroke:var(--line);stroke-width:1.8}
+.stage.b3 .node-disc{stroke:var(--acc);transition:stroke .4s ease}
+.node-num{font-family:var(--mono);font-size:20px;font-weight:700;fill:var(--acc-deep);
+  text-anchor:middle;dominant-baseline:central}
+.node-label{font-family:var(--sans);font-size:15.5px;font-weight:600;fill:var(--ink)}
+.node-sub{font-family:var(--mono);font-size:10.5px;fill:var(--mut)}
+
+/* Wanderndes Datenpaket auf dem Ring */
+.pulse{fill:var(--acc);opacity:0;filter:drop-shadow(0 0 6px rgba(113,177,39,.9))}
+.stage.b3 .pulse{opacity:1;transition:opacity .3s ease .5s}
+
+/* Zentrum */
+.core{opacity:0;transition:opacity .5s ease .2s}
+.stage.b3 .core{opacity:1}
+.core-ring{fill:none;stroke:var(--acc);stroke-width:1.5;opacity:.35}
+.core-txt{font-family:var(--mono);font-size:13px;letter-spacing:.14em;fill:var(--acc-deep);
+  text-anchor:middle;dominant-baseline:central;text-transform:uppercase;font-weight:700}
+
+/* ---- Titelblock (rechte Spalte, schwebt in b4 ein) ---- */
+.title-block{position:absolute;right:4vw;top:50%;width:min(44vw,540px);text-align:left;
+  opacity:0;transform:translateY(-50%) translateX(16px);
+  transition:opacity .75s var(--ease),transform .75s var(--ease);pointer-events:none}
+.stage.b4 .title-block{opacity:1;transform:translateY(-50%) translateX(0)}
+/* gestaffelte Kaskade: Eyebrow → h1 → Rule → Lead → Byline */
+.rv{opacity:0;transform:translateX(18px);
+  transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.stage.b4 .rv{opacity:1;transform:none}
+.stage.b4 .rv-1{transition-delay:.05s}
+.stage.b4 .rv-2{transition-delay:.13s}
+.stage.b4 .rv-3{transition-delay:.21s}
+.stage.b4 .rv-4{transition-delay:.29s}
+.stage.b4 .rv-5{transition-delay:.37s}
+
+.eyebrow{font-family:var(--mono);font-size:clamp(11px,1.15vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:14px}
+h1{font-family:var(--sans);font-weight:700;font-size:clamp(38px,4.8vw,60px);
+  line-height:1.02;letter-spacing:-.025em;color:var(--ink)}
+h1 .g{color:var(--acc-deep)}
+.accent-rule{width:64px;height:4px;background:var(--acc);border-radius:3px;margin:16px 0 14px}
+.lead{font-size:clamp(15px,1.65vw,20px);color:var(--mut);line-height:1.5;
+  max-width:44ch;margin:0 0 16px;font-weight:400}
+.byline{font-family:var(--mono);font-size:12.5px;color:var(--faint);letter-spacing:.02em}
+.byline b{color:var(--mut);font-weight:600}
+
+.hint{position:fixed;left:0;right:0;bottom:20px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none}
+.stage.b4 .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  .ring,.ring-acc,.chev,.node-pop,.node-lbl,.title-block,.rv,.scene-wrap,.core{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="scene-wrap">
+    <!-- viewBox 900×560 · Regelkreis: 5 Knoten im Uhrzeigersinn, Zentrum (450,270) r=150.
+         Labels konsequent RADIAL nach außen. LEITMOTIV: Diesen Loop greift Folie 12 (Danke) wieder auf. -->
+    <svg class="scene" viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+
+      <!-- Ring (grau) + geschlossener grüner Bogen -->
+      <circle class="ring"     cx="450" cy="270" r="150" pathLength="100"/>
+      <circle class="ring-acc" cx="450" cy="270" r="150" pathLength="100"
+              transform="rotate(-90 450 270)"/>
+
+      <!-- Richtungs-Chevrons: mittig zwischen den Knoten, zeigen im Uhrzeigersinn -->
+      <path class="chev" transform="translate(538.2 148.6) rotate(36)"  d="M -4 -5.5 L 5 0 L -4 5.5 L -1.2 0 Z"/>
+      <path class="chev" transform="translate(592.7 316.4) rotate(108)" d="M -4 -5.5 L 5 0 L -4 5.5 L -1.2 0 Z"/>
+      <path class="chev" transform="translate(450 420) rotate(180)"     d="M -4 -5.5 L 5 0 L -4 5.5 L -1.2 0 Z"/>
+      <path class="chev" transform="translate(307.3 316.4) rotate(252)" d="M -4 -5.5 L 5 0 L -4 5.5 L -1.2 0 Z"/>
+      <path class="chev" transform="translate(361.8 148.6) rotate(324)" d="M -4 -5.5 L 5 0 L -4 5.5 L -1.2 0 Z"/>
+
+      <!-- Orbit-Pfad (unsichtbar) für das wandernde Datenpaket -->
+      <path id="orbit" d="M 450 120 A 150 150 0 1 1 449.9 120" fill="none" stroke="none"/>
+      <circle class="pulse" r="5.5">
+        <animateMotion dur="4.2s" repeatCount="indefinite" begin="indefinite" rotate="auto">
+          <mpath xlink:href="#orbit"/>
+        </animateMotion>
+      </circle>
+
+      <!-- Zentrum -->
+      <g class="core">
+        <circle class="core-ring" cx="450" cy="270" r="46"/>
+        <text class="core-txt" x="450" y="261">closed</text>
+        <text class="core-txt" x="450" y="280">loop</text>
+      </g>
+
+      <!-- Knoten (im Uhrzeigersinn ab oben) · Labels radial außen -->
+      <!-- 1 Messen · oben (450,120) · Label ÜBER dem Knoten -->
+      <g class="node n1">
+        <g class="node-pop">
+          <circle class="node-disc" cx="450" cy="120" r="32"/>
+          <text class="node-num" x="450" y="120">1</text>
+        </g>
+        <g class="node-lbl">
+          <text class="node-label" x="450" y="58" text-anchor="middle">Messen</text>
+          <text class="node-sub"  x="450" y="76" text-anchor="middle">240 Probes</text>
+        </g>
+      </g>
+      <!-- 2 Auditieren · rechts oben (593,224) · Label rechts außen -->
+      <g class="node n2">
+        <g class="node-pop">
+          <circle class="node-disc" cx="593" cy="224" r="32"/>
+          <text class="node-num" x="593" y="224">2</text>
+        </g>
+        <g class="node-lbl">
+          <text class="node-label" x="637" y="220" text-anchor="start">Auditieren</text>
+          <text class="node-sub"  x="637" y="238" text-anchor="start">Findings</text>
+        </g>
+      </g>
+      <!-- 3 Fixen · rechts unten (538,391) · Label rechts außen -->
+      <g class="node n3">
+        <g class="node-pop">
+          <circle class="node-disc" cx="538" cy="391" r="32"/>
+          <text class="node-num" x="538" y="391">3</text>
+        </g>
+        <g class="node-lbl">
+          <text class="node-label" x="582" y="387" text-anchor="start">Fixen</text>
+          <text class="node-sub"  x="582" y="405" text-anchor="start">HITL-Gate</text>
+        </g>
+      </g>
+      <!-- 4 Re-Probe · links unten (362,391) · Label links außen -->
+      <g class="node n4">
+        <g class="node-pop">
+          <circle class="node-disc" cx="362" cy="391" r="32"/>
+          <text class="node-num" x="362" y="391">4</text>
+        </g>
+        <g class="node-lbl">
+          <text class="node-label" x="318" y="387" text-anchor="end">Re-Probe</text>
+          <text class="node-sub"  x="318" y="405" text-anchor="end">Effekt</text>
+        </g>
+      </g>
+      <!-- 5 Lernen · links oben (307,224) · Label links außen -->
+      <g class="node n5">
+        <g class="node-pop">
+          <circle class="node-disc" cx="307" cy="224" r="32"/>
+          <text class="node-num" x="307" y="224">5</text>
+        </g>
+        <g class="node-lbl">
+          <text class="node-label" x="263" y="220" text-anchor="end">Lernen</text>
+          <text class="node-sub"  x="263" y="238" text-anchor="end">Gedächtnis</text>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="title-block">
+    <div class="eyebrow rv rv-1">Demo Day · Master-Modulprojekt Agentic AI</div>
+    <h1 class="rv rv-2"><span class="g">geo-audit-loop</span></h1>
+    <div class="accent-rule rv rv-3"></div>
+    <p class="lead rv rv-4">Ein selbstlernender agentischer Regelkreis, der misst, wie Websites in
+      Such- und AI-Engines <b>zitiert</b> werden — und sich mit jedem Lauf selbst verbessert.</p>
+    <div class="byline rv rv-5"><b>Mohammad Alboush</b> · Master Informatik · Westfälische Hochschule</div>
+  </div>
+
+  <div class="hint">Leertaste ▸ weiter</div>
+</div>
+
+<script>
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=4;
+  let beat=0, timer=null;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function startPulse(){
+    const a=document.querySelector('animateMotion');
+    if(a){ try{a.beginElement();}catch(e){} }
+  }
+  function schedule(){
+    clearTimeout(timer);
+    const delay={1:1500, 2:1550, 3:1500}[beat];
+    if(beat<MAX && delay) timer=setTimeout(()=>go(beat+1), delay);
+  }
+  function go(n){
+    if(n<1||n>MAX||n<=beat) return;
+    beat=n;
+    stage.classList.add('b'+n);
+    if(n===3) startPulse();
+    schedule();
+  }
+  function advance(){ clearTimeout(timer); if(beat<MAX) go(beat+1); }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='r'||e.key==='R'){ location.reload(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){
+    stage.classList.add('b1','b2','b3','b4');
+    const p=document.querySelector('.pulse'); if(p) p.style.display='none';
+    beat=MAX;
+  }else{
+    setTimeout(()=>go(1), 450);
+  }
+})();
+</script>
+</body>
+</html>

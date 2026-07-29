@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Demo-Setup</title>
+<style>
+/* ===================================================================
+   DESIGN-TOKENS (gemeinsames Kit — unverändert)
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+/* ---- Einheitlicher Kopf (Demo-Day-Kontrakt) ---- */
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+.head-wrap{flex:0 0 auto}
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--acc-deep);margin-bottom:8px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;color:var(--ink);white-space:nowrap}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:12px 0 0}
+
+/* ---- Bühne ---- */
+.body{flex:1 1 auto;min-height:0;margin-top:clamp(10px,1.8vh,18px);
+  display:grid;grid-template-columns:minmax(300px,34%) 1fr;
+  gap:clamp(26px,3.5vw,52px);align-items:start}
+
+/* ---- Beat-Reveal ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+.d1.show{transition-delay:.12s}
+.d2.show{transition-delay:.24s}
+
+/* ===================================================================
+   LINKS — Faktor-Stack (Probe-Matrix rechnet sich zusammen)
+   =================================================================== */
+.factor{display:flex;flex-direction:column;align-self:stretch;min-height:0}
+.chip{display:grid;grid-template-columns:16px 24px 1fr;align-items:center;gap:9px;
+  width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+  padding:clamp(8px,1.5vh,13px) 13px;
+  font-family:var(--mono);font-size:clamp(11.5px,1.05vw,13px);letter-spacing:.09em;
+  color:var(--mut);font-weight:600;text-transform:uppercase}
+.chip .op{font-size:clamp(14px,1.3vw,17px);font-weight:700;color:var(--acc-deep);
+  letter-spacing:0;text-align:center}
+.chip .fx{display:flex;align-items:baseline;gap:8px}
+.chip .fx b{font-size:clamp(15px,1.5vw,19px);color:var(--ink);font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.chip svg{display:block;justify-self:center}
+.fjoin{width:2px;height:clamp(8px,1.8vh,18px);background:var(--metal);margin:0 auto;border-radius:1px}
+
+.fsum{height:3px;background:var(--ink);border-radius:2px;
+  margin:clamp(12px,2.4vh,22px) 0 clamp(10px,2vh,18px)}
+.hero-stat .v{font-family:var(--sans);font-size:clamp(46px,6vw,84px);font-weight:680;line-height:.92;
+  letter-spacing:-.04em;color:var(--acc-deep);font-variant-numeric:tabular-nums}
+.hero-stat .k{font-family:var(--mono);font-size:clamp(10.5px,1vw,12px);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:700;margin-top:7px}
+
+.pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:auto;padding-top:clamp(12px,2vh,18px)}
+.pill{border-radius:999px;padding:5px 14px;font-size:clamp(11.5px,1.05vw,13px);line-height:1.5;
+  white-space:nowrap}
+.pill-seed{font-family:var(--mono);font-weight:700;letter-spacing:.03em;
+  background:var(--acc-soft);color:var(--acc-deep2)}
+.pill-med{font-family:var(--sans);font-weight:600;background:var(--surface);
+  border:1px solid var(--line);color:var(--mut)}
+.pill-seed.show{animation:pop .5s var(--ease)}
+@keyframes pop{0%{transform:scale(.55)}62%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+.fnote{font-family:var(--mono);font-size:clamp(10px,.95vw,11.5px);color:var(--faint);
+  line-height:1.7;letter-spacing:.02em;margin-top:clamp(10px,1.8vh,16px)}
+.fnote b{color:var(--mut);font-weight:700}
+
+/* ===================================================================
+   RECHTS — Terminal (Hero, dunkles Panel)
+   =================================================================== */
+.term{background:#14170f;border:1px solid #2b3120;border-radius:14px;overflow:hidden;
+  font-family:var(--mono);color:#e6ead9;box-shadow:0 14px 40px rgba(20,23,15,.22);
+  margin-top:0;align-self:stretch;display:flex;flex-direction:column}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 15px;background:#1b2013;
+  border-bottom:1px solid #2b3120}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term-bar .r{background:#CC352B}.term-bar .y{background:#E39B12}.term-bar .g{background:#3fae4a}
+.term-bar span{margin-left:8px;font-size:12px;color:#9aa88a;letter-spacing:.02em}
+.term-body{padding:clamp(18px,3vh,30px) clamp(18px,2vw,26px);min-height:46vh;flex:1 1 auto;
+  font-size:clamp(13px,1.35vw,16px);line-height:1.9}
+.term .dim{color:#8b9678}.term .ac{color:#8fd47f}.term .am{color:#e6b24d}.term .rd{color:#e8756b}
+.term .hl{color:#fff;font-weight:600}
+.term-body .cont{padding-left:1.4em}
+.term-body .grp{margin-top:1.35em}
+
+/* live ✓ — gezeichnetes Häkchen + Glow bei b3 */
+.off-ok{transition:text-shadow .5s ease .25s}
+.stage.b3 .off-ok{text-shadow:0 0 8px rgba(143,212,127,.6)}
+.ck{display:inline-block;vertical-align:-2px;margin-left:2px}
+.ck path{stroke:#8fd47f;stroke-width:2.3;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:19;stroke-dashoffset:19;transition:stroke-dashoffset .55s ease .3s}
+.stage.b3 .ck path{stroke-dashoffset:0;filter:drop-shadow(0 0 4px rgba(143,212,127,.6))}
+
+/* Prompt-Cursor am Ende */
+.caret{display:inline-block;width:.55em;height:1.05em;vertical-align:-3px;background:#8fd47f;
+  animation:blink 1.15s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+
+/* ===================================================================
+   Bottom-Caption
+   =================================================================== */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px)}
+.caption .dash{flex:0 0 auto;width:26px;height:3px;background:var(--acc);border-radius:2px}
+.caption .ctxt{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink)}
+.caption .ctxt b{color:var(--acc-deep)}
+
+.hint{position:fixed;left:0;right:0;bottom:6px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished~.hint,.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+  .pill-seed.show{animation:none}
+  .caret{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">05 / 13</span> &nbsp;·&nbsp; 02 · LIVE-DEMO · DEMO-SETUP</div>
+    <h2>Ein Befehl. Der ganze Loop. <span class="g">Echte Engines.</span></h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="body">
+
+    <!-- ===== LINKS: Faktor-Stack — die Probe-Matrix rechnet sich zusammen ===== -->
+    <div class="factor">
+      <div class="chip" data-beat="1">
+        <span class="op"></span>
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="5.5" y="5.5" width="9" height="9" rx="1.6" fill="none" stroke="#33352E" stroke-width="1.6"/>
+          <rect x="8.4" y="8.4" width="3.2" height="3.2" rx=".8" fill="none" stroke="#33352E" stroke-width="1.2"/>
+          <path d="M8,5.5 V3 M12,5.5 V3 M8,14.5 V17 M12,14.5 V17 M5.5,8 H3 M5.5,12 H3 M14.5,8 H17 M14.5,12 H17" stroke="#33352E" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="fx"><b>4</b> Engines</span>
+      </div>
+      <div class="fjoin d1" data-beat="1"></div>
+      <div class="chip d1" data-beat="1">
+        <span class="op">×</span>
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M4.5,4.5 h11 a1.8,1.8 0 0 1 1.8,1.8 v5.4 a1.8,1.8 0 0 1 -1.8,1.8 h-7.2 l-3.3,3 v-3 h-.5 a1.8,1.8 0 0 1 -1.8,-1.8 v-5.4 a1.8,1.8 0 0 1 1.8,-1.8 z" fill="none" stroke="#33352E" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M6.5,8 H13.5 M6.5,10.6 H11" stroke="#33352E" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="fx"><b>12</b> Prompts</span>
+      </div>
+      <div class="fjoin d2" data-beat="1"></div>
+      <div class="chip d2" data-beat="1">
+        <span class="op">×</span>
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="6.6" fill="none" stroke="#33352E" stroke-width="1.5"/>
+          <ellipse cx="10" cy="10" rx="2.9" ry="6.6" fill="none" stroke="#33352E" stroke-width="1.2"/>
+          <path d="M3.6,10 H16.4" stroke="#33352E" stroke-width="1.2"/>
+        </svg>
+        <span class="fx"><b>5</b> Proxy-IPs</span>
+      </div>
+
+      <div class="fsum" data-beat="2"></div>
+
+      <div class="hero-stat" data-beat="2">
+        <div class="v" id="probes">0</div>
+        <div class="k">Probes pro Lauf</div>
+      </div>
+
+      <div class="pills">
+        <span class="pill pill-seed" data-beat="2">seed 42</span>
+        <span class="pill pill-med" data-beat="3">Median über 5 IPs</span>
+      </div>
+
+      <div class="fnote" data-beat="3">
+        Median eliminiert <b>Personalisierung</b><br>
+        Echte AI-Engines · Proxy-rotiert · budget-gedeckelt
+      </div>
+    </div>
+
+    <!-- ===== RECHTS: Terminal (Hero) ===== -->
+    <div class="term" data-beat="1">
+      <div class="term-bar">
+        <i class="r"></i><i class="y"></i><i class="g"></i>
+        <span>geo-audit-loop — live run</span>
+      </div>
+      <div class="term-body">
+        <div class="cmd" data-beat="1">
+          <div><span class="ac">$</span> geo-audit-loop --domain it-sicherheit.de \</div>
+          <div class="cont">--live --learn --top-n 3</div>
+        </div>
+        <div class="grp" data-beat="2">
+          <div><span class="dim">▸</span> run <span class="hl">9bd9b4a1e867</span> · seed <span class="hl">42</span></div>
+          <div><span class="dim">▸</span> 240 probes · 4 engines · 12 prompts · 5 IPs</div>
+        </div>
+        <div class="grp" data-beat="3">
+          <div><span class="dim">▸</span> budget-cap aktiv · checkpointing an ·
+            <span class="ac off-ok">live<svg class="ck" width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6,8.6 L6.1,12 L13.4,4.2"/></svg></span>
+          </div>
+        </div>
+        <div class="grp" data-beat="3">
+          <div><span class="ac">$</span> <span class="caret"></span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="caption" data-beat="3">
+    <span class="dash"></span>
+    <span class="ctxt">Ein Befehl misst 240-mal — jeder Lauf <b>voll nachvollziehbar</b> (run_id · Seed · Fingerprint).</span>
+  </div>
+
+  <div class="hint">Leertaste ▸ weiter</div>
+</div>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=3;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+
+<script>
+/* ===== rAF-Count-up 0 → 240 (Hook auf Beat 2 via Stage-Klasse) ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const el=document.getElementById('probes');
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const TARGET=240, DUR=1200;
+  let running=false, runId=0;
+
+  function start(){
+    if(running) return; running=true;
+    if(reduced){ el.textContent=TARGET; return; }
+    const id=++runId, t0=performance.now();
+    function tick(now){
+      if(id!==runId) return;
+      const p=Math.min(1,(now-t0)/DUR);
+      const e=1-Math.pow(1-p,3);            /* easeOutCubic */
+      el.textContent=Math.round(e*TARGET);
+      if(p<1) requestAnimationFrame(tick); else el.textContent=TARGET;
+    }
+    requestAnimationFrame(tick);
+  }
+  function check(){
+    if(stage.classList.contains('b2')) start();
+    else { runId++; running=false; el.textContent='0'; }
+  }
+  new MutationObserver(check).observe(stage,{attributes:true,attributeFilter:['class']});
+  check();
+})();
+</script>
+</body>
+</html>

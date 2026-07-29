@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Reflexion</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — NICHT ÄNDERN (Tokens + Basis + Engine).
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(46px,6.4vh,72px) clamp(54px,7vw,112px)}
+
+/* ---- Kopf ---- */
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.15vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--acc-deep);font-weight:700;margin-bottom:12px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:700;font-size:clamp(28px,3.9vw,48px);line-height:1.04;
+  letter-spacing:-.022em;color:var(--ink);max-width:20ch}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:18px 0 0}
+.head-wrap{flex:0 0 auto}
+
+/* ---- Körper ---- */
+.body{flex:1 1 auto;display:flex;min-height:0;gap:clamp(28px,4vw,64px);
+  align-items:center;margin-top:clamp(22px,3.4vh,40px)}
+.col{flex:1 1 0;min-width:0}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ===== Wiederverwendbare Komponenten ===== */
+/* Aufzählung mit grünem Marker */
+.points{list-style:none;display:flex;flex-direction:column;gap:clamp(12px,1.9vh,20px)}
+.points li{display:flex;gap:14px;align-items:flex-start;font-size:clamp(16px,1.72vw,21px);
+  line-height:1.42;color:var(--ink)}
+.points .mk{flex:0 0 auto;width:11px;height:11px;border-radius:3px;background:var(--acc);margin-top:.42em}
+.points b{font-weight:680}
+.points .s{display:block;font-size:.82em;color:var(--mut);margin-top:2px;font-weight:400}
+
+/* Karte */
+.card{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;
+  padding:clamp(18px,2.2vw,26px)}
+.card .ct{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--acc-deep);font-weight:700;margin-bottom:8px}
+
+/* Terminal-/Output-Panel (dunkel) — für Demo-Folien */
+.term{background:#14170f;border:1px solid #2b3120;border-radius:14px;overflow:hidden;
+  font-family:var(--mono);color:#e6ead9;box-shadow:0 14px 40px rgba(20,23,15,.22)}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 15px;background:#1b2013;
+  border-bottom:1px solid #2b3120}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term-bar .r{background:#CC352B}.term-bar .y{background:#E39B12}.term-bar .g{background:#3fae4a}
+.term-bar span{margin-left:8px;font-size:12px;color:#9aa88a;letter-spacing:.02em}
+.term-body{padding:16px 20px;font-size:clamp(12.5px,1.28vw,15.5px);line-height:1.62}
+.term .dim{color:#8b9678}.term .ac{color:#8fd47f}.term .am{color:#e6b24d}.term .rd{color:#e8756b}
+.term .hl{color:#fff;font-weight:600}
+
+/* Horizontaler Balken (z. B. Zitationsrate) */
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;
+  font-size:14px}
+.bar-row .lab{font-family:var(--mono);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{grid-column:1/-1;height:12px;background:var(--surface);border:1px solid var(--line-2);
+  border-radius:7px;overflow:hidden}
+.bar-fill{height:100%;background:var(--acc);border-radius:7px;width:0;
+  transition:width .9s var(--ease)}
+.bar-fill.flop{background:var(--metal)}
+[data-beat].show .bar-fill{width:var(--w,50%)}
+
+/* Kennzahl */
+.stat{font-family:var(--sans)}
+.stat .v{font-size:clamp(34px,5vw,60px);font-weight:720;line-height:1;letter-spacing:-.03em;color:var(--acc-deep)}
+.stat .k{font-size:14px;color:var(--mut);margin-top:6px;font-family:var(--mono);letter-spacing:.02em}
+
+/* dezenter Fußtext / Quelle */
+.foot{position:fixed;left:clamp(54px,7vw,112px);bottom:22px;font-family:var(--mono);
+  font-size:11px;color:var(--faint);letter-spacing:.02em}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">12 / 13</span> &nbsp;·&nbsp; 04 · REFLEXION</div>
+    <h2>Größtes Learning — <span class="g">und was ich anders machen würde</span></h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="body">
+
+    <!-- Trenner + Tausch-Medaillon -->
+    <div class="divider" data-beat="1"></div>
+    <div class="medal" data-beat="1">⇄</div>
+
+    <!-- Seiten-Label -->
+    <div class="side-label learn" data-beat="1">GELERNT</div>
+    <div class="side-label change" data-beat="2">ANDERS MACHEN</div>
+
+    <!-- LINKS: GELERNT -->
+    <div class="half left">
+      <div class="vrow" data-beat="1">
+        <div class="ic">
+          <!-- Vertrags-Siegel mit Haken -->
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <path class="il" d="M28,5.5 L13,5.5 L13,42 L25.5,42"/>
+            <path class="il" d="M35,12.5 L35,26.5"/>
+            <path class="il" d="M28,5.5 L28,12.5 L35,12.5"/>
+            <path class="il" d="M18,17.5 L30,17.5" opacity=".5" stroke-width="1.4"/>
+            <path class="il" d="M18,23 L27,23" opacity=".5" stroke-width="1.4"/>
+            <path class="il" d="M18,28.5 L24,28.5" opacity=".5" stroke-width="1.4"/>
+            <circle class="il" cx="32.5" cy="35.5" r="8.5" fill="var(--bg)"/>
+            <path class="il" d="M28.6,35.6 L31.4,38.4 L36.5,32.7" stroke-width="1.9"/>
+          </svg>
+        </div>
+        <div class="tx"><span class="vw">Contracts-first.</span> Zahlt sich aus:
+          <b>Pydantic-Verträge + Mock/Live-Symmetrie</b> machten jeden Agenten ab Tag&nbsp;1
+          testbar — der Loop ließ sich <b>Sprint für Sprint anstecken</b>, ohne den Kern zu brechen.</div>
+      </div>
+      <div class="vrow dl1" data-beat="1">
+        <div class="ic">
+          <!-- Fingerabdruck (bit-genauer Fingerprint) -->
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <path class="il" d="M12,24 C12,17 17,11.5 24,11.5 C31,11.5 36,17 36,24 C36,30 35.5,35 34,39"/>
+            <path class="il" d="M16.5,24 C16.5,19.6 19.8,16.5 24,16.5 C28.2,16.5 31.5,19.6 31.5,24 C31.5,29.5 31,34 29.5,38"/>
+            <path class="il" d="M21,24 C21,22.3 22.3,21 24,21 C25.7,21 27,22.3 27,24 C27,29 26.4,33.6 24.8,37.6"/>
+            <path class="il" d="M12,29.5 C12.2,32.4 12.8,35 13.9,37.6" opacity=".55"/>
+            <path class="il" d="M16.9,29.5 C17.2,32.6 17.9,35.4 19.2,38.4" opacity=".55"/>
+          </svg>
+        </div>
+        <div class="tx"><span class="vw">Determinismus.</span> Ist ein Feature: der
+          <b>bit-genaue Fingerprint</b> erzwang saubere Grenzen zwischen deterministischem
+          Kern und nicht-deterministischem LLM.</div>
+      </div>
+    </div>
+
+    <!-- RECHTS: ANDERS MACHEN -->
+    <div class="half right">
+      <div class="vrow" data-beat="2">
+        <div class="ic">
+          <!-- Pfeil durchsticht drei Schichtplatten -->
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <rect class="ia" x="9" y="9.5" width="30" height="5.5" rx="2.2"/>
+            <rect class="ia" x="9" y="19.5" width="30" height="5.5" rx="2.2"/>
+            <rect class="ia" x="9" y="29.5" width="30" height="5.5" rx="2.2"/>
+            <line x1="24" y1="3.5" x2="24" y2="41.5" stroke="var(--bg)" stroke-width="7"/>
+            <path class="ia" d="M24,4 L24,41" stroke-width="2"/>
+            <path class="ia" d="M19.5,36 L24,41.5 L28.5,36" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="tx"><span class="vw">Früher End-to-End.</span> Sehr saubere Schichten
+          gebaut — ein <b>dünner Durchstich</b> durch alle Schichten noch früher hätte
+          <b>Contract-Lücken</b> schneller sichtbar gemacht.</div>
+      </div>
+      <div class="vrow dl1" data-beat="2">
+        <div class="ic">
+          <!-- Engine-Stecker mit Uhr -->
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <rect class="ia" x="11" y="22.5" width="13" height="15" rx="3.5"/>
+            <path class="ia" d="M11,27 L5.5,27"/>
+            <path class="ia" d="M11,33 L5.5,33"/>
+            <path class="ia" d="M24,30 L28.5,30 C31.6,30 33,28.2 33,25.5"/>
+            <circle class="ia" cx="33" cy="14.5" r="8.5"/>
+            <path class="ia" d="M33,9.8 L33,14.5 L36.8,16.7" stroke-width="1.9"/>
+          </svg>
+        </div>
+        <div class="tx"><span class="vw">Live-Engines früher.</span> Eher evaluieren:
+          die kostenlosen Wege (<b>Gemini-Grounding, SAIA</b>) erst spät gefunden —
+          früher getestet hätte die <b>Live-Validierung</b> entlastet.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Kernsatz-Band = Caption -->
+  <div class="caption" data-beat="2">
+    <span class="bacc"></span>
+    <span class="btag">Learning</span>
+    <span class="btx"><b>Contracts-first</b> + Determinismus trugen den Loop —
+      <b class="am">ein früher Durchstich</b> hätte ihn noch schneller gemacht.</span>
+  </div>
+
+  <div class="hint">Leertaste ▸ weiter</div>
+
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+/* --- Kompakter Einheitskopf (überschreibt Kit-Defaults) --- */
+.stage{padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+.kicker{font-size:clamp(11px,1.1vw,13px);margin-bottom:8px}
+h2{font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;max-width:none;white-space:nowrap}
+.rule{margin:12px 0 0}
+
+/* --- Split-Stage: zwei Hälften, Divider + Medaillon --- */
+.body{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);gap:0;
+  position:relative;align-items:stretch;align-content:stretch;
+  margin-top:clamp(10px,1.8vh,18px);min-height:0}
+
+.divider{position:absolute;left:calc(50% - .5px);top:6%;bottom:14%;width:1px;
+  background:var(--line);z-index:1}
+.divider[data-beat],.divider[data-beat].show{transform:none}
+.medal{position:absolute;left:50%;top:46%;width:38px;height:38px;border-radius:50%;
+  background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;
+  justify-content:center;font-family:var(--sans);font-weight:680;font-size:18px;
+  color:var(--mut);z-index:3}
+.medal[data-beat],.medal[data-beat].show{transform:translate(-50%,-50%)}
+
+/* Seiten-Label (folie-04-Typo) */
+.side-label{grid-row:1;font-family:var(--mono);font-size:clamp(12.5px,1.4vw,16px);
+  letter-spacing:.24em;font-weight:700;text-align:center;
+  padding:clamp(6px,1.6vh,14px) clamp(24px,3vw,44px) clamp(18px,3.5vh,32px)}
+.side-label.learn{grid-column:1;color:var(--acc-deep)}
+.side-label.change{grid-column:2;color:#9a6a16}
+.side-label.learn[data-beat]{transform:translateX(-16px)}
+.side-label.change[data-beat]{transform:translateX(16px)}
+.side-label.learn[data-beat].show,
+.side-label.change[data-beat].show{transform:none}
+
+/* Hälften mit Verdikt-Zeilen (folie-14-Idiom) */
+.half{grid-row:2;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:clamp(24px,4.5vh,44px);padding:0 clamp(24px,3vw,44px);
+  margin-top:calc(-1*clamp(10px,2vh,24px))}
+.half.left{grid-column:1}
+.half.right{grid-column:2}
+
+.vrow{display:grid;grid-template-columns:clamp(48px,5.4vw,60px) 1fr;gap:18px;align-items:center}
+.vrow .ic{display:flex;align-items:center;justify-content:center}
+.vrow .ic svg{width:44px;height:44px}
+.vrow .tx{font-size:clamp(13.5px,1.5vw,17px);color:var(--mut);line-height:1.48}
+.vrow .tx b{color:var(--ink);font-weight:650}
+.vrow .vw{font-weight:700;letter-spacing:-.01em}
+.half.left .vw{color:var(--acc-deep)}
+.half.right .vw{color:#9a6a16}
+
+/* Slide-Richtung + Stagger der Beats */
+.half.left .vrow[data-beat]{transform:translateX(-16px)}
+.half.right .vrow[data-beat]{transform:translateX(16px)}
+.half.left .vrow[data-beat].show,
+.half.right .vrow[data-beat].show{transform:none}
+.dl1{transition-delay:.14s}
+.vrow[data-beat].dl1{transition-delay:.14s}
+.caption[data-beat]{transition-delay:.28s}
+
+/* Icon-Strichstile */
+.il{stroke:var(--acc-deep);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ia{stroke:#9a6a16;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* Kernsatz-Band = Caption (folie-14/-04-Idiom) */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:14px;
+  background:var(--acc-soft);border-radius:14px;margin-top:clamp(10px,1.8vh,16px);
+  padding:clamp(11px,1.4vw,15px) clamp(16px,2vw,24px)}
+.caption .bacc{flex:0 0 auto;width:4px;align-self:stretch;background:var(--acc);border-radius:3px}
+.caption .btag{flex:0 0 auto;font-family:var(--mono);font-size:clamp(10px,1vw,12px);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--acc-deep);font-weight:700}
+.caption .btx{font-size:clamp(13.5px,1.5vw,17px);color:var(--ink);font-weight:600;line-height:1.3}
+.caption .btx b{color:var(--acc-deep)}
+.caption .btx b.am{color:#9a6a16}
+
+/* Bedienhinweis (Viewer blendet ihn aus) */
+.hint{position:fixed;left:0;right:0;bottom:6px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  [data-beat]{transition-delay:0ms!important}
+}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=2;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+</body>
+</html>

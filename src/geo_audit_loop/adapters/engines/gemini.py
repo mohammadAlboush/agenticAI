@@ -47,7 +47,7 @@ _RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
 _DEFAULT_TIMEOUT_S = 60.0
 _REDIRECT_HOST = "vertexaisearch.cloud.google.com"
 _REDIRECT_CACHE_MAX = 4096  # harte Obergrenze gegen unbegrenztes Wachstum (Memory-Schutz)
-# Gemini 2.5 sucht mit dem google_search-Tool nur "bei Bedarf"; reine Definitionsfragen
+# Gemini sucht mit dem google_search-Tool nur "bei Bedarf"; reine Definitionsfragen
 # wuerde es aus dem Modellwissen beantworten -> keine Quellen. Diese System-Anweisung
 # stosst die Websuche zuverlaessig an (naeher am Verhalten der Verbraucher-App, in der
 # Gemini standardmaessig grounded). Sie aendert NICHT die geteilten Probe-Prompts.

@@ -25,6 +25,9 @@ CONTENT_EXCERPT_WORDS: Final = 300
 # --- Perplexity (Live-Engine seit Sprint 1) ---
 PERPLEXITY_ENDPOINT: Final = "https://api.perplexity.ai/chat/completions"
 
+# --- ChatGPT (Live-Engine ueber die OpenAI-Responses-API mit web_search-Tool) ---
+OPENAI_RESPONSES_ENDPOINT: Final = "https://api.openai.com/v1/responses"
+
 # --- Gemini (Live-Engine mit Google-Search-Grounding; Free Tier 500 Anfragen/Tag) ---
 GEMINI_ENDPOINT_TEMPLATE: Final = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -72,3 +75,24 @@ DEFAULT_EMBEDDING_MODEL: Final = "BAAI/bge-m3"
 DEFAULT_MAX_PROBES: Final = EXPECTED_PROBES_PER_RUN
 DEFAULT_MAX_USD: Final = 2.0
 DEFAULT_MAX_TOKENS_BUDGET: Final = 2_000_000
+
+# --- Live-Loop: SERP-Sichtbarkeit (Serper.dev, Google-Top-10 vs. AI-Zitate) ---
+SERPER_ENDPOINT: Final = "https://google.serper.dev/search"
+SERP_TOP_K: Final = 10  # Google-Top-10 als Vergleichsmenge
+N_SERP_QUERIES: Final = 12  # 1:1 auf die 12 Probe-Prompts gemappt
+DEFAULT_SERP_QUERY_SET_VERSION: Final = "v1"
+SERP_GL: Final = "de"  # Geolokation der SERP-Abfrage (Land)
+SERP_HL: Final = "de"  # Interface-Sprache der SERP-Abfrage
+# Pro-Provider-Request-Quote: 12 Queries x 2 Phasen = 24 Requests/Run reichen.
+DEFAULT_MAX_SERP_REQUESTS: Final = 24
+
+# --- Live-Loop: IndexNow (URLs nach echtem Deploy bei Bing/Yandex/Naver/Seznam einreichen) ---
+INDEXNOW_ENDPOINT: Final = "https://api.indexnow.org/indexnow"
+INDEXNOW_TIMEOUT_S: Final = 10.0
+# Key-Regeln laut IndexNow-Protokoll: 8-128 Zeichen (a-z, A-Z, 0-9, Bindestrich).
+INDEXNOW_KEY_MIN_LEN: Final = 8
+INDEXNOW_KEY_MAX_LEN: Final = 128
+INDEXNOW_MAX_URLS_PER_BATCH: Final = 10_000  # Protokoll-Limit pro POST
+
+# --- Live-Loop: WordPress-Deploy (Backup-vor-Write, Projektregeln §6) ---
+BACKUPS_SUBDIR: Final = "backups"  # Unterordner je Run fuer Pre-Write-Backups

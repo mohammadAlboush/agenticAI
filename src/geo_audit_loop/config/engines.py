@@ -36,14 +36,21 @@ ENGINE_REGISTRY: dict[EngineId, EngineConfig] = {
     ),
     EngineId.CHATGPT: EngineConfig(
         engine_id=EngineId.CHATGPT,
+        # gpt-4o: Responses-API-faehig inkl. web_search-Tool; der Modellname muss zum
+        # Preis-Eintrag in config/pricing.py passen (usd_per_search-Kostenwarnung dort).
         model="gpt-4o",
         api_key_env="OPENAI_API_KEY",
     ),
     EngineId.GEMINI: EngineConfig(
         engine_id=EngineId.GEMINI,
-        # 2.5-flash: einziges Modell mit Grounding im Free Tier (gemini-2.0-flash
-        # wurde am 2026-06-01 abgeschaltet; Gemini-3-Grounding ist Free-Tier-gesperrt).
-        model="gemini-2.5-flash",
+        # Google schaltet Gemini-Modelle nach fester Frist ab (gemini-2.0-flash am
+        # 2026-06-01, gemini-2.5-flash inzwischen 404 "no longer available"). Laut
+        # ListModels ist gemini-3.5-flash verfuegbar und unterstuetzt generateContent
+        # inkl. Grounding. Bewusst exakt gepinnt statt "-latest": Reproduzierbarkeit
+        # (Projektregeln §7) verlangt einen stabilen Modellnamen pro Run; bei der
+        # naechsten Abschaltung diesen Pin hier zentral heben (Adapter/Sampler
+        # beziehen das Modell ausschliesslich aus dieser Registry).
+        model="gemini-3.5-flash",
         api_key_env="GOOGLE_API_KEY",
     ),
 }

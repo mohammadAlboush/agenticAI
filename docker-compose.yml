@@ -1,0 +1,30 @@
+# geo-audit-loop — lokale Steuerzentrale per Container starten.
+#
+#   docker compose up --build        # baut das Image und startet das Dashboard
+#   →  http://localhost:8080
+#
+# Standard: vollstaendig OFFLINE & deterministisch (Mock-Engines, Seed 42) — es
+# werden keinerlei externe Dienste aufgerufen und keine Keys benoetigt.
+#
+# Live-Modus (echte Engines/Deploy): eine `.env` nach dem Muster von `.env.example`
+# anlegen und die untenstehende `env_file`-Zeile einkommentieren. Live bleibt strikt
+# opt-in (Doppel-Gate im Code); ein Deploy ist ohne explizite Freigabe immer Dry-Run.
+
+services:
+  dashboard:
+    build: .
+    image: geo-audit-loop
+    ports:
+      - "8080:8080"
+    environment:
+      GEO_DB_PATH: /data/geo.db
+      PORT: "8080"
+    # Live-Keys (optional, opt-in): anlegen wie in .env.example, dann einkommentieren.
+    # env_file:
+    #   - .env
+    volumes:
+      - geo-data:/data          # SQLite ueberlebt Container-Neustarts
+    restart: unless-stopped
+
+volumes:
+  geo-data:

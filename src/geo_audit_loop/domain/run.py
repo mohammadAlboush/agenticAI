@@ -34,6 +34,9 @@ class RunContext(FrozenModel):
     seed: int
     prompt_set_version: str = Field(min_length=1)
     config_hash: str = Field(min_length=1)
+    # Welche Engines im Lauf ECHT geprobt wurden (Rest = deterministischer Mock/Simulation).
+    # Leer = Offline-Lauf (alle Engines simuliert). Fuer die ehrliche Dashboard-Darstellung.
+    live_engines: tuple[str, ...] = ()
 
 
 class RunRecord(FrozenModel):
@@ -51,6 +54,8 @@ class RunRecord(FrozenModel):
     seed: int
     prompt_set_version: str
     config_hash: str
+    # Gespiegelt aus dem RunContext: echt geprobte Engines (Rest = Simulation) fuers Dashboard.
+    live_engines: tuple[str, ...] = ()
     total_probes: int = Field(default=0, ge=0)
     total_tokens: int = Field(default=0, ge=0)
     total_cost_usd: float = Field(default=0.0, ge=0.0)

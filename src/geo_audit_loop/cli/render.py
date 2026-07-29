@@ -26,6 +26,8 @@ from geo_audit_loop.domain.fix import (
     FixPlan,
 )
 from geo_audit_loop.domain.geo import LEVER_LABELS, PYRAMID_LABELS
+from geo_audit_loop.domain.indexing import IndexSubmissionResult, IndexSubmissionStatus
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.observability.cost import CostSnapshot
 
@@ -177,6 +179,60 @@ def render_topflop(console: Console, report: TopFlopReport) -> None:
         table.add_section()
     for entry in report.flop:
         _row(Text("▼ FLOP", style=f"bold {RED}"), entry, RED)
+    console.print(table)
+
+
+def render_overlap(console: Console, report: OverlapReport) -> None:
+    """Rendert den SERP-Vergleich (Live-Loop): Google-Top-10 vs. AI-Zitate je Thema."""
+    console.print()
+    console.rule(
+        Text("SERP — Google-Top-10 vs. AI-Zitate", style=f"bold {ACCENT}"),
+        style=ACCENT_DIM,
+        align="left",
+    )
+    header = Table.grid(padding=(0, 2))
+    header.add_column(style=GREY, justify="right")
+    header.add_column()
+    header.add_row(
+        "Ueberlappung",
+        Text(
+            f"mittlerer Jaccard {report.mean_jaccard:.3f} · "
+            f"AI-Zitate in SERP {report.mean_ai_in_serp_share:.0%}",
+            style="bold",
+        ),
+    )
+    header.add_row(
+        "Quelle",
+        Text(
+            f"{report.provider.value} · Query-Set {report.query_set_version} · "
+            f"{report.n_queries} Queries",
+            style=GREY,
+        ),
+    )
+    console.print(Panel(header, border_style=ACCENT_DIM, padding=(0, 2)))
+    table = Table(
+        show_header=True,
+        header_style=f"bold {GREY}",
+        border_style="grey30",
+        caption="Jaccard: Schnittmenge/Vereinigung der URLs · Rank: beste Ziel-Position in Google",
+        caption_style=GREY,
+        expand=True,
+    )
+    table.add_column("Query", width=8)
+    table.add_column("Ziel-SERP-Rank", justify="right", width=14)
+    table.add_column("AI-Citation-Rate", justify="right", width=16)
+    table.add_column("Jaccard", width=20)
+    for stat in report.stats:
+        rank = str(stat.target_serp_rank) if stat.target_serp_rank is not None else "—"
+        jaccard = Text()
+        jaccard.append_text(_bar(stat.jaccard, 12, ACCENT))
+        jaccard.append(f" {stat.jaccard:.3f}", style="bold")
+        table.add_row(
+            Text(stat.query_id, style=f"bold {AMBER}"),
+            rank,
+            f"{stat.target_ai_citation_rate:.2f}",
+            jaccard,
+        )
     console.print(table)
 
 
@@ -367,6 +423,45 @@ def render_deploy(console: Console, result: DeployResult) -> None:
     )
 
 
+#: Badge-Stile der Index-Einreichungs-Status (Live-Loop).
+_INDEX_STYLES: Final[dict[IndexSubmissionStatus, str]] = {
+    IndexSubmissionStatus.SUBMITTED: f"bold black on {ACCENT}",
+    IndexSubmissionStatus.SKIPPED: "bold black on grey62",
+    IndexSubmissionStatus.RATE_LIMITED: f"bold black on {AMBER}",
+    IndexSubmissionStatus.FAILED: "bold white on #a8392c",
+}
+
+
+def render_index_submission(console: Console, result: IndexSubmissionResult) -> None:
+    """Rendert die Index-Einreichung nach dem Deploy (IndexNow, Live-Loop)."""
+    console.print()
+    grid = Table.grid(padding=(0, 2))
+    grid.add_column(style=GREY, justify="right")
+    grid.add_column()
+    grid.add_row("Host", Text(result.host, style="bold"))
+    grid.add_row(
+        "Status", Text(f" {result.status.value.upper()} ", style=_INDEX_STYLES[result.status])
+    )
+    grid.add_row("URLs", Text(str(len(result.urls)), style="bold"))
+    for endpoint in result.endpoints:
+        http = f"HTTP {endpoint.http_status}" if endpoint.http_status is not None else "kein HTTP"
+        grid.add_row(
+            endpoint.endpoint.value,
+            Text(f"{endpoint.status.value} · {http} · {endpoint.attempts} Versuche", style=GREY),
+        )
+    if result.detail:
+        grid.add_row("", Text(result.detail, style=GREY))
+    console.print(
+        Panel(
+            grid,
+            title=Text(" Index-Einreichung ", style=f"bold black on {ACCENT}"),
+            title_align="left",
+            border_style=ACCENT_DIM,
+            padding=(1, 2),
+        )
+    )
+
+
 def render_effect(console: Console, report: EffectReport) -> None:
     """Rendert Akt 7 (EFFEKT): die Vorher/Nachher-Re-Probe und die gelernten Hypothesen."""
     console.print()
@@ -446,6 +541,12 @@ def render_summary(
             style="bold",
         ),
     )
+    if snapshot.requests_by_provider:
+        per_provider = " · ".join(
+            f"{provider} {count}"
+            for provider, count in sorted(snapshot.requests_by_provider.items())
+        )
+        grid.add_row("Requests", Text(per_provider, style="bold"))
     grid.add_row("Dauer", Text(f"{duration_s:.1f} s", style="bold"))
     fingerprint_text = Text()
     fingerprint_text.append(fingerprint, style=f"bold {ACCENT}")

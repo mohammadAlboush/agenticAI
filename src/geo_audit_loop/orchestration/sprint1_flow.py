@@ -19,12 +19,15 @@ from pydantic import BaseModel, PrivateAttr
 
 from geo_audit_loop.agents.inventory_crawler import InventoryCrawlerService
 from geo_audit_loop.agents.sampler import SamplerService
+from geo_audit_loop.agents.serp_sampler import SerpSamplerService
 from geo_audit_loop.domain.errors import BudgetExceeded
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.inventory import CrawlOptions
 from geo_audit_loop.domain.metrics import ProbeAggregate
-from geo_audit_loop.domain.probe import ProbePrompt
+from geo_audit_loop.domain.overlap import OverlapReport, compute_overlap
+from geo_audit_loop.domain.probe import ProbePhase, ProbePrompt
 from geo_audit_loop.domain.run import RunContext, RunRecord, RunStatus
+from geo_audit_loop.domain.serp import SerpQuery, SerpResult
 from geo_audit_loop.observability.cost import CostTracker
 from geo_audit_loop.observability.logging import log_event
 from geo_audit_loop.ports.storage import StoragePort
@@ -50,6 +53,9 @@ class Sprint1Pipeline:
         prompts: Sequence[ProbePrompt],
         options: CrawlOptions,
         top_n: int,
+        serp_sampler: SerpSamplerService | None = None,
+        serp_queries: Sequence[SerpQuery] = (),
+        serp_query_set_version: str = "",
         logger: logging.Logger | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
@@ -61,10 +67,16 @@ class Sprint1Pipeline:
         self._prompts = prompts
         self._options = options
         self._top_n = top_n
+        # Live-Loop (optional): SERP-Messung parallel zur Baseline; None = exakter No-Op.
+        self._serp_sampler = serp_sampler
+        self._serp_queries = serp_queries
+        self._serp_query_set_version = serp_query_set_version
         self._log = logger if logger is not None else logging.getLogger(__name__)
         self._clock = clock if clock is not None else _utc_now
         self._aggregates: list[ProbeAggregate] = []
         self._report: TopFlopReport | None = None
+        self._serp_results: list[SerpResult] = []
+        self._overlap_report: OverlapReport | None = None
 
     @property
     def run_id(self) -> str:
@@ -76,8 +88,18 @@ class Sprint1Pipeline:
         """Der erzeugte Top/Flop-Report (nach ``run``); ``None`` bei Abbruch."""
         return self._report
 
+    @property
+    def overlap_report(self) -> OverlapReport | None:
+        """Der SERP-Overlap-Report (Live-Loop); ``None`` ohne SERP-Provider."""
+        return self._overlap_report
+
     def sample(self) -> None:
-        """Schritt 1: Run anlegen und die Probe-Matrix ausfuehren (budget-bewacht)."""
+        """Schritt 1: Run anlegen und die Probe-Matrix ausfuehren (budget-bewacht).
+
+        Mit verdrahtetem SERP-Sampler laeuft parallel zur Baseline die Google-Top-K-
+        Messung (checkpoint-faehig, eigene Provider-Quote); ohne bleibt der Schritt
+        byte-identisch zum bisherigen Verhalten.
+        """
         self._storage.save_run(self._record(RunStatus.RUNNING, finished=False))
         log_event(self._log, "run.start", run_id=self.run_id, agent=_AGENT)
         try:
@@ -85,17 +107,40 @@ class Sprint1Pipeline:
         except BudgetExceeded as exc:
             self._finalize(RunStatus.ABORTED, str(exc))
             raise
+        if self._serp_sampler is not None:
+            self._serp_results = self._serp_sampler.run(self._run_context, self._serp_queries)
 
     def crawl_and_report(self, *, finalize: bool = True) -> TopFlopReport:
         """Schritt 2: Inventar crawlen, Top/Flop bauen, Run abschliessen.
 
         ``finalize=False`` schiebt den COMPLETED-Abschluss auf (Sprint 2 finalisiert erst
         nach den Lern-Schritten, damit die persistierten Kosten das Reasoning enthalten).
+        Mit verdrahtetem SERP-Sampler wird zusaetzlich der Overlap-Report (Google-Top-K
+        vs. AI-Zitate) berechnet und persistiert.
         """
         report = self._crawler.run(
             self._run_context, self._options, aggregates=self._aggregates, top_n=self._top_n
         )
         self._report = report
+        if self._serp_sampler is not None:
+            self._overlap_report = compute_overlap(
+                run_id=self._run_context.run_id,
+                target_domain=self._run_context.target_domain,
+                provider=self._serp_sampler.provider,
+                query_set_version=self._serp_query_set_version,
+                serp_results=self._serp_results,
+                probes=self._storage.load_probes(self._run_context.run_id, ProbePhase.BASELINE),
+                generated_at=self._clock(),
+            )
+            self._storage.save_overlap_report(self._overlap_report)
+            log_event(
+                self._log,
+                "overlap.done",
+                run_id=self.run_id,
+                agent=_AGENT,
+                n_queries=self._overlap_report.n_queries,
+                mean_jaccard=self._overlap_report.mean_jaccard,
+            )
         if finalize:
             self._finalize(RunStatus.COMPLETED, None)
         return report
@@ -133,6 +178,7 @@ class Sprint1Pipeline:
             seed=self._run_context.seed,
             prompt_set_version=self._run_context.prompt_set_version,
             config_hash=self._run_context.config_hash,
+            live_engines=self._run_context.live_engines,
             total_probes=snapshot.probes,
             total_tokens=snapshot.total_tokens,
             total_cost_usd=snapshot.total_usd,

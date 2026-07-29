@@ -24,7 +24,9 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan, FixProposal
+from geo_audit_loop.domain.indexing import IndexSubmissionResult
 from geo_audit_loop.domain.memory import MemoryQuery
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.probe import ProbePrompt
 from geo_audit_loop.domain.run import RunContext, RunStatus
 from geo_audit_loop.domain.templates import PatternReport
@@ -74,6 +76,11 @@ class Sprint4Pipeline:
         return self._base.report
 
     @property
+    def overlap_report(self) -> OverlapReport | None:
+        """Der SERP-Overlap-Report (Live-Loop, delegiert)."""
+        return self._base.overlap_report
+
+    @property
     def pattern_report(self) -> PatternReport | None:
         """Die geminten Templates (Sprint 2)."""
         return self._base.pattern_report
@@ -97,6 +104,11 @@ class Sprint4Pipeline:
     def deploy_result(self) -> DeployResult | None:
         """Das Deploy-Ergebnis (Sprint 3)."""
         return self._base.deploy_result
+
+    @property
+    def index_result(self) -> IndexSubmissionResult | None:
+        """Das Index-Einreichungs-Ergebnis (Live-Loop, delegiert an Sprint 3)."""
+        return self._base.index_result
 
     @property
     def retrieved_memory(self) -> tuple[EffectHypothesis, ...]:

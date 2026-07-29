@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Architektur</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — Tokens exakt übernommen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --node:var(--metal); /* Alias, keine neue Farbe */
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+/* ---- Einheitlicher Kopf (dd-folie-02..11) ---- */
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+.head-wrap{flex:0 0 auto}
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--acc-deep);margin-bottom:8px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;color:var(--ink)}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:12px 0 0}
+.lead{font-size:clamp(13px,1.45vw,16.5px);color:var(--mut);line-height:1.45;margin-top:8px;max-width:72ch}
+
+.body{flex:1 1 auto;min-height:0;margin-top:clamp(10px,1.8vh,18px);
+  display:flex;align-items:center;justify-content:center;position:relative}
+
+/* ---- Beat-Reveal ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ---- Bottom-Caption ---- */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px)}
+.caption .cacc{width:26px;height:3px;background:var(--acc);border-radius:2px}
+.caption .ctxt{font-size:clamp(13.5px,1.5vw,17px);color:var(--ink);font-weight:600}
+.caption .ctxt b{color:var(--acc-deep)}
+
+.hint{position:fixed;left:0;right:0;bottom:7px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">09 / 13</span> &nbsp;·&nbsp; 03 · ARCHITEKTUR</div>
+    <h2>Hexagonal: der Kern kennt <span class="g">keine Außenwelt</span></h2>
+    <div class="rule"></div>
+    <p class="lead">Agenten hängen nur an Ports — jede Engine live oder im Test austauschbar.</p>
+  </div>
+
+  <div class="body">
+    <svg class="archsvg" viewBox="0 0 1100 470" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9"
+                markerUnits="userSpaceOnUse" orient="auto">
+          <path d="M0.5,0.8 L9,5 L0.5,9.2 Z" style="fill:var(--metal)"/>
+        </marker>
+      </defs>
+
+      <!-- ===== AUSSENWELT-ZONE (Beat 2) ===== -->
+      <g class="zoneband" data-beat="2">
+        <rect x="20" y="20" width="1060" height="430" rx="14" fill="#87897C" fill-opacity="0.05"
+              style="stroke:var(--line-2)" stroke-width="1"/>
+        <rect x="459" y="30.5" width="182" height="21" rx="10.5" style="fill:var(--surface);stroke:var(--line-2)" stroke-width="1"/>
+        <text class="zone-label" x="550" y="45">ADAPTERS · AUSSENWELT</text>
+      </g>
+
+      <!-- ===== KANTEN Karte → Dock (Beat 2) ===== -->
+      <g id="edges">
+        <path class="edge" pathLength="100" d="M405,123 L487,143.5" marker-end="url(#arr)"/>
+        <path class="edge" pathLength="100" d="M695,123 L613,143.5" marker-end="url(#arr)"/>
+        <path class="edge" pathLength="100" d="M885,235 L664,235"   marker-end="url(#arr)"/>
+        <path class="edge" pathLength="100" d="M695,348 L613,326.5" marker-end="url(#arr)"/>
+        <path class="edge" pathLength="100" d="M405,348 L487,326.5" marker-end="url(#arr)"/>
+        <path class="edge" pathLength="100" id="edge-pub" d="M215,235 L436,235" marker-end="url(#arr)"/>
+      </g>
+
+      <!-- ===== HEXAGON-KERN (Beat 1) · Mitte (550,235) · r=118 ===== -->
+      <polygon class="hexo" pathLength="100"
+               points="550,117 652.2,176 652.2,294 550,353 447.8,294 447.8,176"/>
+      <g class="coretext" data-beat="1">
+        <text class="core-name" x="550" y="240">domain</text>
+        <text class="core-sub"  x="550" y="260">ports</text>
+      </g>
+
+      <!-- 5 Agenten-Chips pentagonal (Beat 1, Stagger 90ms) -->
+      <g class="agchip c0" data-beat="1">
+        <rect x="517" y="153.5" width="66" height="19" rx="7"/>
+        <text x="550" y="166.5">SAMPLER</text>
+      </g>
+      <g class="agchip c1" data-beat="1">
+        <rect x="589" y="197.5" width="54" height="19" rx="7"/>
+        <text x="616" y="210.5">MINER</text>
+      </g>
+      <g class="agchip c2" data-beat="1">
+        <rect x="554" y="282.5" width="68" height="19" rx="7"/>
+        <text x="588" y="295.5">AUDITOR</text>
+      </g>
+      <g class="agchip c3" data-beat="1">
+        <rect x="492" y="282.5" width="40" height="19" rx="7"/>
+        <text x="512" y="295.5">FIX</text>
+      </g>
+      <g class="agchip c4" data-beat="1">
+        <rect x="455" y="197.5" width="58" height="19" rx="7"/>
+        <text x="484" y="210.5">EFFEKT</text>
+      </g>
+
+      <!-- ===== PORT-DOCKS auf den 6 Hexagon-Kanten (Beat 2) ===== -->
+      <g class="dock" data-beat="2"><rect x="491.9" y="139.5" width="14" height="14" rx="3"/></g>
+      <g class="dock" data-beat="2"><rect x="594.1" y="139.5" width="14" height="14" rx="3"/></g>
+      <g class="dock" data-beat="2"><rect x="645.2" y="228"   width="14" height="14" rx="3"/></g>
+      <g class="dock" data-beat="2"><rect x="594.1" y="316.5" width="14" height="14" rx="3"/></g>
+      <g class="dock" data-beat="2"><rect x="491.9" y="316.5" width="14" height="14" rx="3"/></g>
+      <g class="dock" data-beat="2"><rect x="440.8" y="228"   width="14" height="14" rx="3"/></g>
+
+      <!-- ===== ADAPTER-KARTEN (Beat 2, bottom-up gestaffelt) ===== -->
+      <!-- EnginePort · oben links -->
+      <g class="adcard d2" data-beat="2" data-title="EnginePort" data-sub="probe(prompt) → ProbeResult"
+         data-desc="Live-Adapter (Perplexity, Gemini …) + deterministischer Mock im Test — hinter demselben Protocol, ein Citation-Modell.">
+        <rect class="sh" x="255" y="76" width="150" height="62" rx="10"/>
+        <rect class="cardbg" x="255" y="74" width="150" height="62" rx="10"/>
+        <circle cx="330" cy="91" r="8" fill="none" stroke="#33352E" stroke-width="1.75"/>
+        <ellipse cx="330" cy="91" rx="3.6" ry="8" fill="none" stroke="#33352E" stroke-width="1.3"/>
+        <path d="M322.6,88 H337.4 M322.6,94 H337.4" stroke="#33352E" stroke-width="1.3"/>
+        <text class="ad-t" x="330" y="115">EnginePort</text>
+        <text class="ad-s" x="330" y="127">engines</text>
+      </g>
+      <!-- ProxyPort · oben rechts -->
+      <g class="adcard d2" data-beat="2" data-title="ProxyPort" data-sub="5 Proxy-IPs · Median"
+         data-desc="Der Median über fünf Proxy-IPs eliminiert Personalisierungs-Effekte — neutrale Sicht statt Einzelblase.">
+        <rect class="sh" x="695" y="76" width="150" height="62" rx="10"/>
+        <rect class="cardbg" x="695" y="74" width="150" height="62" rx="10"/>
+        <circle cx="770" cy="91" r="2.2" fill="#33352E"/>
+        <path d="M770,91 L762,85 M770,91 L778,85 M770,91 L762,97 M770,91 L778,97" stroke="#33352E" stroke-width="1.4"/>
+        <circle cx="762" cy="85" r="2" fill="none" stroke="#33352E" stroke-width="1.4"/>
+        <circle cx="778" cy="85" r="2" fill="none" stroke="#33352E" stroke-width="1.4"/>
+        <circle cx="762" cy="97" r="2" fill="none" stroke="#33352E" stroke-width="1.4"/>
+        <circle cx="778" cy="97" r="2" fill="none" stroke="#33352E" stroke-width="1.4"/>
+        <text class="ad-t" x="770" y="115">ProxyPort</text>
+        <text class="ad-s" x="770" y="127">proxy</text>
+      </g>
+      <!-- CrawlPort · rechts -->
+      <g class="adcard d1" data-beat="2" data-title="CrawlPort" data-sub="crawl → Seiteninhalt"
+         data-desc="Crawlt die echten Seiten für Auditor und Pattern-Miner — im Test deterministisch gemockt.">
+        <rect class="sh" x="885" y="206" width="150" height="62" rx="10"/>
+        <rect class="cardbg" x="885" y="204" width="150" height="62" rx="10"/>
+        <circle cx="960" cy="222" r="4" fill="none" stroke="#33352E" stroke-width="1.6"/>
+        <circle cx="960" cy="215.5" r="2" fill="none" stroke="#33352E" stroke-width="1.3"/>
+        <path d="M956.5,220 L950,217 M956.5,223.5 L950,225.5 M957.5,225.5 L953,229.5 M963.5,220 L970,217 M963.5,223.5 L970,225.5 M962.5,225.5 L967,229.5"
+              stroke="#33352E" stroke-width="1.3" stroke-linecap="round"/>
+        <text class="ad-t" x="960" y="245">CrawlPort</text>
+        <text class="ad-s" x="960" y="257">crawl</text>
+      </g>
+      <!-- StoragePort · unten rechts -->
+      <g class="adcard d0" data-beat="2" data-title="StoragePort" data-sub="SQLite · Runs &amp; Checkpoints"
+         data-desc="Persistiert Runs und Zwischenstände — ein abgebrochener Lauf ist fortsetzbar und probt nicht doppelt.">
+        <rect class="sh" x="695" y="339" width="150" height="62" rx="10"/>
+        <rect class="cardbg" x="695" y="337" width="150" height="62" rx="10"/>
+        <ellipse cx="770" cy="348.5" rx="7.5" ry="3" fill="none" stroke="#33352E" stroke-width="1.6"/>
+        <path d="M762.5,348.5 V359.5 A7.5,3 0 0 0 777.5,359.5 V348.5" fill="none" stroke="#33352E" stroke-width="1.6"/>
+        <path d="M762.5,354 A7.5,3 0 0 0 777.5,354" fill="none" stroke="#33352E" stroke-width="1.2"/>
+        <text class="ad-t" x="770" y="378">StoragePort</text>
+        <text class="ad-s" x="770" y="390">SQLite</text>
+      </g>
+      <!-- MemoryPort · unten links -->
+      <g class="adcard d0" data-beat="2" data-title="MemoryPort" data-sub="store · retrieve"
+         data-desc="EffectHypothesis wandert ins Gedächtnis — der nächste Lauf ruft sie ab und ordnet den Fix-Plan messbar um.">
+        <rect class="sh" x="255" y="339" width="150" height="62" rx="10"/>
+        <rect class="cardbg" x="255" y="337" width="150" height="62" rx="10"/>
+        <circle cx="324" cy="350" r="1.6" fill="#33352E"/>
+        <circle cx="331" cy="347" r="2.2" fill="none" stroke="#33352E" stroke-width="1.3"/>
+        <circle cx="337" cy="352" r="1.4" fill="#33352E"/>
+        <circle cx="326" cy="357" r="2" fill="none" stroke="#33352E" stroke-width="1.3"/>
+        <circle cx="334" cy="359" r="1.7" fill="#33352E"/>
+        <circle cx="322" cy="352.5" r="1.1" fill="#33352E"/>
+        <text class="ad-t" x="330" y="378">MemoryPort</text>
+        <text class="ad-s" x="330" y="390">Chroma · SQLite</text>
+      </g>
+      <!-- PublisherPort · links (HITL-Gate) -->
+      <g class="adcard d1" data-beat="2" data-title="PublisherPort" data-sub="WP/GitHub · HITL-Gate"
+         data-desc="Echter WP-Deploy hinter Doppel-Gate: nur mit menschlicher Freigabe UND explizitem allow-remote — sonst fliegt DeployBlocked. Backup vor jedem Write.">
+        <rect class="sh" x="65" y="206" width="150" height="62" rx="10"/>
+        <rect class="cardbg" x="65" y="204" width="150" height="62" rx="10"/>
+        <path d="M135,214.5 V227.5" stroke="#33352E" stroke-width="1.6"/>
+        <path d="M135,218 C135,224 145,220 145,223.5" fill="none" stroke="#33352E" stroke-width="1.4"/>
+        <circle cx="135" cy="212.5" r="2.2" fill="none" stroke="#33352E" stroke-width="1.5"/>
+        <circle cx="135" cy="229.5" r="2.2" fill="none" stroke="#33352E" stroke-width="1.5"/>
+        <circle cx="145" cy="225.7" r="2.2" fill="none" stroke="#33352E" stroke-width="1.5"/>
+        <text class="ad-t" x="140" y="245">PublisherPort</text>
+        <text class="ad-s" x="140" y="257">WP/GitHub <tspan class="lockword">(HITL-Gate)</tspan></text>
+      </g>
+
+      <!-- ===== SCHLOSS auf der PublisherPort-Kante (Beat 3) ===== -->
+      <g class="lockg" data-beat="3">
+        <rect x="319" y="232.5" width="14" height="10.5" rx="2" fill="#f1e0db" stroke="#a8392c" stroke-width="1.6"/>
+        <path d="M321.8,232.5 V227.8 A4.2,4.2 0 0 1 330.2,227.8 V232.5" fill="none" stroke="#a8392c" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="326" cy="237.5" r="1.3" fill="#a8392c"/>
+      </g>
+
+      <!-- ===== LEGENDEN-LEISTE (Beat 3) ===== -->
+      <g class="legendbar" data-beat="3">
+        <rect class="lb" x="30" y="412" width="1040" height="28" rx="8"/>
+        <polygon points="58,419 64.1,422.5 64.1,429.5 58,433 51.9,429.5 51.9,422.5"
+                 fill="none" style="stroke:var(--acc-deep)" stroke-width="1.6" stroke-linejoin="round"/>
+        <text class="lg-t" x="74" y="429.5">Kern = domain + ports</text>
+        <rect x="322" y="421" width="13" height="10" rx="2" style="fill:var(--surface-2)" stroke="#33352E" stroke-width="1.3"/>
+        <text class="lg-t" x="344" y="429.5">Adapter = Außenwelt, im Test gemockt</text>
+        <rect x="708" y="424.5" width="11" height="8.5" rx="1.6" fill="#f1e0db" stroke="#a8392c" stroke-width="1.4"/>
+        <path d="M710.2,424.5 V421 A3.3,3.3 0 0 1 716.8,421 V424.5" fill="none" stroke="#a8392c" stroke-width="1.4" stroke-linecap="round"/>
+        <text class="lg-t" x="730" y="429.5">Schloss = nur mit HITL-Freigabe</text>
+      </g>
+    </svg>
+
+    <div class="tip" id="tip"><div class="tt"></div><div class="ts"></div><div class="td"></div></div>
+  </div>
+
+  <div class="caption" data-beat="3">
+    <span class="cacc"></span>
+    <span class="ctxt">Eine fünfte Engine ist <b>ein neuer Adapter</b> — der Kern bleibt unberührt.</span>
+  </div>
+
+  <div class="hint">Leertaste / Klick ▸ weiter · Klick auf Adapter ▸ Details</div>
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch) ===== -->
+<style>
+.archsvg{width:100%;height:100%;max-width:1150px;overflow:visible}
+svg [data-beat]{transform-box:fill-box;transform-origin:center}
+
+/* Zone */
+.zone-label{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.8px;
+  fill:var(--mut);text-anchor:middle}
+
+/* Hexagon: Sketch-in (pathLength=100), Fläche füllt nach */
+.hexo{fill:var(--acc);fill-opacity:0;stroke:var(--acc-deep);stroke-width:2.4;
+  stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100}
+.stage.b1 .hexo{stroke-dashoffset:0;fill-opacity:.06;
+  transition:stroke-dashoffset 1.05s var(--ease),fill-opacity .55s ease .95s}
+
+.core-name{font-family:var(--sans);font-size:24px;font-weight:680;fill:var(--ink);
+  text-anchor:middle;letter-spacing:-.01em}
+.core-sub{font-family:var(--mono);font-size:13px;fill:var(--acc-deep);
+  text-anchor:middle;letter-spacing:.14em}
+.coretext[data-beat].show{transition-delay:.72s}
+
+/* Agenten-Chips: pentagonal, poppen gestaffelt (90ms) */
+.agchip[data-beat]{transform:scale(.5)}
+.agchip[data-beat].show{transform:none}
+.agchip.c0.show{transition-delay:.50s}
+.agchip.c1.show{transition-delay:.59s}
+.agchip.c2.show{transition-delay:.68s}
+.agchip.c3.show{transition-delay:.77s}
+.agchip.c4.show{transition-delay:.86s}
+.agchip rect{fill:var(--surface-2);stroke:var(--acc-deep);stroke-width:1.2}
+.agchip text{font-family:var(--mono);font-size:10px;font-weight:700;fill:var(--acc-deep2);
+  letter-spacing:.06em;text-anchor:middle}
+
+/* Kanten: Reveal .6s, Pfeil ZUM Dock */
+.edge{fill:none;stroke:var(--node);stroke-width:2.2;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;opacity:0}
+.stage.b2 .edge{opacity:1;stroke-dashoffset:0;
+  transition:opacity .2s ease .30s,stroke-dashoffset .6s var(--ease) .30s}
+
+/* Port-Docks: poppen nach den Kanten */
+.dock[data-beat]{transform:scale(.4)}
+.dock[data-beat].show{transform:none;transition-delay:.55s}
+.dock rect{fill:var(--surface-2);stroke:var(--acc-deep);stroke-width:2}
+
+/* Adapter-Karten (Baustein-Muster folie-05) */
+.adcard{cursor:pointer}
+.adcard[data-beat]{transform:scale(.82)}
+.adcard[data-beat].show{transform:none}
+.adcard.d0.show{transition-delay:.02s}
+.adcard.d1.show{transition-delay:.12s}
+.adcard.d2.show{transition-delay:.22s}
+.adcard .sh{fill:var(--ink);opacity:.05}
+.adcard .cardbg{fill:var(--surface-2);stroke:var(--line-2);stroke-width:1;
+  transition:stroke .2s ease,stroke-width .2s ease,filter .2s ease}
+.adcard.hl .cardbg{stroke:var(--acc-deep);stroke-width:2.2;
+  filter:drop-shadow(0 0 6px rgba(79,125,26,.4))}
+.ad-t{font-family:var(--sans);font-size:12.5px;font-weight:650;fill:var(--ink);text-anchor:middle}
+.ad-s{font-family:var(--mono);font-size:9.5px;fill:var(--mut);letter-spacing:.02em;text-anchor:middle}
+.ad-s .lockword{fill:#a8392c;font-weight:700}
+
+/* Schloss pinnt (Beat 3) */
+.lockg[data-beat]{transform:scale(.4)}
+.lockg[data-beat].show{transform:none;transition-delay:.1s}
+
+/* Legenden-Leiste */
+.legendbar .lb{fill:var(--surface-2);stroke:var(--line-2);stroke-width:1}
+.lg-t{font-family:var(--mono);font-size:10px;fill:var(--mut)}
+
+/* Tooltip (dunkle Term-Palette) */
+.tip{position:fixed;z-index:20;max-width:260px;pointer-events:none;
+  background:#14170f;border:1px solid #2b3120;color:#e6ead9;border-radius:11px;padding:10px 13px;
+  box-shadow:0 10px 30px rgba(20,23,15,.28);opacity:0;
+  transform:translate(-50%,-100%) translateY(-8px);
+  transition:opacity .16s ease,transform .16s ease}
+.tip.on{opacity:1;transform:translate(-50%,-100%) translateY(-12px)}
+.tip .tt{font-family:var(--sans);font-weight:700;font-size:13.5px;margin-bottom:2px;color:#fff}
+.tip .ts{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:#8fd47f;margin-bottom:6px}
+.tip .td{font-size:12px;line-height:1.4;color:#9aa88a}
+.tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:#14170f}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=3;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+
+<script>
+/* ===== Tooltip-Mechanik (Muster folie-05): hover zeigt, Klick pinnt, Leerraum löst ===== */
+(function(){
+  const tip=document.getElementById('tip');
+  const cards=[...document.querySelectorAll('.adcard')];
+  let pinned=null;
+
+  function showTip(card){
+    tip.querySelector('.tt').textContent=card.dataset.title;
+    tip.querySelector('.ts').textContent=card.dataset.sub;
+    tip.querySelector('.td').textContent=card.dataset.desc;
+    const r=card.getBoundingClientRect();
+    tip.style.left=(r.left+r.width/2)+'px';
+    tip.style.top=(r.top)+'px';
+    tip.classList.add('on');
+    card.classList.add('hl');
+  }
+  function hideTip(card){ tip.classList.remove('on'); if(card) card.classList.remove('hl'); }
+
+  cards.forEach(card=>{
+    card.addEventListener('mouseenter',()=>{ if(card.classList.contains('show')) showTip(card); });
+    card.addEventListener('mouseleave',()=>{ if(pinned!==card) hideTip(card); });
+    card.addEventListener('click',(ev)=>{
+      ev.stopPropagation();                      /* Klick auf Karte schaltet NICHT weiter */
+      if(!card.classList.contains('show')) return;
+      if(pinned && pinned!==card) pinned.classList.remove('hl');
+      pinned=(pinned===card)?null:card;
+      if(pinned){ showTip(card); } else { hideTip(card); }
+    });
+  });
+  /* Klick auf Leerraum: Pin lösen (advance übernimmt die Beat-Engine) */
+  window.addEventListener('click',()=>{ if(pinned){ hideTip(pinned); pinned=null; } });
+})();
+</script>
+</body>
+</html>

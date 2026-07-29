@@ -23,6 +23,13 @@ from geo_audit_loop.domain.fix import (
     FixProposal,
 )
 from geo_audit_loop.domain.geo import Lever, PyramidLevel
+from geo_audit_loop.domain.indexing import (
+    EndpointResult,
+    IndexingEndpoint,
+    IndexSubmissionResult,
+    IndexSubmissionStatus,
+)
+from geo_audit_loop.domain.overlap import OverlapReport, OverlapStat
 from geo_audit_loop.domain.probe import (
     Citation,
     EngineId,
@@ -32,6 +39,7 @@ from geo_audit_loop.domain.probe import (
     ProbeUsage,
 )
 from geo_audit_loop.domain.run import RunRecord, RunStatus
+from geo_audit_loop.domain.serp import RankEntry, SerpProvider, SerpResult
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
 
@@ -310,6 +318,127 @@ def test_effect_report_roundtrip(tmp_path: Path) -> None:
     assert storage.load_effect_report("unknown") is None
     storage.delete_run("run-1")
     assert storage.load_effect_report("run-1") is None
+
+
+def _serp_result(query_id: str = "q01", provider: SerpProvider = SerpProvider.MOCK) -> SerpResult:
+    return SerpResult(
+        run_id="run-1",
+        provider=provider,
+        query_id=query_id,
+        prompt_id="p01",
+        query_text="nis2 anforderungen",
+        entries=(RankEntry(url="https://bsi.bund.de/nis2", position=1, title="NIS2"),),
+        fetched_at=FIXED,
+    )
+
+
+def test_index_submission_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    result = IndexSubmissionResult(
+        run_id="run-1",
+        host="it-sicherheit.de",
+        urls=("https://it-sicherheit.de/nis2",),
+        generated_at=FIXED,
+        dry_run=False,
+        status=IndexSubmissionStatus.SUBMITTED,
+        endpoints=(
+            EndpointResult(
+                endpoint=IndexingEndpoint.INDEXNOW,
+                status=IndexSubmissionStatus.SUBMITTED,
+                http_status=202,
+                attempts=1,
+            ),
+        ),
+    )
+    storage.save_index_submission(result)
+    assert storage.load_index_submission("run-1") == result
+    assert storage.load_index_submission("unknown") is None
+    storage.save_index_submission(result)  # Upsert, kein Duplikat/Fehler
+    assert storage.load_index_submission("run-1") == result
+
+
+def test_serp_result_roundtrip_and_checkpoint(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    assert storage.has_serp_result("run-1", SerpProvider.MOCK, "q01") is False
+    storage.save_serp_result(_serp_result())
+    assert storage.has_serp_result("run-1", SerpProvider.MOCK, "q01") is True
+    storage.save_serp_result(_serp_result())  # idempotent (UNIQUE-Schluessel)
+    assert len(storage.load_serp_results("run-1")) == 1
+    loaded = storage.load_serp_results("run-1")[0]
+    assert loaded == _serp_result()
+    assert loaded.entries[0].position == 1
+
+
+def test_serp_results_provider_filter_and_order(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    storage.save_serp_result(_serp_result("q02"))
+    storage.save_serp_result(_serp_result("q01"))
+    storage.save_serp_result(_serp_result("q01", provider=SerpProvider.SERPER))
+    assert len(storage.load_serp_results("run-1")) == 3  # ohne Filter: alle Provider
+    mock_only = storage.load_serp_results("run-1", SerpProvider.MOCK)
+    assert [r.query_id for r in mock_only] == ["q01", "q02"]  # sortiert nach query_id
+    assert storage.has_serp_result("run-1", SerpProvider.SERPER, "q02") is False
+
+
+def test_overlap_report_roundtrip(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    report = OverlapReport(
+        run_id="run-1",
+        target_domain="it-sicherheit.de",
+        generated_at=FIXED,
+        provider=SerpProvider.MOCK,
+        query_set_version="v1",
+        n_queries=1,
+        mean_jaccard=0.333333,
+        mean_ai_in_serp_share=0.5,
+        stats=(
+            OverlapStat(
+                query_id="q01",
+                prompt_id="p01",
+                jaccard=0.333333,
+                ai_in_serp_share=0.5,
+                domain_jaccard=0.5,
+                target_serp_rank=3,
+                target_ai_citation_rate=0.25,
+                n_serp_urls=2,
+                n_ai_urls=2,
+            ),
+        ),
+    )
+    storage.save_overlap_report(report)
+    assert storage.load_overlap_report("run-1") == report
+    assert storage.load_overlap_report("unknown") is None
+
+
+def test_delete_run_removes_live_loop_artifacts(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    storage.save_index_submission(
+        IndexSubmissionResult(run_id="run-1", host="it-sicherheit.de", generated_at=FIXED)
+    )
+    storage.save_serp_result(_serp_result())
+    storage.save_overlap_report(
+        OverlapReport(
+            run_id="run-1",
+            target_domain="it-sicherheit.de",
+            generated_at=FIXED,
+            provider=SerpProvider.MOCK,
+            query_set_version="v1",
+            n_queries=0,
+            mean_jaccard=0.0,
+            mean_ai_in_serp_share=0.0,
+        )
+    )
+    storage.delete_run("run-1")
+    assert storage.load_index_submission("run-1") is None
+    assert storage.load_serp_results("run-1") == []
+    assert storage.load_overlap_report("run-1") is None
+
+
+def test_initialize_is_idempotent_with_new_tables(tmp_path: Path) -> None:
+    storage = _storage(tmp_path)
+    storage.save_serp_result(_serp_result())
+    storage.initialize()  # erneut aufrufen -> kein Fehler, keine Datenverluste
+    assert storage.has_serp_result("run-1", SerpProvider.MOCK, "q01") is True
 
 
 def test_delete_run_removes_fix_artifacts(tmp_path: Path) -> None:

@@ -1,0 +1,47 @@
+# Nur das Noetige in den Build-Context (kleines Image, keine Secrets, kein Ballast).
+# --- Secrets: NIEMALS ins Image ---
+.env
+.env.*
+!.env.example
+*.key
+Webshare*proxies*.txt
+
+# --- Python-/uv-Artefakte (im Image frisch gebaut) ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.python-version
+
+# --- Test-/Typ-Caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Laufzeit-Artefakte (gehoeren nicht ins Image) ---
+runs/
+data/
+*.db
+*.sqlite*
+*.jl
+chroma/
+logs/
+*.log
+
+# --- Nicht build-relevant: VCS, Doku/Praesentation, Tests, CI, Editor ---
+.git/
+.github/
+.claude/
+CLAUDE.md
+docs/
+tests/
+node_modules/
+pitch.pdf
+pitch.md
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

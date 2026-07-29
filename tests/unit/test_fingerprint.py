@@ -137,3 +137,14 @@ def test_fixplan_content_change_changes_fingerprint() -> None:
     a = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block A"))
     b = report_fingerprint(_topflop(), fix_plan=_fixplan(content="Block B"))
     assert a != b
+
+
+def test_regression_payload_without_serp_unchanged() -> None:
+    """Live-Loop-Regression: der Fingerprint-Payload OHNE SERP/Overlap bleibt byte-identisch.
+
+    Pinnt den konkreten Hash des bekannten TopFlop-Fixtures. Schlaegt dieser Test fehl,
+    hat sich ein fingerprint-relevanter Contract (Felder/Defaults/Serialisierung) oder
+    die Hash-Funktion geaendert — genau das darf der Live-Loop-Umbau NICHT (alle
+    dokumentierten Demo-Fingerprints wuerden brechen).
+    """
+    assert report_fingerprint(_topflop()) == "674cffbe3c66"

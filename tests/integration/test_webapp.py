@@ -255,6 +255,9 @@ def test_probe_detail_and_results(tmp_path: Path) -> None:
     assert results["fix_plan"]["proposals"][0]["patch_id"] == "px-f1-add_schema"
     assert results["deploy"]["dry_run"] is True
     assert results["deploy"]["applied_patch_ids"] == ["px-f1-add_schema"]
+    # Live-Loop: der overlap-Key ist immer vorhanden (None ohne SERP-Provider).
+    assert "overlap" in results
+    assert results["overlap"] is None
 
 
 def test_state_surfaces_sprint3_counts(tmp_path: Path) -> None:
@@ -387,9 +390,83 @@ def test_start_run_validates_input(tmp_path: Path) -> None:
     assert bad_engine.status_code == 400
     bad_reasoning = client.post("/api/runs", json={"domain": "x.de", "reasoning_provider": "gpt"})
     assert bad_reasoning.status_code == 400
+    bad_set = client.post("/api/runs", json={"domain": "x.de", "prompt_set_version": "nope"})
+    assert bad_set.status_code == 400
     # Domain-Whitelist haelt Sonderzeichen ab (kein Argument-Schmuggel/XSS-Vektor).
     assert client.post("/api/runs", json={"domain": "<img src=x>"}).status_code == 400
     assert client.post("/api/runs", json={"domain": "evil.de; rm -rf"}).status_code == 400
+
+
+def test_config_lists_prompt_sets(tmp_path: Path) -> None:
+    client = TestClient(create_app(_settings(tmp_path)))
+    cfg = client.get("/api/config").json()
+    versions = {ps["version"] for ps in cfg["prompt_sets"]}
+    assert {"v1", "pm1"} <= versions  # beide versionierten Themen-Sets werden angeboten
+    assert cfg["defaults"]["prompt_set_version"] == "v1"
+
+
+def test_start_run_passes_prompt_set_and_live_crawl(tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def spawn(args: list[str], env: dict[str, str]) -> _FakeProc:
+        captured["args"] = args
+        captured["env"] = env
+        return _FakeProc()
+
+    client = TestClient(create_app(_settings(tmp_path), spawn=spawn))
+    response = client.post(
+        "/api/runs",
+        json={
+            "domain": "pulse-medic.com",
+            "offline": False,
+            "live_engines": ["perplexity"],
+            "prompt_set_version": "pm1",
+            "live_crawl": True,
+        },
+    )
+    assert response.status_code == 201
+    args = captured["args"]
+    env = captured["env"]
+    assert isinstance(args, list) and isinstance(env, dict)
+    assert "--live-crawl" in args
+    assert env["GEO_PROMPT_SET_VERSION"] == "pm1"
+    assert env["GEO_SERP_QUERY_SET_VERSION"] == "pm1"
+
+
+def test_live_crawl_ignored_when_offline(tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def spawn(args: list[str], env: dict[str, str]) -> _FakeProc:
+        captured["args"] = args
+        return _FakeProc()
+
+    client = TestClient(create_app(_settings(tmp_path), spawn=spawn))
+    client.post("/api/runs", json={"domain": "it-sicherheit.de", "live_crawl": True})
+    args = captured["args"]
+    assert isinstance(args, list)
+    assert "--live-crawl" not in args  # offline crawlt nie echt
+
+
+def test_matrix_surfaces_live_engines(tmp_path: Path) -> None:
+    storage = SqliteStorage(tmp_path / "geo.db")
+    storage.initialize()
+    storage.save_run(
+        RunRecord(
+            run_id="live-run",
+            target_domain="pulse-medic.com",
+            status=RunStatus.COMPLETED,
+            started_at=FIXED,
+            seed=42,
+            prompt_set_version="v1",
+            config_hash="hash",
+            live_engines=("perplexity",),
+        )
+    )
+    client = TestClient(create_app(_settings(tmp_path)))
+    matrix = client.get("/api/matrix?run=live-run").json()
+    assert matrix["live_engines"] == ["perplexity"]
+    state = client.get("/api/state?run=live-run").json()
+    assert state["live_engines"] == ["perplexity"]
 
 
 def test_stop_marks_run_aborted(tmp_path: Path) -> None:

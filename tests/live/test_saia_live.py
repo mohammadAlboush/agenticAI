@@ -15,15 +15,20 @@ from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningStatus
 
 pytestmark = pytest.mark.live
 
-_OPT_IN = bool(os.getenv("GEO_RUN_LIVE_TESTS")) and bool(os.getenv("SAIA_API_KEY"))
+# Key beim Modul-Import cachen: die autouse-Env-Scrub-Fixture (tests/conftest.py)
+# loescht projekteigene Variablen VOR dem Testkoerper (Muster test_serper_live.py).
+_API_KEY = os.getenv("SAIA_API_KEY")
+_MODEL = os.getenv("GEO_SAIA_MODEL", "openai-gpt-oss-120b")
+_BASE_URL = os.getenv("GEO_SAIA_BASE_URL", "https://chat-ai.academiccloud.de/v1")
+_OPT_IN = bool(os.getenv("GEO_RUN_LIVE_TESTS")) and bool(_API_KEY)
 
 
 @pytest.mark.skipif(not _OPT_IN, reason="Live-Tests nur mit GEO_RUN_LIVE_TESTS=1 + API-Key")
 def test_live_saia_smoke() -> None:
-    model = os.getenv("GEO_SAIA_MODEL", "openai-gpt-oss-120b")
+    model = _MODEL
     adapter = SaiaReasoningAdapter(
-        api_key=os.environ["SAIA_API_KEY"],
-        base_url=os.getenv("GEO_SAIA_BASE_URL", "https://chat-ai.academiccloud.de/v1"),
+        api_key=_API_KEY,
+        base_url=_BASE_URL,
         model=model,
     )
     request = ReasoningRequest(

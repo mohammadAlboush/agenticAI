@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>geo-audit-loop · Problem</title>
+<style>
+/* ===================================================================
+   GEMEINSAMES DESIGN-KIT — NICHT ÄNDERN (Tokens + Basis + Engine).
+   Folien-spezifisches CSS NUR im markierten Block "SLIDE-CSS" ergänzen.
+   =================================================================== */
+:root{
+  --bg:#f6f5f1; --surface:#edece5; --surface-2:#fbfaf7;
+  --ink:#1c1d1a; --mut:#62655d; --faint:#9a9c92;
+  --line:#ddd9cf; --line-2:#e6e3d9; --unlit:#cdcabc; --metal:#c6c3b6;
+  --acc:#71b127; --acc-deep:#4f7d1a; --acc-soft:#e7efd9; --acc-deep2:#3f6614;
+  --sig-red:#CC352B; --sig-amber:#E39B12; --sig-green:#2E9E5B;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  --sans:"Inter","Segoe UI","Segoe UI Variable Text",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;letter-spacing:-.006em;overflow:hidden}
+
+/* ---- Einheitlicher Kopf (dd-folie-02..11) ---- */
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:clamp(20px,3vh,32px) clamp(36px,5vw,74px) clamp(12px,2vh,20px)}
+.head-wrap{flex:0 0 auto}
+.kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,13px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--acc-deep);margin-bottom:8px}
+.kicker .n{color:var(--faint)}
+h2{font-family:var(--sans);font-weight:680;font-size:clamp(21px,2.9vw,36px);line-height:1.05;
+  letter-spacing:-.018em;color:var(--ink)}
+h2 .g{color:var(--acc-deep)}
+.rule{width:56px;height:4px;background:var(--acc);border-radius:3px;margin:12px 0 0}
+
+.body{flex:1 1 auto;min-height:0;margin-top:clamp(10px,1.8vh,18px)}
+
+/* ---- Beat-Reveal: Elemente mit data-beat erscheinen ab ihrem Beat ---- */
+[data-beat]{opacity:0;transform:translateY(14px);
+  transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-beat].show{opacity:1;transform:none}
+
+/* ---- Bottom-Caption ---- */
+.caption{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding-top:clamp(8px,1.4vh,14px)}
+.caption .cdash{flex:0 0 auto;width:26px;height:3px;background:var(--acc);border-radius:2px}
+.caption .ctxt{font-size:clamp(13.5px,1.5vw,17px);font-weight:600;color:var(--ink)}
+.caption .ctxt b.g{color:var(--acc-deep)}
+
+.hint{position:fixed;left:0;right:0;bottom:7px;text-align:center;font-family:var(--mono);
+  font-size:12px;color:var(--faint);transition:opacity .5s ease;pointer-events:none;z-index:6}
+.stage.finished .hint{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="head-wrap">
+    <div class="kicker"><span class="n">02 / 13</span> &nbsp;·&nbsp; 01 · PROBLEM &amp; LÖSUNG</div>
+    <h2>Sichtbarkeit heißt heute: <span class="g">zitiert werden</span></h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="body">
+
+    <!-- LINKS: drei Thesen mit Mikro-Icons -->
+    <ul class="points">
+      <li data-beat="1">
+        <span class="ico">
+          <svg viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#33352E" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.2,4 H18.8 V14.6 H10.6 L6.6,18.4 V14.6 H3.2 Z"/>
+            <path d="M8.6,7.6 C7.6,7.9 7.2,8.6 7.2,9.6 V11 H9 V9.4 H7.9" stroke-width="1.4"/>
+            <path d="M14.2,7.6 C13.2,7.9 12.8,8.6 12.8,9.6 V11 H14.6 V9.4 H13.5" stroke-width="1.4"/>
+          </svg>
+        </span>
+        <div><b>AI-Engines antworten direkt</b> — und nennen Quellen.<span class="s">Der Klick auf „Platz 1" verschwindet.</span></div>
+      </li>
+      <li data-beat="2">
+        <span class="ico">
+          <svg viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#33352E" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="4.4" cy="11" r="1.9" stroke-width="1.4"/>
+            <path d="M6.2,10.2 L16.2,5.4"/>
+            <path d="M16.6,5.2 L12.9,4.9 M16.6,5.2 L15.2,8.6" stroke-width="1.4"/>
+            <path d="M6.2,11.8 L16.2,16.6"/>
+            <path d="M16.6,16.8 L12.9,17.1 M16.6,16.8 L15.2,13.4" stroke-width="1.4"/>
+          </svg>
+        </span>
+        <div><b>Engines haben eigene Präferenzen.</b><span class="s">Die Überlappung zwischen Top-Google-Treffern und AI-zitierten Quellen ist stark gesunken.</span></div>
+      </li>
+      <li data-beat="3">
+        <span class="ico">
+          <svg viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#33352E" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.4,15.8 A7.6,7.6 0 0 1 18.6,15.8"/>
+            <path d="M5.4,10.6 L6.7,11.5 M11,8.2 V9.8 M16.6,10.6 L15.3,11.5" stroke-width="1.4"/>
+            <path d="M11,15.8 L15,10.9"/>
+            <circle cx="11" cy="15.8" r="1.6" fill="#33352E" stroke="none"/>
+          </svg>
+        </span>
+        <div><b>Niemand misst das systematisch.</b><span class="s">Ob, wo und warum die eigene Seite zitiert wird — genau hier setzt geo-audit-loop an.</span></div>
+      </li>
+    </ul>
+
+    <!-- RECHTS: AI-Antwort als Chat-Fenster -->
+    <div class="chat-col">
+      <div class="chat" data-beat="1">
+        <div class="chat-bar rv rv-0">
+          <i></i><i></i><i></i>
+          <span>AI-Engine · Antwort</span>
+        </div>
+        <div class="chat-body">
+          <div class="agent-row rv rv-1">
+            <span class="avatar">
+              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#4f7d1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7,1.4 L8.3,5.7 L12.6,7 L8.3,8.3 L7,12.6 L5.7,8.3 L1.4,7 L5.7,5.7 Z"/>
+              </svg>
+            </span>
+            <span class="meta">engine · beantwortet 1 Frage</span>
+          </div>
+          <p class="ans-text rv rv-2">
+            Die NIS2-Richtlinie verpflichtet mehr Unternehmen zu einem
+            Mindestmaß an IT-Sicherheit und meldet Vorfälle binnen
+            24&nbsp;Stunden<sup class="cite">[1]</sup>. Betroffen sind
+            künftig auch mittlere Betriebe in kritischen Sektoren.
+          </p>
+
+          <div class="src-label" data-beat="2">Quellen</div>
+          <ul class="src-list">
+            <li class="chip chip-hit" data-beat="2">
+              <span class="curl">it-sicherheit.de/nis2-richtlinie</span>
+              <span class="cbadge">[1]</span>
+            </li>
+            <li class="chip chip-dim cd1" data-beat="2">andere-quelle.de/…</li>
+            <li class="chip chip-dim cd2" data-beat="2">blog.example/…</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="caption" data-beat="3">
+    <span class="cdash"></span>
+    <span class="ctxt">Wer nicht <b class="g">zitiert</b> wird, ist <b style="color:#a8392c">unsichtbar</b> — egal wie gut das Ranking war.</span>
+  </div>
+
+  <div class="hint">Leertaste ▸ weiter</div>
+</div>
+
+<!-- ===== SLIDE-CSS (folienspezifisch ergänzen) ===== -->
+<style>
+/* Zweispaltige Bühne: Thesen links, Chat-Karte rechts auf gemeinsamer Fluchtlinie */
+.body{display:grid;grid-template-columns:5fr 6fr;gap:clamp(28px,4vw,56px);
+  align-items:start;align-content:center}
+
+/* --- Thesen mit 22×22-Mikro-Icons --- */
+.points{list-style:none;display:flex;flex-direction:column;gap:clamp(18px,4.2vh,40px);
+  padding-top:clamp(2px,.8vh,8px)}
+.points li{display:flex;gap:14px;align-items:flex-start;
+  font-size:clamp(15px,1.6vw,19.5px);line-height:1.45;color:var(--ink)}
+.points .ico{flex:0 0 auto;width:22px;height:22px;margin-top:.14em}
+.points .ico svg{width:22px;height:22px;display:block}
+.points b{font-weight:680}
+.points .s{display:block;font-size:.82em;color:var(--mut);margin-top:3px;font-weight:400}
+
+/* --- Chat-Karte: AI-Antwort als echtes Chat-Fenster --- */
+.chat-col{min-width:0}
+.chat{max-width:470px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(20,25,12,.07)}
+
+/* Chrome-Bar in hell */
+.chat-bar{display:flex;align-items:center;gap:6px;padding:10px 15px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.chat-bar i{width:10px;height:10px;border-radius:50%;background:var(--metal);display:inline-block}
+.chat-bar span{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--mut);
+  letter-spacing:.03em}
+
+.chat-body{padding:clamp(14px,1.9vh,18px) clamp(16px,1.9vw,22px) clamp(16px,2.1vh,20px)}
+
+/* Avatar-Zeile */
+.agent-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.avatar{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--acc-soft);
+  border:1px solid var(--acc);display:flex;align-items:center;justify-content:center}
+.avatar svg{width:14px;height:14px;display:block}
+.agent-row .meta{font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.03em}
+
+/* Antwort-Text */
+.ans-text{font-size:clamp(14px,1.4vw,16.5px);line-height:1.58;color:var(--ink);
+  margin:0 0 clamp(14px,2vh,20px)}
+.ans-text .cite{font-family:var(--mono);font-size:.62em;font-weight:700;
+  color:var(--acc-deep);vertical-align:super;line-height:0}
+
+/* Innerer Stagger der Chat-Karte bei Beat 1 (Bar → Avatar → Text) */
+.chat .rv{opacity:0;transform:translateY(8px);
+  transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.chat.show .rv{opacity:1;transform:none}
+.chat.show .rv-1{transition-delay:.12s}
+.chat.show .rv-2{transition-delay:.24s}
+
+/* Quellenblock */
+.src-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);font-weight:700;margin-bottom:9px}
+.src-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+
+.chip{font-family:var(--mono);font-size:clamp(12px,1.24vw,14px);line-height:1.2;
+  padding:9px 13px;border-radius:9px;border:1px solid var(--line-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Chip 1: zitierte Quelle — poppt mit Glow, trägt das [1]-Zitat-Badge */
+.chip-hit{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-deep);
+  font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chip-hit .curl{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.chip-hit .cbadge{flex:0 0 auto;font-size:12px;line-height:14px;font-weight:700;
+  padding:2px 7px;border-radius:8px;background:var(--surface-2);border:1px solid var(--acc);
+  color:var(--acc-deep)}
+.chip-hit[data-beat]{transform:translateY(10px) scale(.92);
+  transition:opacity .55s var(--ease),transform .55s var(--ease),filter .55s var(--ease)}
+.chip-hit[data-beat].show{transform:none;filter:drop-shadow(0 0 6px rgba(113,177,39,.45))}
+
+/* Chips 2 & 3: gedämpft, gestaffelt 100 ms */
+.chip-dim{background:var(--surface);border-color:var(--line-2);color:var(--faint)}
+.chip-dim.cd1{transition-delay:.1s}
+.chip-dim.cd2{transition-delay:.2s}
+</style>
+
+<script>
+/* ===== BEAT-ENGINE — NICHT ÄNDERN, nur MAX unten setzen ===== */
+(function(){
+  const stage=document.getElementById('stage');
+  const MAX=3;                       /* <<< Anzahl Beats dieser Folie */
+  let beat=0;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const forceFinal=(function(){try{return !!(window.frameElement&&window.frameElement.dataset.final);}catch(e){return false;}})();
+
+  function render(){
+    for(let i=1;i<=MAX;i++) stage.classList.toggle('b'+i, i<=beat);
+    document.querySelectorAll('[data-beat]').forEach(el=>{
+      el.classList.toggle('show', (+el.dataset.beat||0)<=beat);
+    });
+    stage.classList.toggle('finished', beat>=MAX);
+  }
+  function advance(){ if(beat<MAX){ beat++; render(); } }
+  function back(){ if(beat>0){ beat--; render(); } }
+
+  window.addEventListener('keydown',function(e){
+    if(e.code==='Space'||e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); back(); }
+    else if(e.key==='r'||e.key==='R'){ beat=0; render(); }
+  });
+  window.addEventListener('click',advance);
+
+  if(reduced||forceFinal){ beat=MAX; }
+  render();
+})();
+</script>
+</body>
+</html>

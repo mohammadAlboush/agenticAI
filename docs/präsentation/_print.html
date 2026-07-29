@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>pitch-deck · print</title>
+<style>
+/* 1280×720 px = 13.333in × 7.5in = 338.67mm × 190.5mm (16:9) */
+@page{ size: 338.667mm 190.5mm; margin: 0 }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#fff}
+.page{ width:1280px; height:720px; overflow:hidden; page-break-after:always; break-after:page; position:relative }
+.page:last-child{ page-break-after:auto; break-after:auto }
+iframe{ width:1280px; height:720px; border:0; display:block }
+@media print{ .page{ box-shadow:none } }
+</style>
+</head>
+<body>
+  <div class="page"><iframe src="dd-folie-01.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-02.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-03.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-04.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-05.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-06.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-07.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-08.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-09.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-10.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-11.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-12.html" data-final="1" scrolling="no"></iframe></div>
+  <div class="page"><iframe src="dd-folie-13.html" data-final="1" scrolling="no"></iframe></div>
+</body>
+</html>

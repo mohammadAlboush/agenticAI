@@ -13,18 +13,23 @@ from geo_audit_loop.domain.audit import AuditReport
 from geo_audit_loop.domain.effect import EffectHypothesis, EffectReport
 from geo_audit_loop.domain.findings import TopFlopReport
 from geo_audit_loop.domain.fix import ApprovalDecision, DeployResult, FixPlan
+from geo_audit_loop.domain.indexing import IndexSubmission, IndexSubmissionResult
 from geo_audit_loop.domain.inventory import CrawlOptions, PageInventory
 from geo_audit_loop.domain.memory import MemoryQuery
+from geo_audit_loop.domain.overlap import OverlapReport
 from geo_audit_loop.domain.probe import EngineId, ProbePhase, ProbeRequest, ProbeResult
 from geo_audit_loop.domain.reasoning import ReasoningRequest, ReasoningResult
 from geo_audit_loop.domain.run import RunContext, RunRecord
+from geo_audit_loop.domain.serp import SerpProvider, SerpRequest, SerpResult
 from geo_audit_loop.domain.templates import PatternReport
 from geo_audit_loop.ports.crawl import CrawlPort
 from geo_audit_loop.ports.engine import EnginePort
+from geo_audit_loop.ports.indexing import IndexingPort
 from geo_audit_loop.ports.memory import MemoryPort
 from geo_audit_loop.ports.proxy import ProxyPort
 from geo_audit_loop.ports.publisher import PublisherPort
 from geo_audit_loop.ports.reasoning import ReasoningPort
+from geo_audit_loop.ports.serp import SerpPort
 from geo_audit_loop.ports.storage import StoragePort
 
 FIXED = datetime(2026, 1, 1, 12, 0, 0)
@@ -137,6 +142,26 @@ class _StubStorage:
     def load_effect_report(self, run_id: str) -> EffectReport | None:
         return None
 
+    def save_index_submission(self, result: IndexSubmissionResult) -> None: ...
+
+    def load_index_submission(self, run_id: str) -> IndexSubmissionResult | None:
+        return None
+
+    def save_serp_result(self, result: SerpResult) -> None: ...
+
+    def has_serp_result(self, run_id: str, provider: SerpProvider, query_id: str) -> bool:
+        return False
+
+    def load_serp_results(
+        self, run_id: str, provider: SerpProvider | None = None
+    ) -> list[SerpResult]:
+        return []
+
+    def save_overlap_report(self, report: OverlapReport) -> None: ...
+
+    def load_overlap_report(self, run_id: str) -> OverlapReport | None:
+        return None
+
 
 class _StubMemory:
     def store(self, hypothesis: EffectHypothesis) -> None: ...
@@ -161,6 +186,31 @@ class _StubPublisher:
             target_domain=plan.target_domain,
             generated_at=FIXED,
             publisher=self.name,
+        )
+
+
+class _StubIndexing:
+    name = "stub"
+
+    def submit(
+        self, submission: IndexSubmission, *, run_context: RunContext
+    ) -> IndexSubmissionResult:
+        return IndexSubmissionResult(
+            run_id=submission.run_id, host=submission.host, generated_at=FIXED
+        )
+
+
+class _StubSerp:
+    provider = SerpProvider.MOCK
+
+    def search(self, request: SerpRequest) -> SerpResult:
+        return SerpResult(
+            run_id=request.run_id,
+            provider=self.provider,
+            query_id=request.query.query_id,
+            prompt_id=request.query.prompt_id,
+            query_text=request.query.text,
+            fetched_at=FIXED,
         )
 
 
@@ -211,3 +261,15 @@ def test_memory_port_conformance() -> None:
     memory: MemoryPort = _StubMemory()
     assert isinstance(memory, MemoryPort)
     assert memory.retrieve(MemoryQuery(target_domain="it-sicherheit.de")) == []
+
+
+def test_indexing_port_conformance() -> None:
+    indexer: IndexingPort = _StubIndexing()
+    assert isinstance(indexer, IndexingPort)
+    assert indexer.name == "stub"
+
+
+def test_serp_port_conformance() -> None:
+    serp: SerpPort = _StubSerp()
+    assert isinstance(serp, SerpPort)
+    assert serp.provider is SerpProvider.MOCK

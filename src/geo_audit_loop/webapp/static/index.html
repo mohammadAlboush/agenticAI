@@ -47,7 +47,8 @@ code{font-family:var(--mono);font-size:.88em;background:#e9e7df;color:#33352e;pa
 .field input[type=text],.field input[type=number],.field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--mono);font-size:13px;background:#fff;color:var(--ink)}
 .field input:focus,.field select:focus{outline:2px solid var(--acc-soft);border-color:var(--acc)}
 .toggles{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:13.5px}
-.toggles label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.toggles label{display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:560}
+.toggles label small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--faint);margin-left:2px}
 .toggles input{accent-color:var(--acc-deep);width:16px;height:16px}
 .toggles .dim{color:var(--faint)}
 #engine-toggles{display:flex;gap:16px;flex-wrap:wrap}
@@ -90,6 +91,11 @@ h2.sec .n{font-family:var(--mono);font-size:12px;color:var(--acc-deep);font-weig
 .engine .nm{font-family:var(--mono);font-weight:700;font-size:14px}
 .engine .nm .lv{font-size:9.5px;color:#fff;background:var(--acc-deep);border-radius:5px;padding:1px 6px;vertical-align:2px;margin-left:6px}
 .engine .rate{font-family:var(--mono);font-size:12px;color:var(--acc-deep);font-weight:600}
+/* Live-Lauf: echt geprobte Engine vs. Simulation (Mock) klar unterscheiden. */
+.livebadge{font-size:9.5px;color:#fff;background:var(--acc-deep);border-radius:5px;padding:1px 7px;vertical-align:2px;margin-left:7px;font-weight:700;letter-spacing:.03em}
+.simbadge{font-family:var(--sans);font-size:9.5px;color:#8a6d1a;background:#f6edd4;border:1px solid #e3d29a;border-radius:5px;padding:1px 7px;vertical-align:2px;margin-left:7px;font-weight:700;letter-spacing:.03em}
+.engine.simulated{opacity:.5;background:repeating-linear-gradient(135deg,var(--surface-2),var(--surface-2) 9px,#f2f0e8 9px,#f2f0e8 18px)}
+.engine .rate.sim{color:#a08320;font-weight:600}
 .grid{display:grid;gap:3px}
 .grid .hcell{font-family:var(--mono);font-size:9px;color:var(--faint);text-align:center;align-self:end}
 .grid .pcell{font-family:var(--mono);font-size:10px;color:var(--mut);padding-right:5px;text-align:right;align-self:center;cursor:help}
@@ -146,6 +152,25 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
 .card .conf{height:7px;background:#e7e5dc;border-radius:4px;overflow:hidden;margin:7px 0 6px}
 .card .conf i{display:block;height:100%;background:var(--acc)}
 .card p{margin:0;font-size:12.5px;color:var(--mut)}
+/* Deploy-Karte (Schritt 6) — ruhige Karte mit Status-Pille statt hartem linken Rand */
+.deploycard{background:linear-gradient(180deg,var(--surface-2),#faf9f4);border:1px solid var(--line);
+  border-radius:14px;padding:15px 18px;margin-bottom:14px}
+.deploycard .dh{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.deploycard .dh .shield{width:17px;height:17px;flex:none;color:var(--acc-deep)}
+.deploycard .dh .ti{font-weight:660;font-size:14.5px;letter-spacing:-.01em}
+.deploycard .dh .ti small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--faint);margin-left:6px}
+.deploycard .dh .pill{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:700;
+  letter-spacing:.05em;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.deploycard .pill.dry{background:var(--acc-soft);color:var(--acc-deep)}
+.deploycard .pill.live{background:#f6dcd8;color:#a8392c}
+.deploycard .dstats{display:flex;gap:22px;font-size:13px;color:var(--ink);margin:2px 0 9px}
+.deploycard .dstats span{display:flex;flex-direction:column}
+.deploycard .dstats b{font-size:19px;font-weight:700;color:var(--acc-deep);line-height:1}
+.deploycard .dstats em{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--faint);margin-top:3px}
+.deploycard .dnote{font-size:12px;color:var(--mut);display:flex;align-items:flex-start;gap:7px;
+  border-top:1px solid var(--line-2,#eceae1);padding-top:9px}
+.deploycard .dnote .lock{width:13px;height:13px;flex:none;margin-top:1px;color:var(--acc-deep)}
 .find{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:11px 15px;margin-bottom:9px}
 .find .h{display:flex;gap:9px;align-items:center;font-size:12.5px;flex-wrap:wrap;margin-bottom:4px}
 .sev{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.05em}
@@ -156,6 +181,18 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
 .find .lever{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--acc-deep)}
 .find .fix{font-size:13px}
 .find .ev{font-size:12px;color:var(--faint)}
+
+/* Effekt- & Overlap-Panels */
+.statrow{display:flex;gap:13px;flex-wrap:wrap;margin:6px 0 12px}
+.stat{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:9px 16px;min-width:110px}
+.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.stat .v{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--acc-deep);margin-top:2px}
+.dir{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.05em;white-space:nowrap}
+.dir.improved{background:var(--acc-soft);color:var(--acc-deep)}
+.dir.regressed{background:var(--red-soft);color:var(--red)}
+.dir.unchanged{background:#eceae1;color:var(--mut)}
+td.num.pos{color:var(--acc-deep);font-weight:700}
+td.num.neg{color:var(--red);font-weight:700}
 
 .footer{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--mut)}
 .fp{font-family:var(--mono);font-weight:700;color:var(--acc-deep)}
@@ -184,10 +221,13 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
       <div class="field"><label>Seed</label><input type="number" id="f-seed" value="42"></div>
       <div class="field"><label>Proxy-IPs</label><input type="number" id="f-ips" value="5" min="1" max="5"></div>
       <div class="field"><label>Reasoning (Warum/Was tun)</label><select id="f-reason"></select></div>
+      <div class="field" style="grid-column:span 2"><label>Themen-Set (Fragen an die Engines)</label><select id="f-promptset"></select></div>
     </div>
     <div class="toggles">
-      <label><input type="checkbox" id="f-explain" checked> Lern-Loop (Pattern-Miner + GEO-Auditor)</label>
-      <label><input type="checkbox" id="f-fix"> Fix &amp; Deploy (Fix-Agent + HITL-Freigabe + Dry-Run)</label>
+      <label><input type="checkbox" id="f-explain" checked> Verstehen <small>· Pattern-Miner + GEO-Auditor (Schritt 4–5)</small></label>
+      <label><input type="checkbox" id="f-fix"> Fix &amp; Deploy <small>· Fix-Agent + HITL-Freigabe (Schritt 6)</small></label>
+      <label><input type="checkbox" id="f-learn"> Lern-Loop <small>· Re-Probe + Effekt (Schritt 7)</small></label>
+      <label id="crawl-wrap" style="display:none"><input type="checkbox" id="f-crawl"> Echte Seiten crawlen <small>· Live</small></label>
       <span id="engine-toggles" class="hidden"></span>
     </div>
     <div class="startrow">
@@ -252,6 +292,24 @@ td.num,th.num{font-family:var(--mono);font-size:12.5px;text-align:right}
       <div id="fixes"></div>
     </div>
 
+    <div id="sec-effect" class="hidden">
+      <h2 class="sec"><span class="n">SCHRITT 7</span>Effekt — Vorher → Nachher (Re-Probe)</h2>
+      <p class="sub">Zitationsrate je gepatchter URL vor und nach dem Deploy; Δ = Nachher − Vorher. Offline zeigt der deterministische Mock-Boost den Mechanismus, live die Realität.</p>
+      <div id="effectsummary"></div>
+      <table class="data"><thead><tr>
+        <th>URL</th><th class="num">Vorher</th><th class="num">Nachher</th><th class="num">Δ</th><th>Richtung</th><th class="num">Konfidenz</th>
+      </tr></thead><tbody id="effectbody"></tbody></table>
+    </div>
+
+    <div id="sec-overlap" class="hidden">
+      <h2 class="sec"><span class="n">SERP</span>Overlap — Google-Top-10 vs. AI-Zitate</h2>
+      <p class="sub">Wie stark überschneiden sich klassische Google-Treffer und AI-Engine-Zitate je Query? (Jaccard auf URL- und Domain-Ebene)</p>
+      <div id="overlapsummary"></div>
+      <table class="data"><thead><tr>
+        <th>Query · Prompt</th><th class="num">Jaccard</th><th class="num">AI-in-SERP</th><th class="num">Domain-Jaccard</th><th class="num">Ziel-Rang (SERP)</th><th class="num">Ziel-AI-Rate</th><th class="num">URLs (SERP/AI)</th>
+      </tr></thead><tbody id="overlapbody"></tbody></table>
+    </div>
+
     <div class="footer">
       <span id="fpwrap" class="hidden">Report-Fingerprint <span class="fp" id="fp"></span></span>
       <span style="margin-left:auto;font-family:var(--mono);font-size:11.5px" id="poll"></span>
@@ -278,6 +336,7 @@ const PYR = {access:"Zugang",extractability:"Extrahierbarkeit",substance:"Substa
 const ENGINE_NAME = {perplexity:"Perplexity",chatgpt:"ChatGPT",claude:"Claude",gemini:"Gemini"};
 const REASON_NAME = {mock:"Mock (Simulation)", saia:"SAIA · Hochschule (kostenlos)", claude:"Claude (Anthropic)"};
 const CHG = {insert_block:"Block +", rewrite_block:"Umschreiben", add_schema:"Schema +", add_heading:"Überschrift +", meta_update:"Meta"};
+const DIR_LABEL = {improved:"▲ VERBESSERT", regressed:"▼ VERSCHLECHTERT", unchanged:"· UNVERÄNDERT"};
 
 let targetDomain = "";
 let resultsLoaded = false;
@@ -296,7 +355,7 @@ async function getJSON(url){ const r = await fetch(url); return r.json(); }
 
 function resetForNewRun(){
   resultsLoaded = false;
-  for (const id of ["sec-pages","sec-topflop","sec-patterns","sec-findings","sec-fix","fpwrap"]) $(id).classList.add("hidden");
+  for (const id of ["sec-pages","sec-topflop","sec-patterns","sec-findings","sec-fix","sec-effect","sec-overlap","fpwrap"]) $(id).classList.add("hidden");
   closeDrawer();
 }
 
@@ -320,6 +379,9 @@ function syncModeUI(){
   const live = $("f-mode").value === "live";
   $("engine-toggles").classList.toggle("hidden", !live);
   $("livehint").style.display = live ? "block" : "none";
+  // Echt-Crawl nur im Live-Modus anbieten (offline nutzt deterministisches Mock-Inventar).
+  $("crawl-wrap").style.display = live ? "inline-flex" : "none";
+  if (!live) $("f-crawl").checked = false;
 }
 
 async function loadConfig(){
@@ -330,6 +392,14 @@ async function loadConfig(){
   $("f-topn").value = c.defaults.top_n;
   $("f-seed").value = c.defaults.seed;
   $("f-ips").value = c.defaults.n_proxy_ips;
+  const ps = $("f-promptset");
+  ps.innerHTML = "";
+  for (const s of (c.prompt_sets || [])){
+    const opt = document.createElement("option");
+    opt.value = s.version; opt.textContent = s.label + " · " + s.version;
+    if (s.version === c.defaults.prompt_set_version) opt.selected = true;
+    ps.appendChild(opt);
+  }
   const sel = $("f-reason");
   sel.innerHTML = "";
   for (const r of ["mock","saia","claude"]){
@@ -362,13 +432,17 @@ $("startbtn").addEventListener("click", async () => {
     const r = await fetch("/api/runs", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
       domain: $("f-domain").value.trim(),
       offline: !live,
-      explain: $("f-explain").checked,
-      fix: $("f-fix").checked,
+      // Verschachtelung sicherstellen: Lernen ⇒ Fixen ⇒ Verstehen (CLI-Implikationen gespiegelt).
+      explain: $("f-explain").checked || $("f-fix").checked || $("f-learn").checked,
+      fix: $("f-fix").checked || $("f-learn").checked,
+      learn: $("f-learn").checked,
       top_n: parseInt($("f-topn").value, 10),
       seed: parseInt($("f-seed").value, 10),
       n_proxy_ips: parseInt($("f-ips").value, 10),
       live_engines: live ? engines : [],
       reasoning_provider: $("f-reason").value,
+      prompt_set_version: $("f-promptset").value,
+      live_crawl: $("f-crawl").checked,
     })});
     const data = await r.json();
     if (!r.ok){ msg.className = "startmsg err"; msg.textContent = data.error || "Start fehlgeschlagen"; }
@@ -463,13 +537,20 @@ function renderMatrix(m){
   for (const c of m.cells) byKey[c.engine+"|"+c.prompt+"|"+c.proxy] = c;
   const host = $("engines");
   host.innerHTML = "";
+  // War dies ein Live-Lauf? Dann sind Engines AUSSERHALB von m.live_engines nur Simulation
+  // (deterministischer Mock) — ihre Rate ist irrefuehrend und wird als solche markiert.
+  const liveRun = (m.live_engines || []).length > 0;
   for (const eng of m.engines){
+    const engLive = (m.live_engines || []).includes(eng);
+    const simulated = liveRun && !engLive;
     const card = document.createElement("div");
-    card.className = "engine";
+    card.className = "engine" + (simulated ? " simulated" : "");
     const rate = m.engine_rates[eng];
-    const liveTag = liveEngines.includes(eng) ? "" : "";
-    card.innerHTML = `<div class="hd"><span class="nm">${ENGINE_NAME[eng]||eng}${liveTag}</span>` +
-      `<span class="rate">Rate ${(rate*100).toFixed(0)}%</span></div>`;
+    let badge = "", rateHtml = `<span class="rate">Rate ${(rate*100).toFixed(0)}%</span>`;
+    if (liveRun && engLive){ badge = ' <span class="livebadge">● live</span>'; }
+    else if (simulated){ badge = ' <span class="simbadge">Simulation</span>'; rateHtml = `<span class="rate sim">nicht live</span>`; }
+    card.innerHTML = `<div class="hd"><span class="nm">${ENGINE_NAME[eng]||eng}${badge}</span>` +
+      rateHtml + `</div>`;
     const grid = document.createElement("div");
     grid.className = "grid";
     grid.style.gridTemplateColumns = `44px repeat(${m.proxies.length},1fr)`;
@@ -563,13 +644,17 @@ function renderResults(res){
     $("sec-fix").classList.remove("hidden");
     if (res.deploy){
       const d = res.deploy, safe = d.dry_run;
+      const shield = `<svg class="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`;
+      const lock = `<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
       $("deploybox").innerHTML =
-        `<div class="card" style="border-left:3px solid var(--acc)">` +
-        `<h4>Deploy · ${esc(d.publisher)} <span class="sev ${safe?"low":"high"}" style="margin-left:8px">` +
-        `${safe?"DRY-RUN · KEINE EXTERNEN WRITES":"LIVE"}</span></h4>` +
-        `<p><b>${d.applied_patch_ids.length}</b> angewandt · <b>${d.skipped_patch_ids.length}</b> übersprungen` +
-        ` · Status ${esc(d.status)}</p>` +
-        `<p style="margin-top:6px;color:var(--mut)">Kein Deploy ohne Freigabe — der Mensch entscheidet (Projektregeln §6).</p></div>`;
+        `<div class="deploycard">` +
+        `<div class="dh">${shield}<span class="ti">Deploy<small>${esc(d.publisher)}</small></span>` +
+        `<span class="pill ${safe?"dry":"live"}">${safe?"DRY-RUN · KEINE WRITES":"LIVE-DEPLOY"}</span></div>` +
+        `<div class="dstats">` +
+        `<span><b>${d.applied_patch_ids.length}</b><em>angewandt</em></span>` +
+        `<span><b>${d.skipped_patch_ids.length}</b><em>übersprungen</em></span>` +
+        `<span><b style="font-size:13px;color:var(--ink)">${esc(d.status)}</b><em>Status</em></span></div>` +
+        `<div class="dnote">${lock}<span>Kein Deploy ohne menschliche Freigabe — das HITL-Gate entscheidet (Projektregeln §6). Vor jedem Write wird die Originalseite gesichert (Rollback).</span></div></div>`;
     }
     $("fixes").innerHTML = res.fix_plan.proposals.map((p,i) =>
       `<div class="find"><div class="h"><b>${i+1}.</b>` +
@@ -578,6 +663,54 @@ function renderResults(res){
       `<span class="lever">${esc(PYR[p.pyramid_level]||p.pyramid_level)} · ${esc(LEVER[p.lever]||p.lever)} · Konf. ${(p.confidence).toFixed(2)}</span></div>` +
       `<div class="fix">${esc(p.proposed_content)}</div><div class="ev">${esc(p.rationale)}</div></div>`).join("");
   }
+  renderEffect(res.effect);
+  renderOverlap(res.overlap);
+}
+
+function fmtPct(x){ return (100 * (Number(x) || 0)).toFixed(1) + "%"; }
+function fmtDelta(x){ const v = Number(x) || 0; return (v > 0 ? "+" : "") + fmtPct(v); }
+
+function renderEffect(effect){
+  // EffectReport aus /api/results (Sprint 4): Vorher/Nachher-Zitationsrate je gepatchter URL.
+  if (!effect || !Array.isArray(effect.hypotheses) || !effect.hypotheses.length) return;
+  $("sec-effect").classList.remove("hidden");
+  $("effectsummary").innerHTML =
+    `<div class="statrow">` +
+    `<div class="stat"><div class="k">Ø Delta</div><div class="v">${esc(fmtDelta(effect.mean_delta))}</div></div>` +
+    `<div class="stat"><div class="k">Verbessert</div><div class="v">${esc(effect.n_improved)} / ${esc(effect.hypotheses.length)}</div></div>` +
+    `<div class="stat"><div class="k">Re-Probes (OK)</div><div class="v">${esc(effect.reprobe_matrix_size)}</div></div>` +
+    `</div>`;
+  $("effectbody").innerHTML = effect.hypotheses.map(h => {
+    const cls = h.delta > 0 ? " pos" : (h.delta < 0 ? " neg" : "");
+    return `<tr><td class="mono">${esc(shortUrl(h.target_url))}</td>` +
+      `<td class="num">${esc(fmtPct(h.before_citation_rate))}</td>` +
+      `<td class="num">${esc(fmtPct(h.after_citation_rate))}</td>` +
+      `<td class="num${cls}">${esc(fmtDelta(h.delta))}</td>` +
+      `<td><span class="dir ${esc(h.direction)}">${esc(DIR_LABEL[h.direction] || h.direction)}</span></td>` +
+      `<td class="num">${esc(Number(h.confidence).toFixed(2))}</td></tr>`;
+  }).join("");
+}
+
+function renderOverlap(overlap){
+  // Defensiv: das overlap-Feld liefert erst die SERP-Integration (GEO_SERP_PROVIDER != off).
+  // Fehlt es (aeltere Laeufe, Provider off), bleibt die Sektion einfach ausgeblendet.
+  if (!overlap || !Array.isArray(overlap.stats) || !overlap.stats.length) return;
+  $("sec-overlap").classList.remove("hidden");
+  $("overlapsummary").innerHTML =
+    `<div class="statrow">` +
+    `<div class="stat"><div class="k">Ø Jaccard (URLs)</div><div class="v">${esc(Number(overlap.mean_jaccard).toFixed(3))}</div></div>` +
+    `<div class="stat"><div class="k">Ø AI-in-SERP</div><div class="v">${esc(fmtPct(overlap.mean_ai_in_serp_share))}</div></div>` +
+    `<div class="stat"><div class="k">Queries</div><div class="v">${esc(overlap.n_queries)}</div></div>` +
+    `<div class="stat"><div class="k">Provider</div><div class="v">${esc(overlap.provider)}</div></div>` +
+    `</div>`;
+  $("overlapbody").innerHTML = overlap.stats.map(s =>
+    `<tr><td class="mono">${esc(s.query_id)} · ${esc(s.prompt_id)}</td>` +
+    `<td class="num">${esc(Number(s.jaccard).toFixed(3))}</td>` +
+    `<td class="num">${esc(fmtPct(s.ai_in_serp_share))}</td>` +
+    `<td class="num">${esc(Number(s.domain_jaccard).toFixed(3))}</td>` +
+    `<td class="num">${s.target_serp_rank != null ? esc(s.target_serp_rank) : "—"}</td>` +
+    `<td class="num">${esc(fmtPct(s.target_ai_citation_rate))}</td>` +
+    `<td class="num">${esc(s.n_serp_urls)} / ${esc(s.n_ai_urls)}</td></tr>`).join("");
 }
 
 /* ---------- Poll-Schleife ---------- */
@@ -610,6 +743,9 @@ async function tick(){
     schedule(3000);
   }
 }
+// Deep-Link: ?run=<id> in der URL waehlt diesen Lauf direkt an (sonst neuester).
+const _urlRun = new URLSearchParams(location.search).get("run");
+if (_urlRun) selectedRun = _urlRun;
 loadConfig().then(tick);
 </script>
 </body>
