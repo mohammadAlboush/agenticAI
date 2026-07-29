@@ -6,6 +6,26 @@ Templates auditiert, Fixes vorschlägt (Human-in-the-Loop), deployt und den Effe
 
 Master-Modulprojekt · Agentic AI · Westfälische Hochschule · Master Informatik.
 
+## 🚀 Live-Demo & Schnellstart
+
+**Live-Dashboard (läuft):** <https://geo-audit-loop-production.up.railway.app/> — die echte
+Steuerzentrale, öffentlich erreichbar. Ohne API-Keys läuft jeder Lauf **offline & deterministisch**
+(Mock-Engines, Seed 42): „Neuer Lauf" starten und dem geschlossenen Regelkreis live zusehen
+(Probe-Matrix → Top/Flop → Templates → Findings → Fix/Deploy · Dry-Run → Effekt → Fingerprint).
+
+**Selbst hosten (Docker):**
+
+```bash
+docker compose up --build        # baut das Image und startet das Dashboard → http://localhost:8080
+```
+
+oder ohne Compose: `docker build -t geo-audit-loop . && docker run --rm -p 8080:8080 geo-audit-loop`.
+Für den Live-Modus (echte Engines/Deploy) eine `.env` nach dem Muster von `.env.example` anlegen —
+alles opt-in; ohne Keys bleibt jeder Lauf offline und byte-identisch reproduzierbar.
+
+**Screencast (~2 Min):** [`docs/präsentation/live-demo.mp4`](docs/präsentation/live-demo.mp4) ·
+**Pitch-Deck:** [`docs/präsentation/pitch-deck.pdf`](docs/präsentation/pitch-deck.pdf).
+
 > **Status:** Sprint 4 (LERN-LOOP) abgeschlossen — der Regelkreis ist **geschlossen**: nach dem
 > (Dry-Run-)Deploy misst das System den Effekt per Re-Probe, bildet daraus strukturierte
 > `EffectHypothesis`-Objekte, schreibt sie ins `MemoryPort`-Gedächtnis und lässt sie den **nächsten**
